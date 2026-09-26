@@ -1463,7 +1463,7 @@ const Genetics = (() => {
     // physiology & behavior
     P.speed = lerp(F.speed[0], F.speed[1], g[G.speed]) * (0.8 + 0.4 * g[G.legLen]);
     P.aggro = g[G.aggro]; P.social = g[G.social]; P.percep = lerp(9, 26, g[G.percep]); P.fert = g[G.fertility];
-    P.life = lerp(420, 1500, g[G.longevity]) * (0.75 + S * 0.22);
+    P.life = lerp(900, 2400, g[G.longevity]) * (0.75 + S * 0.22);
     P.noct = g[G.nocturnal] > 0.62; P.metab = lerp(0.6, 1.4, g[G.metab]);
     P.massKg = Math.max(0.2, Math.round(Math.pow(S, 3) * lerp(28, 85, g[G.girth]) * (fam === 'floater' ? 0.04 : fam === 'avian' ? 0.2 : 1) * 10) / 10);
     P.lengthM = Math.round(S * 1.4 * (fam === 'serpent' ? P.segs * 0.22 : 1) * 10) / 10;
@@ -1857,7 +1857,7 @@ class Surface {
       let c = this.groundColor(o, ny, x, z, h - mn > 0.8 && ny > 0.8);
       let em = 0;
       if (Bm[k] === B.LAVAFIELD && ny > 0.7) { const cr = Math.abs(this.n2.n2(x * 0.12, z * 0.12)); if (cr < 0.07) { c = [1, 0.5, 0.12]; em = 0.9; } }
-      if (lifeGlow && BIOMES[Bm[k]].prod > 0.4 && h > W[k]) { const hh = RNG.unit(RNG.h3(this.seed, x, z)); if (hh < 0.025) { c = Color.mix(c, glowCol, 0.6); em = 0.55; } }
+      if (lifeGlow && BIOMES[Bm[k]].prod > 0.4 && h > W[k]) { const hh = RNG.unit(RNG.h3(this.seed, x, z)); if (hh < 0.012) { c = Color.mix(c, glowCol, 0.5); em = 0.38; } }
       col[v * 4] = clamp(c[0], 0, 1) * 255; col[v * 4 + 1] = clamp(c[1], 0, 1) * 255; col[v * 4 + 2] = clamp(c[2], 0, 1) * 255; col[v * 4 + 3] = 255;
       ext[v * 4 + 1] = em * 255;
     }
@@ -3583,7 +3583,7 @@ class Ecosystem {
     this.groups = { land, water, air };
     this.universeT = t;
   }
-  weightOf(sp) { return Math.pow(Ecology.population(sp, this.universeT), 0.75); }
+  weightOf(sp) { const w = Math.pow(Ecology.population(sp, this.universeT), 0.75); return sp.diet === 'carnivore' ? w * 2.5 + 4 : w; }
   pickSpecies(r, list) { if (!list.length) return null; return r.weighted(list.map((s) => [s, this.weightOf(s)])); }
   // try to spawn a group of a species compatible with the local habitat near (x,z)
   spawnGroup(r, cx, cz, rad, edge) {
@@ -3595,8 +3595,8 @@ class Ecosystem {
       const gy = W.heightAt(x, z), wl = W.waterAt(x, z), depth = wl - gy;
       let pool;
       if (depth > 1.4 && !W.frozenAt(x, z)) pool = this.groups.water.length ? this.groups.water : this.groups.air;
-      else if (depth > 0.2) pool = this.groups.air;
-      else pool = r.chance(0.22) && this.groups.air.length ? this.groups.air : this.groups.land;
+      else if (depth > 0.2) { if (!r.chance(0.3)) continue; pool = this.groups.air; }
+      else pool = r.chance(this.groups.land.length ? 0.14 : 1) && this.groups.air.length ? this.groups.air : this.groups.land;
       if (!pool || !pool.length) pool = this.groups.air.length ? this.groups.air : null;
       if (!pool) continue;
       const sp = this.pickSpecies(r, pool);
@@ -3626,7 +3626,7 @@ class Ecosystem {
     const a = {
       id, sp, g, P, sex: r.chance(0.5) ? 'F' : 'M', name: Names.word(r, 1, 2), gen: o.gen || 1, parents: o.parents || null, mom: o.mom || null,
       x, z, y: gy, heading: r.range(0, TAU), pitch: 0, roll: 0, v: 0,
-      age: o.age != null ? o.age : r.range(0.2, 0.7) * P.life, energy: r.range(0.55, 0.95), thirst: r.range(0, 0.45), rest: r.range(0, 0.3),
+      age: o.age != null ? o.age : r.range(0.1, 0.6) * P.life, energy: sp.diet === 'carnivore' ? r.range(0.35, 0.7) : r.range(0.55, 0.95), thirst: r.range(0, 0.45), rest: r.range(0, 0.3),
       mateCD: o.age === 0 ? 9999 : r.range(15, 70), huntCD: 0,
       state: 'wander', target: null, tx: x, tz: z, stateT: 0, thinkT: r.range(0, 0.3),
       anim: { t: r.range(0, 10), phase: r.range(0, TAU), walk: 0, run: 0, eat: 0, jaw: 0, look: 0, sleep: 0, attack: 0, fly: 0, flap: r.range(0, TAU), seed: r.next(), headBob: 0, dead: 0, glide: false, climb: 0 },
@@ -3653,7 +3653,7 @@ class Ecosystem {
     if (a.state === 'dead') return;
     a.state = 'dead'; a.cause = cause; a.dead = 0.001; a.v = 0; a.stateT = 25; this.stats.deaths++;
     if (cause === 'predation') { this.stats.kills++; this.emit(`${this.label(by)} #${by.id} brought down ${/^[AEIOU]/.test(a.sp.common) ? 'an' : 'a'} ${this.label(a)}`, 'hunt', by); }
-    else if (cause === 'age') this.emit(`${this.label(a)} #${a.id} died of old age (${Math.round(a.age / 60)} min)`, 'death', a);
+    else if (cause === 'age' && this.world.onScreen && this.world.onScreen(a)) this.emit(`${this.label(a)} #${a.id} died of old age (${Math.round(a.age / 60)} min)`, 'death', a);
     else if (cause === 'starvation') this.emit(`${this.label(a)} #${a.id} starved`, 'death', a);
   }
   near(a, rad) {
@@ -3677,7 +3677,7 @@ class Ecosystem {
     for (const b of nearby) {
       const d = Math.hypot(b.x - a.x, b.z - a.z);
       if (b.state === 'dead') { if (sp.diet !== 'herbivore' && sp.prey.includes(b.sp) && d < cd) { carcass = b; cd = d; } continue; }
-      if (sp.predators.includes(b.sp) && d < td) { threat = b; td = d; }
+      if (sp.predators.includes(b.sp) && d < td && (b.state !== 'sleep' || d < P.percep * 0.3)) { threat = b; td = d; }
       else if (sp.prey.includes(b.sp) && d < pd && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05) { prey = b; pd = d; }
       if (b.sp === sp) { cx += b.x; cz += b.z; cn++; if (b.sex !== a.sex && b.grow >= 1 && b.mateCD <= 0 && b.energy > 0.5 && d < md) { mate = b; md = d; } }
     }
@@ -3807,8 +3807,9 @@ class Ecosystem {
         if (a.energy > 0.97) a.state = 'wander';
         break;
       case 'drink': {
-        const d = Math.hypot(tx - a.x, tz - a.z);
-        if (d > 1.2) spd = P.speed * 0.5; else { eat = 1; a.thirst = Math.max(0, a.thirst - dt * 0.18); if (a.thirst < 0.05) a.state = 'wander'; }
+        const d = Math.hypot(tx - a.x, tz - a.z), px = a.x + Math.sin(a.heading) * (P.bodyL * 0.6 + 0.6), pz = a.z + Math.cos(a.heading) * (P.bodyL * 0.6 + 0.6);
+        const shore = W.waterAt(px, pz) - W.heightAt(px, pz) > 0.05;
+        if (d > 1.2 && !shore) spd = P.speed * 0.5; else { eat = 1; a.thirst = Math.max(0, a.thirst - dt * 0.25); if (a.thirst < 0.05) a.state = 'wander'; }
         if (a.stateT > 25) a.state = 'wander';
         break;
       }
@@ -4045,7 +4046,7 @@ class GalaxyView {
     const show = (s, cls) => { const p = this.cam.project(this.rel(s), R.cssW, R.cssH); if (p.visible) L.add(p.x, p.y, s.name, cls); return p; };
     const book = this.app.store.systemMarks();
     let n = 0;
-    for (const s of this.stars) if (book.has(Codes.ofStar(s)) && n++ < 20) show(s, 'lbl-book');
+    if (book.size) for (const s of this.stars) if (book.has(Codes.ofStar(s)) && n++ < 20) show(s, 'lbl-book');
     if (this.hover && this.hover !== this.selected) show(this.hover, 'lbl-hover');
     if (this.selected && !this.selected.pocket) { const p = show(this.selected, 'lbl-sel'); this.app.ui.markers.set('sel', p.x, p.y, p.visible, 'reticle'); }
     else this.app.ui.markers.hide('sel');
@@ -4576,8 +4577,9 @@ class SurfaceView {
       else if (fresh.length) this.app.ui.toast(`${fresh.length} new species catalogued: ${fresh.slice(0, 2).join(', ')}${fresh.length > 2 ? '…' : ''}`, 'life');
       for (const n of fresh) this.app.ui.log(`Catalogued a new species: ${n}`, 'evolve');
     }
-    if (this.selected && this.app.ui.panel.visible) { this.panelT = (this.panelT || 0) + dt; if (this.panelT > 0.5) { this.panelT = 0; this.app.ui.liveUpdate(); } }
+    if (this.app.ui.panel.visible) { this.panelT = (this.panelT || 0) + dt; if (this.panelT > (this.selected ? 0.5 : 1)) { this.panelT = 0; this.app.ui.liveUpdate(); } }
   }
+  onScreen(a) { return this.visible(a.x, a.y, a.z, 0); }
   visible(x, y, z, pad) {
     const v = M4.xform(this.cam.vp, [x, y, z]);
     const ax = pad / (this.cam.cur.dist * this.cam.aspect), ay = pad / this.cam.cur.dist;
@@ -4824,7 +4826,9 @@ const Store = {
     this.save(); return i < 0;
   },
   systemMarks() {
-    const s = new Set();
+    const sig = this.d.bookmarks.length + ':' + (this.d.bookmarks[0] ? this.d.bookmarks[0].code : '');
+    if (this._marks && this._marksSig === sig) return this._marks;
+    const s = new Set(); this._marks = s; this._marksSig = sig;
     for (const b of this.d.bookmarks) { const a = Codes.parse(b.code); if (a && a.pocket == null) s.add(Codes.make({ u: a.u, sx: a.sx, sz: a.sz, i: a.i })); }
     return s;
   },
@@ -5003,11 +5007,27 @@ const Portraits = {
   },
 };
 const Thumbs = {
-  cache: new Map(),
+  cache: new Map(), queue: [],
   planet(p, size = 40) {
-    const key = p.seed + ':' + size;
-    let src = this.cache.get(key);
-    if (!src) {
+    const key = p.seed + ':' + size, c = h('canvas', { width: size, height: size, class: 'thumb' });
+    const src = this.cache.get(key);
+    if (src) c.getContext('2d').drawImage(src, 0, 0);
+    else { this.queue.push({ p, size, key, c }); const x = c.getContext('2d'); x.fillStyle = '#1d2466'; x.beginPath(); x.arc(size / 2, size / 2, size / 2 - 2, 0, TAU); x.fill(); }
+    return c;
+  },
+  process(budget) {
+    const t0 = performance.now();
+    while (this.queue.length && performance.now() - t0 < budget) {
+      const q = this.queue.shift();
+      if (!q.c.isConnected && this.queue.length > 4) continue;
+      let src = this.cache.get(q.key);
+      if (!src) src = this.render(q.p, q.size, q.key);
+      q.c.getContext('2d').drawImage(src, 0, 0);
+    }
+  },
+  render(p, size, key) {
+    let src;
+    {
       p.prepare();
       src = document.createElement('canvas'); src.width = src.height = size;
       const ctx = src.getContext('2d'), img = ctx.createImageData(size, size), o = {};
@@ -5034,9 +5054,7 @@ const Thumbs = {
       this.cache.set(key, src);
       if (this.cache.size > 200) this.cache.delete(this.cache.keys().next().value);
     }
-    const c = h('canvas', { width: size, height: size, class: 'thumb' });
-    c.getContext('2d').drawImage(src, 0, 0);
-    return c;
+    return src;
   },
   star(s, size = 40) {
     const c = h('canvas', { width: size, height: size, class: 'thumb' }), x = c.getContext('2d'), m = size / 2;
@@ -5817,6 +5835,7 @@ const App = {
     } catch (e) { console.error(e); if (!this._errShown) { this._errShown = true; UI.toast('Render error: ' + e.message, 'err'); } }
     UI.frame(dt);
     Portraits.process(this.R, this.mobile ? 4 : 7);
+    Thumbs.process(this.mobile ? 5 : 8);
     this.crumbT += dt; if (this.crumbT > 1.2) { this.crumbT = 0; UI.crumbs(this.view.crumbs()); }
     this.saveT += dt; if (this.saveT > 4) { this.saveT = 0; this.persist(false); }
     this.fpsAcc += dt; this.fpsN++;
