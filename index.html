@@ -3649,7 +3649,7 @@ class Ecosystem {
       id, uid: (Ecosystem.uid = (Ecosystem.uid || 0) + 1), sp, g, P, sex: r.chance(0.5) ? 'F' : 'M', name: Names.word(r, 1, 2), gen: o.gen || 1, parents: o.parents || null, mom: o.mom || null,
       x, z, y: gy, heading: r.range(0, TAU), pitch: 0, roll: 0, v: 0,
       age: o.age != null ? o.age : r.range(0.1, 0.6) * P.life, energy: sp.diet === 'carnivore' ? r.range(0.35, 0.7) : r.range(0.55, 0.95), thirst: r.range(0, 0.45), rest: r.range(0, 0.3),
-      mateCD: o.age === 0 ? 9999 : r.range(15, 70), huntCD: 0,
+      mateCD: o.age === 0 ? 9999 : r.range(15, 70), huntCD: 0, drinkCD: 0,
       state: 'wander', target: null, tx: x, tz: z, stateT: 0, thinkT: r.range(0, 0.3),
       anim: { t: r.range(0, 10), phase: r.range(0, TAU), walk: 0, run: 0, eat: 0, jaw: 0, look: 0, sleep: 0, attack: 0, fly: 0, flap: r.range(0, TAU), seed: r.next(), headBob: 0, dead: 0, glide: false, climb: 0 },
       alt: 0, altT: 0, trail: null, dead: 0, cause: null, born: this.t, seen: false,
@@ -3661,6 +3661,7 @@ class Ecosystem {
     if (sp.habitat === 'water') a.y = this.swimY(a, x, z);
     if (sp.fam === 'serpent') a.trail = [];
     a.grow = this.growOf(a);
+    Nav.state(a);
     this.agents.push(a);
     return a;
   }
@@ -3688,7 +3689,7 @@ class Ecosystem {
     for (const d of [4, 8, 13, 19, 26]) for (let k = 0; k < 12; k++) {
       const ang = (k / 12) * TAU + a.anim.seed * 6, x = a.x + Math.cos(ang) * d, z = a.z + Math.sin(ang) * d;
       if (!W.loaded(x, z)) continue;
-      if (W.waterAt(x, z) - W.heightAt(x, z) > 0.25 && !W.frozenAt(x, z)) return [x - Math.cos(ang) * 1.6, z - Math.sin(ang) * 1.6];
+      if (W.waterAt(x, z) - W.heightAt(x, z) > 0.25 && !W.frozenAt(x, z)) { const p = Nav.nearestValid(W, a, x - Math.cos(ang) * 1.6, z - Math.sin(ang) * 1.6, 3); if (p) return p; }
     }
     return null;
   }
@@ -3708,6 +3709,7 @@ class Ecosystem {
     const set = (s, t) => { if (a.state !== s) { a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
     if (threat && td < P.percep * (a.state === 'sleep' ? 0.35 : 0.8)) { set('flee', threat); return; }
     if (sleepy && a.state !== 'hunt' && sp.fam !== 'floater') { set('sleep', null); return; }
+    if (a.nav.lockT > 0 && a.state === 'wander') return;
     if (a.state === 'eat' && a.target && a.stateT < 7) return;
     if (hungry && sp.diet !== 'herbivore') {
       if (carcass) { set('eat', carcass); a.tx = carcass.x; a.tz = carcass.z; return; }
@@ -3717,21 +3719,20 @@ class Ecosystem {
       const b = W.biomeAt(a.x, a.z);
       if (sp.habitat !== 'land' || BIOMES[b].prod > 0.28) { set('graze', null); return; }
     }
-    if (a.thirst > 0.72 && sp.habitat === 'land' && W.liquid && W.liquid !== 'lava') {
+    if (a.thirst > 0.72 && sp.habitat === 'land' && W.liquid && W.liquid !== 'lava' && a.drinkCD <= 0) {
       if (a.state !== 'drink' || !a.target) { const wpt = this.findWater(a); if (wpt) { set('drink', null); a.tx = wpt[0]; a.tz = wpt[1]; return; } }
       else return;
     }
     if (a.grow >= 1 && a.mateCD <= 0 && a.energy > 0.55 && mate && this.speciesCount(sp) < Math.max(4, this.cap * 0.25)) { set('mate', mate); return; }
     if (a.mom) { const m = this.agents.find((x) => x.id === a.mom && x.state !== 'dead'); if (m && Math.hypot(m.x - a.x, m.z - a.z) > 3) { set('follow', m); return; } if (!m) a.mom = null; }
-    if (P.social > 0.45 && cn > 0) { const hx = cx / cn, hz = cz / cn; if (Math.hypot(hx - a.x, hz - a.z) > 5 + P.S * 2) { set('herd', null); a.tx = hx; a.tz = hz; return; } }
+    if (P.social > 0.45 && cn > 0) {
+      const hx = cx / cn, hz = cz / cn;
+      if (Math.hypot(hx - a.x, hz - a.z) > 5 + P.S * 2) { const p = Nav.nearestValid(W, a, hx, hz, 5); if (p) { set('herd', null); a.tx = p[0]; a.tz = p[1]; return; } }
+    }
     if (a.state !== 'wander' || Math.hypot(a.tx - a.x, a.tz - a.z) < 2 || a.stateT > 14) {
-      set('wander', null);
-      const r = Math.random;
-      const ang = a.heading + (r() - 0.5) * 2.4, d = 6 + r() * 16;
-      let tx = a.x + Math.sin(ang) * d, tz = a.z + Math.cos(ang) * d;
-      const dc = Math.hypot(tx - env.cx, tz - env.cz);
-      if (dc > env.radius * 0.8) { tx = lerp(tx, env.cx, 0.5); tz = lerp(tz, env.cz, 0.5); }
-      a.tx = tx; a.tz = tz;
+      set('wander', null); a.stateT = 0;
+      const p = Nav.randomTarget(W, a, env);
+      if (p) { a.tx = p[0]; a.tz = p[1]; } else { a.tx = a.x; a.tz = a.z; }
     }
   }
   speciesCount(sp) { let n = 0; for (const a of this.agents) if (a.sp === sp && a.state !== 'dead') n++; return n; }
@@ -3752,6 +3753,7 @@ class Ecosystem {
   update(dt, env) {
     this.t += dt; this.universeT = env.t;
     const W = this.world;
+    Nav.reset(this.agents.length > 60 ? 2 : 3);
     // population management
     this.spawnT -= dt;
     let alive = 0; for (const a of this.agents) if (a.state !== 'dead') alive += Math.max(0.5, a.P.S / 1.3);
@@ -3761,7 +3763,7 @@ class Ecosystem {
     }
     for (let i = this.agents.length - 1; i >= 0; i--) {
       const a = this.agents[i];
-      if (Math.hypot(a.x - env.cx, a.z - env.cz) > env.radius * 1.6 && a !== env.follow) { this.agents.splice(i, 1); continue; }
+      if ((Math.hypot(a.x - env.cx, a.z - env.cz) > env.radius * 1.6 || a.gone) && a !== env.follow) { this.agents.splice(i, 1); continue; }
       if (a.state === 'dead') { if (a.sp.habitat === 'air') { a.y = Math.max(W.heightAt(a.x, a.z), a.y - dt * 7); a.anim.fly = 0; } a.stateT -= dt; a.dead = Math.min(1, a.dead + dt * 1.5); a.anim.dead = a.dead; if (a.stateT < 4) a.y -= dt * 0.25; if (a.stateT <= 0) this.agents.splice(i, 1); else this.animate(a, dt, 0); continue; }
       this.step(a, dt, env);
     }
@@ -3783,16 +3785,41 @@ class Ecosystem {
           const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz), min = ra + (b.P.bodyW * 0.55 + b.P.bodyL * 0.3) * b.grow;
           if (d < min && d > 1e-4 && !(a.state === 'eat' && a.target === b) && !(b.state === 'eat' && b.target === a)) {
             const push = Math.min(0.25, (min - d) * 0.25), ux = dx / d, uz = dz / d;
-            a.x -= ux * push; a.z -= uz * push; b.x += ux * push; b.z += uz * push;
+            this.nudge(a, -ux * push, -uz * push); this.nudge(b, ux * push, uz * push);
           }
         }
       }
     }
   }
+  nudge(a, dx, dz) {
+    const W = this.world, x = a.x + dx, z = a.z + dz;
+    if (Nav.ok(W, a, x, z) || !Nav.ok(W, a, a.x, a.z)) { a.x = x; a.z = z; }
+  }
+  // stuck: drop the plan, pick a reachable goal and hold it for a few seconds
+  recover(a, env) {
+    const n = a.nav, W = this.world;
+    n.stuck++; n.path = null; n.cd = 0; n.sideT = 0; n.losT = 0;
+    if (a.state !== 'flee') { a.state = 'wander'; a.target = null; a.stateT = 0; }
+    const p = Nav.randomTarget(W, a, env, 4, 14);
+    if (p) { a.tx = p[0]; a.tz = p[1]; } else { a.tx = a.x; a.tz = a.z; }
+    n.lockT = 3;
+    if (n.stuck >= 3) { n.esc = Nav.nearestValid(W, a, a.x + Math.sin(a.heading + Math.PI) * 2, a.z + Math.cos(a.heading + Math.PI) * 2, 6); n.escT = 3; n.stuck = 0; }
+  }
+  // goal cannot be reached: give up on it rather than pushing against the shoreline
+  unreachable(a, env) {
+    const W = this.world;
+    if (a.state === 'hunt') a.huntCD = 10;
+    else if (a.state === 'drink') a.drinkCD = 20;
+    else if (a.state === 'mate') a.mateCD = Math.max(a.mateCD, 15);
+    if (a.state !== 'flee') { a.state = 'wander'; a.target = null; a.stateT = 0; }
+    const p = Nav.randomTarget(W, a, env);
+    if (p) { a.tx = p[0]; a.tz = p[1]; } else { a.tx = a.x; a.tz = a.z; }
+    a.nav.lockT = 2;
+  }
   step(a, dt, env) {
     const P = a.P, sp = a.sp, W = this.world;
     a.age += dt; a.grow = this.growOf(a); a.stateT += dt;
-    a.mateCD -= dt; a.huntCD -= dt;
+    a.mateCD -= dt; a.huntCD -= dt; a.drinkCD -= dt;
     a.energy -= dt * 0.0045 * P.metab * (a.state === 'hunt' || a.state === 'flee' ? 2.2 : 1);
     if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * 0.0035);
     if (a.state !== 'sleep') a.rest = Math.min(1, a.rest + dt * 0.002);
@@ -3846,24 +3873,49 @@ class Ecosystem {
       default: spd = Math.hypot(tx - a.x, tz - a.z) > 1.5 ? P.speed * (sp.habitat === 'air' ? 0.6 : 0.32) : 0;
     }
     if (sp.habitat === 'air') { spd = Math.max(spd, a.anim.fly > 0.5 ? P.speed * 0.45 : 0); if (a.state === 'sleep') spd = 0; }
-    // --- steering ---
-    const dxT = tx - a.x, dzT = tz - a.z;
-    if (spd > 0 && Math.hypot(dxT, dzT) > 0.05) {
-      const want = Math.atan2(dxT, dzT);
-      const turn = (sp.habitat === 'air' ? 1.6 : 3.2) * dt;
-      a.heading += clamp(angleDelta(a.heading, want), -turn, turn);
+    // --- navigation ---
+    const nav = a.nav;
+    nav.lockT -= dt; nav.sideT -= dt;
+    const here = W.loaded(a.x, a.z), valid = !here || Nav.ok(W, a, a.x, a.z);
+    if (!valid && !nav.esc) {
+      // standing somewhere it can't be (shoved, born on a bank, terrain changed): head for the nearest legal spot
+      nav.esc = Nav.nearestValid(W, a, a.x, a.z, 14); nav.escT = 6;
+      if (!nav.esc && sp.habitat !== 'air') a.gone = true;
     }
-    a.v += (spd * (0.55 + 0.45 * a.grow) - a.v) * damp(4, dt);
+    if (nav.esc) {
+      nav.escT -= dt;
+      if ((valid && nav.escT < 5.5) || nav.escT <= 0 || Math.hypot(nav.esc[0] - a.x, nav.esc[1] - a.z) < 0.3) nav.esc = null;
+      else { tx = nav.esc[0]; tz = nav.esc[1]; spd = Math.max(spd, P.speed * 0.5); if (a.state === 'sleep') a.state = 'wander'; }
+    }
+    let wx = tx, wz = tz, block = 1;
+    if (spd > 0 && !nav.esc) {
+      const wp = Nav.route(W, a, tx, tz, dt, a.state !== 'flee' && sp.habitat !== 'air');
+      if (!wp) { this.unreachable(a, env); wx = a.tx; wz = a.tz; } else { wx = wp[0]; wz = wp[1]; }
+    }
+    const dxT = wx - a.x, dzT = wz - a.z, dT = Math.hypot(dxT, dzT);
+    if (spd > 0 && dT > 0.05) {
+      let want = Math.atan2(dxT, dzT);
+      if (!nav.esc && valid) {
+        const look = Math.min(dT, 1.2 + P.bodyL * 0.5 * a.grow + a.v * 0.5);
+        const h = look > 0.3 ? Nav.steer(W, a, want, look) : want;
+        if (h === null) { want = a.heading; block = 0; nav.blockT += dt; if (nav.blockT > 0.8) { nav.blockT = 0; this.unreachable(a, env); } }
+        else { want = h; nav.blockT = 0; }
+      }
+      const rate = sp.habitat === 'air' ? 1.6 : 3.2, dh = angleDelta(a.heading, want);
+      a.heading += clamp(dh, -rate * dt, rate * dt);
+      block *= clamp(Math.cos(dh), 0.2, 1);
+      // goal inside the turning circle: slow right down instead of orbiting it
+      if (Math.abs(dh) > 0.6 && dT < (a.v / rate) * 2.4 && sp.habitat !== 'air') block *= 0.15;
+    }
+    a.v += (spd * (0.55 + 0.45 * a.grow) * block - a.v) * damp(4, dt);
     let nx = a.x + Math.sin(a.heading) * a.v * dt, nz = a.z + Math.cos(a.heading) * a.v * dt;
-    // --- terrain constraints ---
-    if (!W.loaded(nx, nz)) { nx = a.x; nz = a.z; a.heading += Math.PI * 0.5; }
-    if (sp.habitat === 'land') {
-      const depth = W.waterAt(nx, nz) - W.heightAt(nx, nz);
-      if (depth > 0.25 + P.legL * 0.4 && !W.frozenAt(nx, nz)) { nx = a.x; nz = a.z; a.heading += (Math.random() < 0.5 ? 1 : -1) * 1.2; a.tx = a.x - (a.tx - a.x); a.tz = a.z - (a.tz - a.z); }
-    } else if (sp.habitat === 'water') {
-      const depth = W.waterAt(nx, nz) - W.heightAt(nx, nz);
-      if (depth < 1.1 || W.frozenAt(nx, nz)) { nx = a.x; nz = a.z; a.heading += Math.PI * 0.7; a.tx = a.x + Math.sin(a.heading) * 10; a.tz = a.z + Math.cos(a.heading) * 10; }
+    // --- collision with illegal terrain: slide along the boundary, never step over it ---
+    if (valid && !nav.esc && !Nav.ok(W, a, nx, nz)) {
+      if (Nav.ok(W, a, nx, a.z)) nz = a.z;
+      else if (Nav.ok(W, a, a.x, nz)) nx = a.x;
+      else { nx = a.x; nz = a.z; a.v *= 0.5; }
     }
+    if (Nav.watch(a, dt, spd > 0 && dT > 1.5 && a.state !== 'follow')) this.recover(a, env);
     const moved = Math.hypot(nx - a.x, nz - a.z);
     a.x = nx; a.z = nz;
     const gy = W.heightAt(a.x, a.z);
@@ -3899,7 +3951,7 @@ class Ecosystem {
         if (tr.length > P.segs * 4 + 8) tr.pop();
       }
       // wiggle the head sideways for a slither path
-      a.x += Math.cos(a.heading) * hw * a.v * dt * 0.6; a.z -= Math.sin(a.heading) * hw * a.v * dt * 0.6;
+      this.nudge(a, Math.cos(a.heading) * hw * a.v * dt * 0.6, -Math.sin(a.heading) * hw * a.v * dt * 0.6);
     }
     // --- animation state ---
     const stride = sp.fam === 'avian' ? 1 : Math.max(0.35, (P.legL || P.S * 0.5) * 1.5 * a.grow);
@@ -3919,6 +3971,193 @@ class Ecosystem {
     an.headBob = Math.sin(an.phase * 2) * 0.05 * an.walk;
   }
 }
+</script>
+
+<!-- ===== Nav · terrain-aware steering, pathfinding, stuck recovery ===== -->
+<script>
+'use strict';
+// Creature navigation: terrain/water validity, obstacle-avoiding steering, grid A*,
+// stuck detection and recovery. Land walkers must stay out of deep unfrozen water,
+// swimmers out of shallows/land/ice, fliers inside loaded terrain.
+const Nav = {
+  budget: 0,
+  OFFS: [0.3, 0.6, 0.95, 1.35, 1.8, 2.3, 2.85],
+  reset(n) { this.budget = n; },
+  take() { if (this.budget <= 0) return false; this.budget--; return true; },
+  state(a) {
+    return a.nav || (a.nav = { path: null, pi: 0, gx: 0, gz: 0, cd: 0, losT: 0, clear: true, side: 0, sideT: 0, esc: null, escT: 0, lockT: 0,
+      stuck: 0, wx: a.x, wz: a.z, wT: 0, tryT: 0, turn: 0, lh: a.heading, fails: 0, blockT: 0 });
+  },
+  depth(W, x, z) { return W.waterAt(x, z) - W.heightAt(x, z); },
+  // is (x,z) a legal position for this creature?
+  ok(W, a, x, z) {
+    if (!W.loaded(x, z)) return false;
+    const hab = a.sp.habitat;
+    if (hab === 'air') return true;
+    const d = W.waterAt(x, z) - W.heightAt(x, z);
+    if (hab === 'water') return d >= 1.0 && !W.frozenAt(x, z);
+    return d <= 0.25 + a.P.legL * 0.4 || !!W.frozenAt(x, z);
+  },
+  // probe a ray from the creature along heading h
+  clear(W, a, h, look) {
+    const s = Math.sin(h), c = Math.cos(h);
+    const n = look > 2.5 ? 4 : 2;
+    for (let i = 1; i <= n; i++) { const f = look * i / n; if (!this.ok(W, a, a.x + s * f, a.z + c * f)) return false; }
+    return true;
+  },
+  lineClear(W, a, x0, z0, x1, z1) {
+    const d = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(d));
+    for (let i = 1; i <= n; i++) { const f = i / n; if (!this.ok(W, a, x0 + (x1 - x0) * f, z0 + (z1 - z0) * f)) return false; }
+    return true;
+  },
+  // pick a clear heading close to `want`; remembers which side it detoured to so it doesn't dither
+  steer(W, a, want, look) {
+    const n = a.nav;
+    if (this.clear(W, a, want, look)) return want;
+    if (n.sideT <= 0 || !n.side) {
+      n.side = 0;
+      for (const o of this.OFFS) {
+        const l = this.clear(W, a, want - o, look), r = this.clear(W, a, want + o, look);
+        if (l || r) { n.side = l && r ? (angleDelta(want, a.heading) >= 0 ? -1 : 1) : r ? 1 : -1; break; }
+      }
+      if (!n.side) n.side = a.id & 1 ? 1 : -1;
+    }
+    n.sideT = 2.5;
+    for (const o of this.OFFS) { const h = want + o * n.side; if (this.clear(W, a, h, look)) return h; }
+    for (const o of this.OFFS) { const h = want - o * n.side; if (this.clear(W, a, h, look)) { n.side = -n.side; return h; } }
+    if (look > 1.2) return this.steer(W, a, want, look * 0.45);
+    return null;
+  },
+  nearestValid(W, a, x, z, maxR = 12) {
+    if (this.ok(W, a, x, z)) return [x, z];
+    for (let r = 1; r <= maxR; r += 1) {
+      const n = Math.max(8, Math.round(r * 6)), o = (a.id % 7) / 7;
+      for (let k = 0; k < n; k++) {
+        const ang = ((k + o) / n) * TAU, px = x + Math.cos(ang) * r, pz = z + Math.sin(ang) * r;
+        if (this.ok(W, a, px, pz)) return [px, pz];
+      }
+    }
+    return null;
+  },
+  // a valid wander goal in roughly the current direction, reachable in a straight line when possible
+  randomTarget(W, a, env, dMin = 6, dMax = 22) {
+    const r = Math.random;
+    let fallback = null;
+    for (let k = 0; k < 10; k++) {
+      const spread = k < 5 ? 2.4 : TAU, ang = a.heading + (r() - 0.5) * spread, d = dMin + r() * (dMax - dMin);
+      let tx = a.x + Math.sin(ang) * d, tz = a.z + Math.cos(ang) * d;
+      if (env && Math.hypot(tx - env.cx, tz - env.cz) > env.radius * 0.8) { tx = lerp(tx, env.cx, 0.5); tz = lerp(tz, env.cz, 0.5); }
+      if (!this.ok(W, a, tx, tz)) continue;
+      if (this.lineClear(W, a, a.x, a.z, tx, tz)) return [tx, tz];
+      if (!fallback) fallback = [tx, tz];
+    }
+    return fallback;
+  },
+  // grid A* (2-unit cells, 8-connected, no corner cutting) followed by line-of-sight smoothing
+  findPath(W, a, tx, tz) {
+    const C = 2, sx = a.x, sz = a.z;
+    const half = clamp(Math.max(Math.abs(tx - sx), Math.abs(tz - sz)) / 2 + 14, 16, 64);
+    const N = Math.ceil((half * 2) / C) + 1, ox = (sx + tx) / 2 - half, oz = (sz + tz) / 2 - half;
+    const pass = new Uint8Array(N * N);
+    const cellOk = (i, j) => {
+      if (i < 0 || j < 0 || i >= N || j >= N) return false;
+      const k = j * N + i;
+      if (!pass[k]) pass[k] = this.ok(W, a, ox + i * C, oz + j * C) ? 1 : 2;
+      return pass[k] === 1;
+    };
+    const si = clamp(Math.round((sx - ox) / C), 0, N - 1), sj = clamp(Math.round((sz - oz) / C), 0, N - 1);
+    let gi = clamp(Math.round((tx - ox) / C), 0, N - 1), gj = clamp(Math.round((tz - oz) / C), 0, N - 1);
+    if (!cellOk(gi, gj)) {
+      let best = null, bd = 1e9;
+      for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const d = di * di + dj * dj; if (d < bd && cellOk(gi + di, gj + dj)) { bd = d; best = [gi + di, gj + dj]; } }
+      if (!best) return null;
+      [gi, gj] = best;
+    }
+    pass[sj * N + si] = 1;
+    const size = N * N, g = new Float32Array(size).fill(1e9), came = new Int32Array(size).fill(-1), closed = new Uint8Array(size);
+    const heapK = [], heapF = [];
+    const push = (k, f) => {
+      let i = heapK.length; heapK.push(k); heapF.push(f);
+      while (i > 0) { const p = (i - 1) >> 1; if (heapF[p] <= f) break; heapK[i] = heapK[p]; heapF[i] = heapF[p]; i = p; }
+      heapK[i] = k; heapF[i] = f;
+    };
+    const pop = () => {
+      const top = heapK[0], lk = heapK.pop(), lf = heapF.pop();
+      if (heapK.length) {
+        let i = 0; const n = heapK.length;
+        for (;;) { let c = i * 2 + 1; if (c >= n) break; if (c + 1 < n && heapF[c + 1] < heapF[c]) c++; if (heapF[c] >= lf) break; heapK[i] = heapK[c]; heapF[i] = heapF[c]; i = c; }
+        heapK[i] = lk; heapF[i] = lf;
+      }
+      return top;
+    };
+    const hEst = (i, j) => { const dx = Math.abs(i - gi), dz = Math.abs(j - gj); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+    const s0 = sj * N + si, gk = gj * N + gi;
+    g[s0] = 0; push(s0, hEst(si, sj));
+    let found = false, exp = 0;
+    while (heapK.length && exp < 2500) {
+      const k = pop();
+      if (closed[k]) continue;
+      closed[k] = 1; exp++;
+      if (k === gk) { found = true; break; }
+      const i = k % N, j = (k - i) / N;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue;
+        const ni = i + di, nj = j + dj;
+        if (!cellOk(ni, nj)) continue;
+        if (di && dj && (!cellOk(i + di, j) || !cellOk(i, j + dj))) continue;
+        const nk = nj * N + ni;
+        if (closed[nk]) continue;
+        const ng = g[k] + (di && dj ? 1.414 : 1);
+        if (ng < g[nk]) { g[nk] = ng; came[nk] = k; push(nk, ng + hEst(ni, nj)); }
+      }
+    }
+    if (!found) return null;
+    const pts = [];
+    for (let k = gk; k !== s0 && k >= 0; k = came[k]) { const i = k % N, j = (k - i) / N; pts.push([ox + i * C, oz + j * C]); }
+    pts.reverse();
+    if (this.ok(W, a, tx, tz)) pts.push([tx, tz]);
+    // string pulling: keep only waypoints needed for line of sight
+    const out = []; let cx = sx, cz = sz, i = 0;
+    while (i < pts.length) {
+      let j = pts.length - 1;
+      while (j > i && !this.lineClear(W, a, cx, cz, pts[j][0], pts[j][1])) j--;
+      out.push(pts[j]); cx = pts[j][0]; cz = pts[j][1]; i = j + 1;
+    }
+    return out;
+  },
+  // next point to head for: the goal itself, or the current waypoint of a planned path.
+  // returns null when the goal is unreachable
+  route(W, a, tx, tz, dt, allowPath) {
+    const n = a.nav;
+    n.cd -= dt; n.losT -= dt;
+    if (n.path && Math.hypot(n.gx - tx, n.gz - tz) > 4) n.path = null;
+    if (n.path) {
+      while (n.pi < n.path.length && Math.hypot(n.path[n.pi][0] - a.x, n.path[n.pi][1] - a.z) < 1.4) n.pi++;
+      if (n.pi >= n.path.length) n.path = null;
+      else return n.path[n.pi];
+    }
+    if (!allowPath || Math.hypot(tx - a.x, tz - a.z) < 2.5) return [tx, tz];
+    if (n.losT <= 0) { n.losT = 0.6 + Math.random() * 0.3; n.clear = this.lineClear(W, a, a.x, a.z, tx, tz); }
+    if (n.clear || n.cd > 0 || !this.take()) return [tx, tz];
+    n.cd = 1.5;
+    const path = this.findPath(W, a, tx, tz);
+    if (!path || !path.length) { n.fails++; return null; }
+    n.fails = 0; n.path = path; n.pi = 0; n.gx = tx; n.gz = tz;
+    return path[0];
+  },
+  // track progress over 2.5 s windows; true when the creature was trying to move but going nowhere or circling
+  watch(a, dt, trying) {
+    const n = a.nav;
+    n.turn += Math.abs(angleDelta(n.lh, a.heading)); n.lh = a.heading;
+    n.wT += dt; if (trying) n.tryT += dt;
+    if (n.wT < 2.5) return false;
+    const d = Math.hypot(a.x - n.wx, a.z - n.wz);
+    const stuck = n.tryT > 1.8 && (d < 0.4 || (n.turn > TAU * 1.2 && d < 1.5));
+    n.wx = a.x; n.wz = a.z; n.wT = 0; n.tryT = 0; n.turn = 0;
+    if (!stuck) n.stuck = Math.max(0, n.stuck - 1);
+    return stuck;
+  },
+};
 </script>
 
 <!-- ===== Views · galaxy, system, planet, surface ===== -->
@@ -4489,7 +4728,7 @@ class SurfaceView {
   exit() { this.dispose(); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); }
   dispose() {
     for (const ch of this.chunks.values()) this.freeChunk(ch);
-    this.chunks.clear(); this.queue = []; this.eco = null;
+    this.chunks.clear(); this._lc = null; this.queue = []; this.eco = null;
   }
   freeChunk(ch) { if (ch.gTerrain) ch.gTerrain.dispose(); if (ch.gWater) ch.gWater.dispose(); if (ch.gFlora) ch.gFlora.dispose(); }
   genChunk(cx, cz) {
@@ -4503,7 +4742,13 @@ class SurfaceView {
     this.chunks.set(key, ch);
     return ch;
   }
-  chunkAt(x, z) { return this.chunks.get(Math.floor(x / 32) + ',' + Math.floor(z / 32)); }
+  chunkAt(x, z) {
+    const c = this._lc;
+    if (c && x >= c.x0 && x < c.x0 + 32 && z >= c.z0 && z < c.z0 + 32) return c;
+    const ch = this.chunks.get(Math.floor(x / 32) + ',' + Math.floor(z / 32));
+    if (ch) this._lc = ch;
+    return ch;
+  }
   loaded(x, z) { return !!this.chunkAt(x, z); }
   heightAt(x, z) { const ch = this.chunkAt(x, z); if (ch) return Surface.interp(ch, ch.H, x, z); const o = {}; return this.surface.sample(x, z, o).h; }
   waterAt(x, z) {
@@ -4537,7 +4782,7 @@ class SurfaceView {
     for (const [, cx, cz] of need) { this.genChunk(cx, cz); if (performance.now() - t0 > budget) break; }
     for (const [key, ch] of this.chunks) {
       const d = Math.hypot(ch.x0 + 16 - t[0], ch.z0 + 16 - t[2]);
-      if (d > ext + 90) { this.freeChunk(ch); this.chunks.delete(key); }
+      if (d > ext + 90) { this.freeChunk(ch); this.chunks.delete(key); if (this._lc === ch) this._lc = null; }
     }
   }
   lighting() {
