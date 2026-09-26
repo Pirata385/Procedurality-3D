@@ -5437,8 +5437,8 @@ function locationPanel(v, app) {
           section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : 'This world is lifeless. Only wind and stone.')));
       } },
     ],
-    actions: [{ label: 'Follow a creature', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } else UI.toast('No creatures in range'); } }, { label: 'Orbit', icon: 'up', fn: () => app.openPlanet(p, v.surface.dirAt(tg[0], tg[2])) }],
-    quick: [{ label: 'Follow', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } } }],
+    actions: [v.community.length ? { label: 'Follow a creature', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } else UI.toast('No creatures in range'); } } : null, { label: 'Orbit', icon: 'up', fn: () => app.openPlanet(p, v.surface.dirAt(tg[0], tg[2])) }].filter(Boolean),
+    quick: v.community.length ? [{ label: 'Follow', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } } }] : [], persistQuick: true,
   };
 }
 function poiPanel(poi, v, app) {
