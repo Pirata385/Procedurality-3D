@@ -2551,7 +2551,7 @@ class MeshBuilder {
    SHADERS · toon lighting, dithering, procedural surfaces, pixel-art post
    ============================================================================= */
 const Shaders = (() => {
-  const H = '#version 300 es\nprecision highp float;\nprecision highp int;\n';
+  const H = '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
   const OUT = 'layout(location=0) out vec4 oC;\nlayout(location=1) out vec4 oI;\n';
   const COMMON = `
 float bayer2(vec2 a){ a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
@@ -2773,9 +2773,9 @@ void main(){
   float ca = cos(rot), sa = sin(rot); vec3 q = vec3(ca * p.x - sa * p.z, p.y, sa * p.x + ca * p.z);
   float t = snoise(vec3(q.x * 2.2, q.y * 9.0, q.z * 2.2) + uSeed) * uTurb + snoise(vec3(q.x * 6.0, q.y * 20.0, q.z * 6.0) + uSeed * 2.0) * uTurb * 0.35;
   float v = fract(lat * uBands * 0.5 + t + 10.0);
-  float k = v * 4.0; int i = int(floor(k)); float f = smoothstep(0.3, 0.7, fract(k));
-  vec3 cols[4] = vec3[4](uC0, uC1, uC2, uC3);
-  vec3 base = mix(cols[i], cols[(i + 1) % 4], f);
+  // explicit palette blend (no array constructors: some mobile GPU compilers reject them)
+  float k = v * 4.0, f = smoothstep(0.3, 0.7, fract(k));
+  vec3 base = k < 1.0 ? mix(uC0, uC1, f) : k < 2.0 ? mix(uC1, uC2, f) : k < 3.0 ? mix(uC2, uC3, f) : mix(uC3, uC0, f);
   if (uStorm.w > 0.5) {
     vec3 sp = vec3(cos(uStorm.x) * sin(uStorm.y), sin(uStorm.x), cos(uStorm.x) * cos(uStorm.y));
     float sd = distance(p, sp) / uStorm.z;
