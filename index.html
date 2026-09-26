@@ -2944,6 +2944,10 @@ void main(){
   if (uTransparent > 0.5 && inf.a < 0.5) alpha = 0.0;
   oColor = vec4(c, alpha);
 }`];
+  src.blit = [H + `
+layout(location=0) in vec3 aPos; void main(){ gl_Position = vec4(aPos.xy, 0.0, 1.0); }`, H + `
+uniform sampler2D uTex; uniform float uScale; uniform vec2 uRes; out vec4 oColor;
+void main(){ oColor = texelFetch(uTex, min(ivec2(floor(gl_FragCoord.xy / uScale)), ivec2(uRes) - 1), 0); }`];
   return { src };
 })();
 
@@ -2985,8 +2989,9 @@ class Renderer {
     this.canvas.style.width = (lw * k) / dpr + 'px'; this.canvas.style.height = (lh * k) / dpr + 'px';
     this.k = k; this.dpr = dpr; this.cssPx = k / dpr; this.cssW = cssW; this.cssH = cssH;
     if (!this.target || this.low[0] !== lw || this.low[1] !== lh) {
-      if (this.target) this.target.dispose();
+      if (this.target) { this.target.dispose(); this.postT.dispose(); }
       this.target = GFX.target(lw, lh);
+      this.postT = GFX.target(lw, lh, false);
       this.low = [lw, lh];
     }
   }
@@ -3009,21 +3014,31 @@ class Renderer {
     if (mode === 'add') gl.blendFunc(gl.ONE, gl.ONE); else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
   end(cam, target = null) {
-    const gl = this.gl, P = GFX.use(this.P.post);
-    const w = target ? target.w : this.canvas.width, h = target ? target.h : this.canvas.height;
+    const gl = this.gl, P = GFX.use(this.P.post), sprite = !!target;
+    // screen path: composite at low resolution, then upscale with a 1-fetch blit
+    if (!target) target = this.postT;
+    const w = target.w, h = target.h;
     const src = this._src || this.target;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, target ? target.fb : null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, target.fb);
     gl.viewport(0, 0, w, h);
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src.color);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, src.info);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, src.depth);
     GFX.setAll(P, {
-      uColor: 0, uInfo: 1, uDepth: 2, uRes: [src.w, src.h], uScale: target ? 1 : this.k,
+      uColor: 0, uInfo: 1, uDepth: 2, uRes: [src.w, src.h], uScale: 1,
       uCam: [cam.near, cam.far, cam.ortho ? 1 : 0, cam.edge || 0.4], uOutlineOn: this.outline ? 1 : 0,
-      uFade: target ? 0 : this.fade, uFadeCol: this.fadeCol, uVignette: target ? 0 : this.vignette, uPosterize: target ? 0 : this.posterize, uTransparent: target ? 1 : 0,
+      uFade: sprite ? 0 : this.fade, uFadeCol: this.fadeCol, uVignette: sprite ? 0 : this.vignette, uPosterize: sprite ? 0 : this.posterize, uTransparent: sprite ? 1 : 0,
     });
     this.tri.draw();
+    if (!sprite) {
+      const B = GFX.use(this.P.blit);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.postT.color);
+      GFX.setAll(B, { uTex: 0, uScale: this.k, uRes: [this.postT.w, this.postT.h] });
+      this.tri.draw();
+    }
     gl.enable(gl.DEPTH_TEST);
     gl.activeTexture(gl.TEXTURE0);
   }
@@ -3107,6 +3122,7 @@ class Camera {
     M4.lookAt(this.view, this.pos, t, [0, 1, 0]);
     if (this.ortho) { const hh = c.dist, hw = hh * aspect; M4.ortho(this.proj, -hw, hw, -hh, hh, this.near, this.far); }
     else M4.perspective(this.proj, this.fov, aspect, this.near, this.far);
+    if (this.shift) { if (this.ortho) this.proj[12] += this.shift; else this.proj[8] -= this.shift; }
     M4.mul(this.vp, this.proj, this.view);
     M4.invert(this.inv, this.vp);
     this.aspect = aspect;
@@ -3624,7 +3640,7 @@ class Ecosystem {
     const P = Genetics.express(g, sp.fam);
     const W = this.world, gy = W.heightAt(x, z);
     const a = {
-      id, sp, g, P, sex: r.chance(0.5) ? 'F' : 'M', name: Names.word(r, 1, 2), gen: o.gen || 1, parents: o.parents || null, mom: o.mom || null,
+      id, uid: (Ecosystem.uid = (Ecosystem.uid || 0) + 1), sp, g, P, sex: r.chance(0.5) ? 'F' : 'M', name: Names.word(r, 1, 2), gen: o.gen || 1, parents: o.parents || null, mom: o.mom || null,
       x, z, y: gy, heading: r.range(0, TAU), pitch: 0, roll: 0, v: 0,
       age: o.age != null ? o.age : r.range(0.1, 0.6) * P.life, energy: sp.diet === 'carnivore' ? r.range(0.35, 0.7) : r.range(0.55, 0.95), thirst: r.range(0, 0.45), rest: r.range(0, 0.3),
       mateCD: o.age === 0 ? 9999 : r.range(15, 70), huntCD: 0,
@@ -4006,7 +4022,7 @@ class GalaxyView {
     this.nebulae = Universe.nebulae(csx - R, csz - R, csx + R, csz + R);
   }
   update(dt) {
-    if (this.app.autopilot) this.cam.goal.yaw += dt * 0.03;
+    if (this.app.autopilot || this.app.splashOn) this.cam.goal.yaw += dt * (this.app.splashOn ? 0.06 : 0.03);
     this.cam.update(dt);
     this.ensure();
   }
@@ -5434,7 +5450,7 @@ function creaturePanel(a, v, app) {
     { id: 'species', label: 'Species', render: () => speciesBody(sp, app) },
   ];
   return {
-    key: 'agent:' + a.id, title: `${a.name} #${a.id}`, sub: `${sp.common} · ${sp.name}`, icon: Portraits.el('ind:' + a.id, P, 48), code: sp.code,
+    key: 'agent:' + a.id, title: `${a.name} #${a.id}`, sub: `${sp.common} · ${sp.name}`, icon: Portraits.el('ind:' + a.uid, P, 48), code: sp.code,
     badges: [chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), a.grow < 1 ? chip('juvenile') : null],
     tabs,
     actions: [{ label: v.follow === a ? 'Stop following' : 'Follow', icon: 'eye', primary: v.follow !== a, fn: () => { v.follow = v.follow === a ? null : a; UI.panelFor(v, true); } }],
@@ -5459,11 +5475,11 @@ function offspringView(a, sp, app) {
     const mates = app.views.surface.eco ? app.views.surface.eco.agents.filter((b) => b.sp === sp && b !== a && b.state !== 'dead') : [];
     const mate = mates.length ? mates[Math.floor(r.next() * mates.length)] : null;
     const parentG = mate ? mate.g : Genetics.mutate(a.g, r, 0.6, 0.1);
-    wrap.append(h('div', { class: 'parent' }, Portraits.el('ind:' + a.id, a.P, 72), h('div', null, h('b', null, 'Parent'), h('small', null, `${a.name} #${a.id}`), mate ? h('small', null, `× ${mate.name} #${mate.id}`) : h('small', null, '× wild-type mate'))));
+    wrap.append(h('div', { class: 'parent' }, Portraits.el('ind:' + a.uid, a.P, 72), h('div', null, h('b', null, 'Parent'), h('small', null, `${a.name} #${a.id}`), mate ? h('small', null, `× ${mate.name} #${mate.id}`) : h('small', null, '× wild-type mate'))));
     const grid = h('div', { class: 'kids' });
     for (let k = 0; k < 4; k++) {
       const cg = Genetics.breed(a.g, parentG, r, 0.35, 0.16);
-      grid.append(h('div', { class: 'kid' }, Portraits.el(`kid:${a.id}:${roll}:${k}`, Genetics.express(cg, sp.fam), 72), h('small', null, 'Child')));
+      grid.append(h('div', { class: 'kid' }, Portraits.el(`kid:${a.uid}:${roll}:${k}`, Genetics.express(cg, sp.fam), 72), h('small', null, 'Child')));
     }
     wrap.append(grid, h('p', { class: 'muted small' }, 'Crossover of both parents’ genomes with random mutation. Variation in hue, spines, horns and proportions is heritable.'), btn('Roll new offspring', () => { roll++; draw(); }, { icon: 'dice' }));
   };
@@ -5829,6 +5845,9 @@ const App = {
       if (tr.phase === 'out') { this.R.fade = Math.min(1, tr.t / 0.2); if (tr.t >= 0.2) { tr.fn(); tr.phase = 'in'; tr.t = 0; this.R.fade = 1; } }
       else { this.R.fade = Math.max(0, 1 - tr.t / 0.35); if (tr.t >= 0.35) { this.trans = null; this.R.fade = 0; } }
     }
+    const want = UI.panel.visible && !this.mobile && innerWidth > 760 ? -(this.R.cssW > 0 ? 384 / this.R.cssW : 0) : 0;
+    this.shift = (this.shift || 0) + (want - (this.shift || 0)) * damp(6, dt);
+    this.view.cam.shift = this.shift;
     try {
       this.view.update(dt);
       this.view.render(this.R);
@@ -6022,7 +6041,7 @@ const Splash = {
     const begin = () => {
       const v = Universe.normalize(seed.value);
       if (v !== Universe.name) app.setUniverse(v);
-      el.classList.add('out');
+      el.classList.add('out'); app.splashOn = false;
       setTimeout(() => el.classList.add('hidden'), 450);
       if (Store.d.firstRun) { Store.d.firstRun = false; Store.save(); setTimeout(() => UI.toast(app.mobile ? 'Tip: tap a glowing star, then double-tap to enter it' : 'Tip: click a star to inspect it · double-click to enter', 'ok'), 800); }
     };
@@ -6036,6 +6055,7 @@ const Splash = {
       h('div', { class: 'muted small' }, app.mobile ? 'Drag · pinch · tap · double-tap' : 'Drag · scroll · click · double-click · press ? for help')));
     seed.addEventListener('keydown', (e) => { if (e.key === 'Enter') begin(); e.stopPropagation(); });
     el.classList.remove('hidden', 'out');
+    app.splashOn = true;
   },
 };
 
