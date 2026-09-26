@@ -192,7 +192,8 @@ code, kbd { font-family: var(--mono); }
 /* ---------- hud / quick / log / toasts ---------- */
 #hud { position: fixed; left: 50%; bottom: calc(14px + var(--sb)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 12; pointer-events: none; max-width: calc(100vw - 20px); }
 #hud > * { pointer-events: auto; }
-#hint { font: 600 11px var(--mono); color: #aab6ea; background: #070a22b3; padding: 5px 10px; letter-spacing: 0.03em; text-align: center; }
+#hint { transition: opacity 0.6s; font: 600 11px var(--mono); color: #aab6ea; background: #070a22b3; padding: 5px 10px; letter-spacing: 0.03em; text-align: center; }
+#hint.fade { opacity: 0; }
 #quick { display: flex; gap: 8px; }
 #quick:empty { display: none; }
 body.panel-open #quick { display: none; }
@@ -210,6 +211,11 @@ body.panel-open #quick { display: none; }
 .toast.ok { box-shadow: inset 0 0 0 2px #1f8e70; } .toast.err { box-shadow: inset 0 0 0 2px #b03a4f; color: #ffc0c8; } .toast.life { box-shadow: inset 0 0 0 2px #7be07b; color: #d5ffd0; }
 .toast.out { opacity: 0; transition: opacity 0.4s; }
 @keyframes tin { from { transform: translateY(-8px); opacity: 0; } }
+#status { position: fixed; left: 104px; bottom: calc(12px + var(--sb)); z-index: 11; display: flex; align-items: center; gap: 8px; pointer-events: none; font: 600 11px var(--mono); color: #aab6ea; text-shadow: 1px 1px 0 #03040c; }
+#compass { width: 34px; height: 34px; border-radius: 50%; background: #070a22cc; box-shadow: inset 0 0 0 2px var(--line); }
+#compass > div { position: relative; width: 100%; height: 100%; }
+#compass b { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); font: 800 10px var(--mono); color: var(--gold); }
+#compass i { position: absolute; left: 50%; top: 13px; width: 2px; height: 9px; margin-left: -1px; background: var(--gold); box-shadow: 0 9px 0 #5a66a8; }
 #fps { position: fixed; right: 8px; bottom: calc(6px + var(--sb)); font: 600 10px var(--mono); color: #7f8bc4; z-index: 30; pointer-events: none; }
 
 /* ---------- modal ---------- */
@@ -273,7 +279,9 @@ body.noui #top, body.noui #panel, body.noui #hud, body.noui #logbox, body.noui #
   .p-head { padding-top: 4px; }
   #panel.open[data-state=half] .p-body { padding-bottom: 44vh; }
   #hint { font-size: 10px; }
-  body.panel-open #hud { display: none; }
+  body.panel-open #hud, body.panel-open #status { display: none; }
+  #status { bottom: calc(12px + var(--sb)); left: 10px; }
+  #status-t { display: none; }
   #logbox { bottom: auto; top: calc(96px + var(--st)); flex-direction: column; }
   #log { max-height: 30vh; }
   .gene { grid-template-columns: 100px 1fr; }
@@ -300,6 +308,7 @@ body.noui #top, body.noui #panel, body.noui #hud, body.noui #logbox, body.noui #
 <div id="modal" class="hidden"></div>
 <div id="fatal" class="hidden"></div>
 <div id="splash" class="hidden"></div>
+<div id="status"><div id="compass" title="North"><div><b>N</b><i></i></div></div><span id="status-t"></span></div>
 <div id="fps" style="display:none"></div>
 
 <!-- ===== Core · math, hashing, PRNG, simplex noise, color, names ===== -->
@@ -3960,7 +3969,7 @@ class GalaxyView {
   select(star) {
     this.selected = star;
     if (star) this.app.ui.panelFor(this);
-    else this.app.ui.panel.hide();
+    else { this.app.ui.panel.hide(); this.app.ui.quick([]); }
   }
   ensure() {
     const S = Universe.SECTOR, t = this.cam.cur.target;
@@ -4059,7 +4068,7 @@ class GalaxyView {
   hoverAt(x, y) { const s = this.pick(x, y, 18); this.hover = s; return !!s; }
   crumbs() { return [{ label: Universe.name, icon: 'galaxy' }]; }
   hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · tap a star' : 'Drag to pan · right-drag to orbit · scroll to zoom · click a star · double-click to enter'; }
-  sectorText() { const t = this.cam.cur.target, S = Universe.SECTOR; return `Sector ${Math.floor(t[0] / S)}, ${Math.floor(t[2] / S)}`; }
+  status() { const t = this.cam.cur.target, S = Universe.SECTOR; return `Sector ${Math.floor(t[0] / S)}, ${Math.floor(t[2] / S)} · ${fmt.n(this.stars.length)} stars in range`; }
 }
 
 /* =============================================================================
@@ -4242,6 +4251,7 @@ class SystemView {
   dbl(x, y) { const b = this.pick(x, y); if (b) this.app.openPlanet(b.p); }
   hoverAt(x, y) { return !!this.pick(x, y); }
   crumbs() { return [{ label: this.sys.star.pocket ? 'Pocket space' : Universe.name, icon: 'galaxy', go: () => this.app.openGalaxy(this.sys.star) }, { label: this.sys.star.name, icon: 'star' }]; }
+  status() { const s = this.sys.star; return `${s.specClass} ${s.typeLabel} · ${this.sys.planets.length} planets · live orbits`; }
   hint() { return this.app.mobile ? 'Tap a planet to inspect · double-tap to observe' : 'Click a planet to inspect · double-click to observe · right-drag to orbit'; }
 }
 
@@ -4403,6 +4413,7 @@ class PlanetView {
     c.push({ label: p.title, icon: 'planet' });
     return c;
   }
+  status() { const p = this.planet; return `${p.typeName} · day ${p.tidalLock ? 'locked' : fmt.dur(p.dayLength)} · year ${fmt.dur(p.period)}`; }
   hint() { return this.app.mobile ? 'Drag to spin · tap to pick a site · double-tap to descend' : 'Drag to spin · click to pick a landing site · double-click to descend'; }
 }
 
@@ -4508,9 +4519,9 @@ class SurfaceView {
     const warm = (1 - smoothstep(0.05, 0.45, e)) * air;
     const sunCol = Color.mix(Color.mix(p.star.color, [1, 1, 1], 0.4), [1.0, 0.6, 0.38], warm * 0.55);
     const dim = p.star.cls === 'BH' || p.star.cls === 'NS' ? 0.6 : 1;
-    const lightCol = Color.mix([0.2, 0.24, 0.42], Color.mul(sunCol, 0.92 * dim), day);
+    const lightCol = Color.mix([0.26, 0.3, 0.5], Color.mul(sunCol, 0.92 * dim), day);
     const skyDay = Color.mix(Color.mix(p.atmo.color, [1, 1, 1], 0.35), [0.05, 0.05, 0.08], 1 - air);
-    const amb = Color.mix([0.24, 0.26, 0.44], Color.mix([0.44, 0.46, 0.54], p.atmo.color, 0.22 * air), day);
+    const amb = Color.mix([0.28, 0.3, 0.5], Color.mix([0.44, 0.46, 0.54], p.atmo.color, 0.22 * air), day);
     const fogCol = Color.mix([0.05, 0.06, 0.13], skyDay, day);
     const night = 1 - day;
     return { lightDir: dir, lightCol, amb, fogCol, night, hour: sol.hour, sunElev: e, time: this.app.anim };
@@ -4687,6 +4698,11 @@ class SurfaceView {
     const b = this.biomeAt(this.cam.cur.target[0], this.cam.cur.target[2]);
     c.push({ label: BIOMES[b].name, icon: 'leaf' });
     return c;
+  }
+  status() {
+    const e = this.env; if (!e) return '';
+    const H = Math.floor(e.hour), M = Math.floor((e.hour - H) * 60), w = this.weather;
+    return `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')} ${e.night > 0.5 ? 'night' : e.sunElev < 0.25 ? 'twilight' : 'day'} · ${w.kind && w.intensity > 0.05 ? cap(w.kind) : 'clear'} · ${this.eco.agents.filter((a) => a.state !== 'dead').length} creatures`;
   }
   hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · twist to rotate · tap a creature' : 'Drag to pan · right-drag or Q/E to rotate · scroll to zoom · click a creature'; }
 }
@@ -5080,6 +5096,10 @@ const UI = {
   frame(dt) {
     const app = this.app;
     this.clockEl.textContent = Clock.format(app.t);
+    this._stT = (this._stT || 0) + dt;
+    if (this._stT > 0.25) { this._stT = 0; const s = app.view.status ? app.view.status() : ''; if (s !== this._st) { this.$('status-t').textContent = s; this._st = s; } }
+    const comp = this.$('compass');
+    if (app.view.name === 'surface') { comp.style.display = ''; comp.firstChild.style.transform = `rotate(${app.view.cam.cur.yaw}rad)`; } else comp.style.display = 'none';
     this.labels.begin(); app.view.labels(this.labels); this.labels.end();
     if (app.view.sectorText) { this._sec = this._sec || 0; }
   },
@@ -5092,7 +5112,7 @@ const UI = {
     });
     el.scrollLeft = el.scrollWidth;
   },
-  hint(t) { this.hintEl.textContent = t || ''; },
+  hint(t) { this.hintEl.textContent = t || ''; this.hintEl.classList.remove('fade'); clearTimeout(this._ht); this._ht = setTimeout(() => this.hintEl.classList.add('fade'), 9000); },
   toast(msg, kind = '') {
     const t = h('div', { class: 'toast ' + kind }, msg);
     this.toastEl.append(t);
@@ -5178,7 +5198,7 @@ class PanelCtl {
     const actions = h('div', { class: 'p-actions' });
     if (c.bookmark) { const on = Store.isBookmarked(c.bookmark.code); actions.append(h('button', { class: 'ib ' + (on ? 'gold' : ''), title: on ? 'Remove bookmark' : 'Bookmark', onclick: () => { const added = Store.toggleBookmark(c.bookmark); UI.toast(added ? `Saved “${c.bookmark.name}”` : 'Bookmark removed', added ? 'ok' : ''); this.render(); } }, icon('star'))); }
     if (c.code) actions.append(h('button', { class: 'ib', title: 'Copy seed code', onclick: () => copyText(c.code) }, icon('copy')));
-    actions.append(h('button', { class: 'ib', title: 'Close', onclick: () => { this.hide(); if (c.onClose) c.onClose(); } }, icon('close')));
+    actions.append(h('button', { class: 'ib', title: 'Close', onclick: () => { this.hide(); if (c.onClose) c.onClose(); UI.quick(c.persistQuick ? c.quick || [] : []); } }, icon('close')));
     this.head.append(h('div', { class: 'p-icon' }, c.icon || null), h('div', { class: 'p-title' }, h('h2', null, c.title), c.sub ? h('div', { class: 'p-sub' }, c.sub) : null, c.badges ? h('div', { class: 'badges' }, c.badges) : null), actions);
     this.tabs.innerHTML = '';
     this.tabs.style.display = c.tabs.length > 1 ? '' : 'none';
@@ -5313,7 +5333,7 @@ function planetPanel(p, app, o) {
   return {
     key: 'planet:' + code + (view && view.site ? ':site' : ''), title: p.title, sub: p.nick ? `${p.name} · ${p.typeName}` : p.typeName, icon: Thumbs.planet(p, 40), badges, code,
     bookmark: { code, kind: 'planet', name: p.title, type: p.typeName, sub: p.life.has ? `${p.life.count} species slots` : p.star.name },
-    tabs, actions, quick: actions,
+    tabs, actions, quick: actions, persistQuick: !o.inSystem,
     onClose: () => { if (o.inSystem) { const sv = app.views.system; sv.selected = null; sv.follow = null; } },
   };
 }
@@ -5433,12 +5453,12 @@ function offspringView(a, sp, app) {
   return wrap;
 }
 function speciesBody(sp, app) {
-  const t = app.t, pop = Ecology.population(sp, t), hist = Ecology.history(sp, t, 3600 * 12, 48);
+  const t = app.t, pop = Ecology.population(sp, t), span = clamp(t - sp.eraStart, 600, 3600 * 12), hist = Ecology.history(sp, t, span, 48);
   const E = sp;
   return h('div', null,
     h('div', { class: 'sphead' }, Portraits.el(sp.code, sp.pheno, 96, 'big'), h('div', null, h('h3', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.cls), chip(sp.role, 'c-' + sp.diet), chip(sp.habitat)))),
     h('div', { class: 'grid' }, stat('Population', `~${fmt.n(pop)}`), stat('Habitat', sp.habitat === 'water' ? 'Aquatic' : sp.habitat === 'air' ? 'Aerial' : BIOMES[sp.home].name), stat('Diet', cap(sp.diet)), stat('Size', `${sp.pheno.lengthM} m · ${fmt.sig(sp.pheno.massKg)} kg`), stat('Lifespan', fmt.dur(sp.pheno.life)), stat('Activity', sp.pheno.noct ? 'Nocturnal' : 'Diurnal')),
-    section('Population · last 12 h', sparkline(hist, sp.diet === 'carnivore' ? '#ff7e6b' : '#5cf2c6')),
+    section(`Population · last ${fmt.dur(span)}`, sparkline(hist, sp.diet === 'carnivore' ? '#ff7e6b' : '#5cf2c6')),
     section('Adaptations', h('ul', { class: 'adapt' }, sp.adaptations.map(([a, why]) => h('li', null, h('b', null, a), h('small', null, why))))),
     section('Food web', h('div', null, sp.prey.length ? h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.prey.map((x) => x.common).join(', ')) : h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.fam === 'floater' ? 'airborne plankton & light' : sp.habitat === 'water' ? 'algae & plankton' : 'vegetation'), sp.predators.length ? h('p', { class: 'small' }, h('b', null, 'Hunted by: '), sp.predators.map((x) => x.common).join(', ')) : h('p', { class: 'small muted' }, 'No natural predators.'))),
     section('Evolution', h('p', { class: 'small' }, `Lineage era ${E.gen + 1} of ${Ecology.LINEAGE - 1}. This form arose ${fmt.dur(t - E.eraStart)} ago and will persist for roughly ${fmt.dur(E.eraEnd - t)} more.`), E.ancestor ? h('p', { class: 'small' }, h('b', null, 'Descended from: '), `${E.ancestor.common} (${E.ancestor.name})`) : h('p', { class: 'small muted' }, 'Founder of a new lineage.')),
@@ -5481,7 +5501,8 @@ const Modals = {
           for (const s of Universe.sector(sx, sz).stars) {
             if (f.star !== 'any' && s.cls !== f.star) continue;
             const sys = SystemGen.generate(s);
-            for (const pl of sys.planets) for (const p of [pl, ...pl.moons]) {
+            scan: for (const pl of sys.planets) for (const p of [pl, ...pl.moons]) {
+              if (job.found >= 40) break scan;
               job.checked++;
               if (f.type !== 'any' && p.type !== f.type) continue;
               if (f.life && !p.life.has) continue;
@@ -5490,9 +5511,8 @@ const Modals = {
               if (+f.moons && (p.isMoon || p.moons.length < +f.moons)) continue;
               job.found++;
               const d = Math.hypot(s.pos[0] - t0[0], s.pos[2] - t0[2]);
-              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(d)} ly-units`)), p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null));
-              if (job.found >= 40) break;
-            }
+              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(d)} ly`)), p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null));
+                          }
           }
         }
         status.textContent = `Scanned ${job.i}/${cells.length} sectors · ${fmt.n(job.checked)} bodies · ${job.found} matches${job.i >= cells.length || job.found >= 40 ? ' · done' : '…'}`;
@@ -5599,7 +5619,7 @@ const Modals = {
         h('li', null, h('b', null, 'Orbit & climate'), ` · a = ${fmt.au(p.a)}, L = ${fmt.sig(L)} L☉ → T_eq ≈ ${Math.round(Teq)} K; greenhouse (${p.isGiant ? '—' : fmt.sig(p.pressure) + ' atm'}) → mean ${fmt.temp(p.tempC)}`),
         h('li', null, h('b', null, 'Classification'), ` · ${p.kind} body → ${PTYPES[p.type].name}; liquid: ${p.liquid || 'none'} (${fmt.pct(p.coverage)})`),
         h('li', null, h('b', null, 'Terrain'), p.isGiant ? ` · banded simplex turbulence, ${Math.round(p.gas.bands)} bands, turbulence ${p.gas.turb.toFixed(2)}` : ` · 3D simplex fBm: freq ${T.freq.toFixed(2)}, ${T.oct} octaves, gain ${T.gain.toFixed(2)}, domain warp ${T.warp.toFixed(2)}, ridged ${T.ridge.toFixed(2)}${T.craters ? `, craters ${T.craters.toFixed(2)}` : ''}; sea level = ${fmt.pct(p.coverage)} quantile`),
-        h('li', null, h('b', null, 'Surface'), ` · local 2D simplex hills + ridges, terraces every ${T.step.toFixed(2)} m (strength ${fmt.pct(T.terr)}), domain-warped river channels & lake basins`),
+        h('li', null, h('b', null, 'Surface'), ` · planet-anchored 3D simplex hills + ridges, terraces every ${T.step.toFixed(2)} m (strength ${fmt.pct(T.terr)}), domain-warped river channels & lake basins`),
         h('li', null, h('b', null, 'Biomes'), ' · Whittaker-style lookup of temperature × moisture × elevation, adjusted per world type'),
         h('li', null, h('b', null, 'Life'), p.life.has ? ` · ${p.life.count} niche slots; lineages of ${Ecology.LINEAGE} eras seeded by (planet, slot, era); genomes mutate each era` : ' · none'))),
       section('Noise maps (equirectangular)', h('div', { class: 'maps' }, [['Elevation', 'elev'], ['Temperature', 'temp'], ['Moisture', 'moist'], ['Biomes', 'biome']].map(([l, k]) => h('figure', null, maps[k], h('figcaption', null, l))))),
