@@ -265,6 +265,48 @@ kbd { background: #1b2362; box-shadow: inset 0 -2px 0 #0d1238, inset 0 0 0 1px #
 .seedrow input { max-width: 220px; text-transform: uppercase; }
 .lbl-s { font: 700 10px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 
+/* ---------- civilizations ---------- */
+.lbl-city { color: #ffe3b0; font-size: 11px; }
+.lbl-city::before { content: '▲ '; font-size: 8px; vertical-align: 1px; }
+.lbl-city.cap::before { content: '★ '; }
+.lbl-city.ruin { color: #a39c93; font-style: italic; }
+.lbl-civ { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.95; }
+.lbl-civ::before { content: '◆ '; }
+.emblem { image-rendering: pixelated; flex: none; box-shadow: 0 0 0 2px #04061a, 0 0 0 3px var(--line2); }
+.civrow { display: flex; gap: 10px; align-items: center; padding: 6px 8px; margin: 4px 0; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; cursor: pointer; }
+.civrow:hover { background: #141b52; box-shadow: inset 0 0 0 1px var(--hi); }
+.civrow .emblem { width: 40px; height: 40px; }
+.civrow > div { flex: 1; min-width: 0; }
+.civrow b { display: block; font: 700 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.civrow small { display: block; color: var(--muted); font-size: 11px; }
+.civrow.fallen { opacity: 0.6; }
+.civhead { display: flex; gap: 14px; align-items: center; margin-bottom: 10px; }
+.civhead .emblem { width: 84px; height: 84px; }
+.civhead .portrait { width: 96px; height: 96px; background: radial-gradient(#243282, #0b1032 70%); box-shadow: inset 0 0 0 2px var(--line2); }
+.civhead h3 { margin: 0 0 4px; font: 800 16px var(--mono); }
+.stages { display: flex; gap: 4px; margin: 6px 0 2px; }
+.stages div { flex: 1; padding: 6px 4px; text-align: center; font: 700 9px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; color: #6f7bb8; }
+.stages div.done { color: #c9d1f9; background: #16205c; }
+.stages div.now { color: #fff; box-shadow: inset 0 0 0 2px var(--gold); background: #2a2a5c; }
+.stages small { display: block; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; margin-top: 2px; }
+.grid.wrapv .stat .v { white-space: normal; overflow: visible; text-overflow: clip; font-size: 12px; line-height: 1.3; }
+.swatches { display: flex; margin-top: 8px; gap: 3px; flex-wrap: wrap; }
+.swatches i { width: 22px; height: 22px; box-shadow: inset 0 0 0 1px #0006; }
+.chron { display: flex; flex-direction: column; gap: 2px; }
+.chron div { display: flex; gap: 8px; font-size: 12px; padding: 3px 4px; border-bottom: 1px solid #161c52; }
+.chron time { font: 600 10px var(--mono); color: #6f7bb8; flex: none; width: 74px; padding-top: 2px; }
+.chron .k-war, .chron .k-battle, .chron .k-conquest, .chron .k-extermination, .log-e.civwar span:last-child { color: #ffab9a; }
+.chron .k-alliance, .chron .k-peace, .chron .k-trade, .log-e.civ span:last-child { color: #a8dcff; }
+.chron .k-stage, .chron .k-terraform, .chron .k-colony, .chron .k-expansion, .log-e.civup span:last-child { color: #ffd98a; }
+.chron .k-discovery { color: #b9f5c8; }
+.chip.c-war { background: #4a1616; color: #ffab9a; box-shadow: inset 0 0 0 1px #9a3434; }
+.chip.c-allied { background: #10324a; color: #a8dcff; box-shadow: inset 0 0 0 1px #2c6a9a; }
+.chip.c-trade { background: #3d3514; color: #f5e39a; box-shadow: inset 0 0 0 1px #7a6a2a; }
+.chip.c-civ { background: #2f1d4a; color: #e2c6ff; box-shadow: inset 0 0 0 1px #6a3f9a; }
+.chip.c-fallen { background: #2a2a2e; color: #b9b1d6; box-shadow: inset 0 0 0 1px #55526a; }
+.toast.civ { box-shadow: inset 0 0 0 2px #9a6ae0; color: #eadcff; }
+.toast.civwar { box-shadow: inset 0 0 0 2px #d04a4a; color: #ffd6d6; }
+
 body.noui #top, body.noui #panel, body.noui #hud, body.noui #logbox, body.noui #labels, body.noui #markers, body.noui #toasts { display: none !important; }
 
 /* ---------- mobile ---------- */
@@ -817,8 +859,9 @@ class Planet {
 
   prepare() {
     if (this._ready) return this;
-    this.noise = new Noise.Simplex(this.seed);
-    this.noise2 = new Noise.Simplex(RNG.hash(this.seed, 'moist'));
+    const ts = this.terrSeed || this.seed;
+    this.noise = new Noise.Simplex(ts);
+    this.noise2 = new Noise.Simplex(RNG.hash(ts, 'moist'));
     if (!this.isGiant) this.calibrate();
     else { this.seaLevel = 0; this.landMax = 1; this.oceanMin = 1; }
     this.computeStats();
@@ -851,7 +894,7 @@ class Planet {
     for (let si = 0; si < 3; si++) {
       const sc = scales[si], px = x * sc, py = y * sc, pz = z * sc;
       const ix = Math.floor(px), iy = Math.floor(py), iz = Math.floor(pz);
-      const h = RNG.h3(RNG.h2(this.seed + si * 1013, ix), iy, iz);
+      const h = RNG.h3(RNG.h2((this.terrSeed || this.seed) + si * 1013, ix), iy, iz);
       if ((h & 255) > 150) continue;
       const cr = 0.14 + 0.28 * ((h >>> 8) & 255) / 255;
       const m = 0.5 - cr;
@@ -1253,7 +1296,25 @@ const PlanetGen = (() => {
     return { gases, color, label, density: p.kind !== 'rocky' ? 1 : clamp(Math.log10(Math.max(P, 0.001)) / 2 + 0.7, 0, 1.3) };
   }
 
-  return { create };
+  // a terraformed variant of a world: same continents, new air, seas and biosphere
+  function terraform(src, civ) {
+    const p = Object.create(Planet.prototype);
+    Object.assign(p, src);
+    const r = new RNG.Rand(RNG.hash(src.seed, 'terraform'));
+    p.original = src; p.terraformed = civ || true; p._ready = false; p.terrSeed = src.terrSeed || src.seed; p.seed = RNG.hash(src.seed, 'terraformed');
+    p.type = r.pick(['terran', 'terran', 'ocean', 'jungle']);
+    p.pressure = r.range(0.8, 1.5); p.tempC = r.range(10, 22); p.tempK = p.tempC + 273; p.latRange = 36;
+    p.liquid = 'water'; p.coverage = r.range(0.35, 0.6); p.moistBias = p.type === 'jungle' ? 0.2 : 0.05;
+    p.life = { has: true, bio: r.range(0.45, 0.8), count: r.int(4, 7) }; p.habitability = 0.9;
+    p.floraHue = r.chance(0.6) ? r.range(0.24, 0.36) : r.next(); p.soilHue = r.range(0.06, 0.12);
+    buildPalette(p, r); p.flora = floraProfile(p, r); p.atmo = atmosphereFor(p, r);
+    p.clouds = { cover: r.range(0.3, 0.55), color: [1, 1, 1] };
+    p.terrain = Object.assign({}, src.terrain, { craters: src.terrain.craters * 0.25 });
+    p.features = Object.assign({}, src.features, { nests: true, fossils: false, geysers: false });
+    p.nick = src.nick; p.name = src.name;
+    return p;
+  }
+  return { create, terraform };
 })();
 
 /* ---------------------------------------------------------------------------
@@ -1295,7 +1356,7 @@ const SystemGen = (() => {
     const each = (p) => { if (p.life.has) sys.lifeCount++; };
     for (const p of sys.planets) { each(p); p.moons.forEach(each); }
     sys.bodyCount = sys.planets.reduce((s, p) => s + 1 + p.moons.length, 0);
-    if (cache.size > 80) cache.delete(cache.keys().next().value);
+    if (cache.size > 320) cache.delete(cache.keys().next().value);
     cache.set(key, sys);
     return sys;
   }
@@ -1724,7 +1785,7 @@ class Surface {
     const north = V3.cross(this.dir0, east);
     this.bx = east; this.by = this.dir0; this.bz = V3.scale(north, -1);
     this.Rs = 4200 * Math.sqrt(Math.max(0.15, planet.radius));
-    this.seed = RNG.hash(planet.seed, 'surface');
+    this.seed = RNG.hash(planet.terrSeed || planet.seed, 'surface');
     this.n = new Noise.Simplex(this.seed);
     this.n2 = new Noise.Simplex(this.seed ^ 0x5f3759df);
     const T = planet.terrain;
@@ -1799,6 +1860,8 @@ class Surface {
         }
       }
     }
+    o.city = null;
+    if (this.cities && this.cities.length) { o.h = h; o.w = w; CityGen.flatten(this, x, z, o); h = o.h; w = o.w; }
     const eL = h / 46;
     const t = f[1] - Math.max(0, eL) * this.planet.lapse;
     const under = h < w - 0.02;
@@ -1843,6 +1906,7 @@ class Surface {
     const mb = new MeshBuilder(4096);
     this.placeFlora(ch, mb);
     this.placePOIs(ch, mb);
+    const cityTop = this.cities && this.cities.length ? CityGen.bake(this, ch, mb) : -1e9;
     // --- terrain mesh ---
     const nv = N * N;
     const pos = new Float32Array(nv * 3), nrm = new Float32Array(nv * 3), col = new Uint8Array(nv * 4), ext = new Uint8Array(nv * 4);
@@ -1861,12 +1925,14 @@ class Surface {
       o.h = h; o.w = W[k]; o.b = Bm[k]; o.t = T[k];
       if (GC) { o.c0 = GC[k * 3]; o.c1 = GC[k * 3 + 1]; o.c2 = GC[k * 3 + 2]; }
       let c = this.groundColor(o, ny, x, z, h - mn > 0.8 && ny > 0.8);
+      if (this.cities) c = CityGen.paint(this, x, z, c);
       let em = 0;
       if (Bm[k] === B.LAVAFIELD && ny > 0.7) { const cr = Math.abs(this.n2.n2(x * 0.12, z * 0.12)); if (cr < 0.07) { c = [1, 0.5, 0.12]; em = 0.9; } }
       if (lifeGlow && BIOMES[Bm[k]].prod > 0.4 && h > W[k]) { const hh = RNG.unit(RNG.h3(this.seed, x, z)); if (hh < 0.012) { c = Color.mix(c, glowCol, 0.5); em = 0.38; } }
       col[v * 4] = clamp(c[0], 0, 1) * 255; col[v * 4 + 1] = clamp(c[1], 0, 1) * 255; col[v * 4 + 2] = clamp(c[2], 0, 1) * 255; col[v * 4 + 3] = 255;
       ext[v * 4 + 1] = em * 255;
     }
+    if (cityTop > ch.hmax) ch.hmax = cityTop;
     // canopy shade under trees
     for (const t of ch.trees) {
       const r = t.r;
@@ -1952,6 +2018,7 @@ class Surface {
       const r = new RNG.Rand(RNG.h3(this.seed, ch.cx * n + gx, ch.cz * n + gz));
       const x = ch.x0 + (gx + r.next()) * sp, z = ch.z0 + (gz + r.next()) * sp;
       if (x >= ch.x0 + this.CS || z >= ch.z0 + this.CS) continue;
+      if (this.cities && CityGen.blocked(this, x, z)) continue;
       const h = Surface.interp(ch, ch.H, x, z), w = Surface.interp(ch, ch.W, x, z);
       const k = (Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1;
       const b = ch.B[k], t = ch.T[k];
@@ -2125,6 +2192,7 @@ class Surface {
         const h = ch.H[k];
         if (h < ch.W[k] + 0.2) continue;
         if (Math.abs(ch.H[k + 2] - ch.H[k - 2]) + Math.abs(ch.H[k + 2 * ch.M] - ch.H[k - 2 * ch.M]) > 1.5) continue;
+        if (this.cities && CityGen.blocked(this, x, z)) continue;
         return [x, h, z];
       }
       return null;
@@ -2209,6 +2277,763 @@ class Surface {
     }
   }
 }
+</script>
+
+<!-- ===== Civilizations · cultures and the deterministic history engine ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   CIVILIZATIONS · procedural cultures and a deterministic history engine.
+   Sapient species found tribes on life-bearing worlds; every tribe carries a
+   hidden progression value (XP) that grows with population, discoveries,
+   activities, conflicts, trade, exploration and technology. XP moves a
+   civilization through four stages: tribal → nation → system colonization →
+   intergalactic. History is simulated per galactic region (4×4 sectors) in
+   fixed steps from the start of the region's current age, so it is a pure
+   function of the universe seed and universal time — it runs whether or not
+   anyone is watching, and every observer sees the same chronicle.
+   ============================================================================= */
+
+const Culture = (() => {
+  const ARCH = {
+    dome: { name: 'Domed', desc: 'drum halls under rounded domes' },
+    gable: { name: 'Gabled', desc: 'steep pitched roofs over timber-framed halls' },
+    stepped: { name: 'Stepped', desc: 'terraced pyramids and ziggurats' },
+    spire: { name: 'Spired', desc: 'slender towers crowned with needle spires' },
+    organic: { name: 'Organic', desc: 'grown, bulbous forms without straight lines' },
+    monolith: { name: 'Monolithic', desc: 'massive slab blocks and brutal towers' },
+    crystal: { name: 'Crystalline', desc: 'faceted, gem-like prisms' },
+    tent: { name: 'Pavilion', desc: 'conical pavilions and canopies' },
+  };
+  const LAYOUT = {
+    grid: 'orthogonal street grid', radial: 'radial avenues around a sacred center', organic: 'organic clusters along winding lanes',
+    linear: 'a long ribbon along one great road', ring: 'concentric fortified rings', terraced: 'stacked terraces climbing a central mound',
+  };
+  const CLOTH = { robe: 'long robes', tunic: 'belted tunics', wrap: 'wound wraps', harness: 'leather harnesses', poncho: 'ponchos', coat: 'long coats', sash: 'sashes and cords' };
+  const HEAD = { none: 'bare heads', hood: 'hoods', crown: 'crowns', helm: 'helmets', plume: 'plumed headdresses', antenna: 'antenna diadems', circlet: 'circlets', mask: 'ritual masks', horned: 'horned caps' };
+  // weapon lines: [key, tribal, nation, system, intergalactic]
+  const MELEE = [['spear', 'Spear', 'Pike', 'Rail lance', 'Plasma lance'], ['blade', 'Stone blade', 'Sabre', 'Mono-edge', 'Energy blade'], ['axe', 'Hand axe', 'Poleaxe', 'Arc axe', 'Graviton axe'],
+    ['mace', 'War club', 'Warhammer', 'Shock maul', 'Singularity maul'], ['staff', 'Fighting staff', 'Iron staff', 'Stun staff', 'Beam staff'], ['glaive', 'Bone glaive', 'Halberd', 'Vibro-glaive', 'Phase glaive']];
+  const RANGED = [['bow', 'Shortbow', 'Crossbow', 'Rail rifle', 'Photon rifle'], ['sling', 'Sling', 'Musket', 'Coil gun', 'Plasma caster'], ['javelin', 'Javelins', 'Arbalest', 'Rocket lance', 'Ion javelin'], ['blowpipe', 'Blowpipe', 'Repeater', 'Needle gun', 'Disruptor']];
+  const VEH = {
+    cart: 'beast-drawn carts', wagon: 'covered wagons', sled: 'runner sleds', litter: 'carried litters',
+    hovercar: 'hover cars', rover: 'wheeled rovers', walker: 'legged walkers', monorail: 'monorail pods',
+    skiff: 'grav skiffs', gravsled: 'grav sleds', drone: 'swarm drones', pod: 'tube pods',
+  };
+  const HULL = {
+    needle: 'needle-nosed lancers', saucer: 'disc-hulled saucers', wedge: 'wedge-shaped cruisers', ring: 'ring-drive vessels',
+    organic: 'grown bio-ships', crystal: 'crystal-lattice ships', block: 'blocky industrial haulers', spindle: 'spindle ships with outriggers',
+  };
+  const TECH = {
+    brass: { name: 'Brass & steam', metal: [0.85, 0.62, 0.3], glow: [1, 0.72, 0.35] },
+    chrome: { name: 'Polished chrome', metal: [0.78, 0.82, 0.88], glow: [0.55, 0.85, 1] },
+    bio: { name: 'Living biotech', metal: [0.42, 0.62, 0.4], glow: [0.5, 1, 0.55] },
+    crystal: { name: 'Crystal resonance', metal: [0.75, 0.7, 0.95], glow: [0.9, 0.55, 1] },
+    brutal: { name: 'Brutalist alloy', metal: [0.32, 0.32, 0.36], glow: [1, 0.35, 0.25] },
+    neon: { name: 'Neon lattice', metal: [0.2, 0.22, 0.3], glow: [1, 0.3, 0.85] },
+    stone: { name: 'Carved stone & glyphs', metal: [0.62, 0.58, 0.5], glow: [0.4, 0.95, 0.9] },
+  };
+  const TRIBE = ['Tribe', 'Clan', 'Band', 'Kin', 'Circle', 'Horde', 'Brood', 'Hearth'];
+  const NATION = { order: ['Empire', 'Dominion', 'Hegemony', 'Kingdom'], piety: ['Theocracy', 'Holy Realm', 'Sanctum'], free: ['Republic', 'Commonwealth', 'Confederacy', 'Union'], trade: ['Mercantile League', 'Trade Republic', 'Guild State'] };
+  const SYSGOV = ['Federation', 'Directorate', 'Concord', 'Collective', 'Compact', 'Accord', 'Syndicate', 'Protectorate'];
+  const STELLAR = ['Star Empire', 'Ascendancy', 'Stellar Union', 'Imperium', 'Harmony', 'Starborne Collective', 'Hegemony', 'Radiance'];
+  const SUFFIX = ['i', 'an', 'ese', 'ic', 'ar', 'ite', 'ian', 'ari', 'en'];
+  const ON = ['b', 'c', 'd', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'v', 'z', 'br', 'dr', 'gr', 'kr', 'tr', 'vr', 'ch', 'sh', 'th', 'st', 'sk', 'q', 'x', 'y', 'j', 'w', 'zh', "k'", 'tl', 'ts'];
+  const NU = ['a', 'e', 'i', 'o', 'u', 'aa', 'ae', 'ai', 'au', 'ei', 'io', 'ou', 'y', 'ia', 'uu', 'oo'];
+  const CO = ['n', 'r', 'l', 's', 'x', 'th', 'm', 'k', 'nd', 'rk', 'ss', 'll', 'v', 'sh', 'z', 'rn', 'ld', 'nt', 'q', 'tl'];
+
+  // a culture-specific phonology: each culture draws names from its own small syllable inventory
+  function namer(seed) {
+    const r = new RNG.Rand(RNG.hash(seed, 'phonology'));
+    const pickN = (arr, n) => { const a = arr.slice(), o = []; for (let i = 0; i < n; i++) o.push(a.splice(Math.floor(r.next() * a.length), 1)[0]); return o; };
+    const on = pickN(ON, r.int(6, 11)), nu = pickN(NU, r.int(3, 6)), co = pickN(CO, r.int(3, 7)), coda = r.range(0.2, 0.75), mid = r.range(0.05, 0.35);
+    return (rr, min = 2, max = 3) => {
+      const n = rr.int(min, max);
+      let w = '';
+      for (let i = 0; i < n; i++) w += rr.pick(on) + rr.pick(nu) + (i < n - 1 && rr.chance(mid) ? rr.pick(co) : '');
+      if (rr.chance(coda)) w += rr.pick(co);
+      w = w.replace(/(.)\1\1+/g, '$1$1').replace(/[aeiouy]{3,}/g, (m) => m.slice(0, 2));
+      if (w.length > 11) w = w.slice(0, 9);
+      return w[0].toUpperCase() + w.slice(1);
+    };
+  }
+  // 7×7 left-right symmetric emblem
+  function emblem(r) {
+    const bits = new Uint8Array(49);
+    for (let y = 0; y < 7; y++) for (let x = 0; x < 4; x++) {
+      const edge = x === 0 || y === 0 || y === 6;
+      const on = r.chance(edge ? 0.32 : x === 3 ? 0.62 : 0.52) ? 1 : 0;
+      bits[y * 7 + x] = on; bits[y * 7 + 6 - x] = on;
+    }
+    bits[3 * 7 + 3] = 1; bits[2 * 7 + 3] = r.chance(0.7) ? 1 : bits[2 * 7 + 3];
+    return bits;
+  }
+
+  function make(seed, planet) {
+    const r = new RNG.Rand(RNG.hash(seed, 'culture'));
+    const aggression = r.next(), xeno = clamp(r.next() * 0.8 + (1 - aggression) * 0.3, 0, 1);
+    const T = {
+      aggression, xeno, curiosity: r.next(), piety: r.next(), mercantile: r.next(), order: r.next(), drive: r.next(),
+      ruthless: clamp(aggression * 0.65 + r.next() * 0.45 - xeno * 0.2, 0, 1), artistry: r.next(),
+    };
+    // palette from a color-harmony scheme
+    const hue = r.next(), scheme = r.pick(['analog', 'complement', 'triad', 'split', 'mono']);
+    const off = { analog: [0.08, -0.08], complement: [0.5, 0.04], triad: [0.333, 0.667], split: [0.42, 0.58], mono: [0.02, -0.03] }[scheme];
+    const H = Color.hsv;
+    const sat = r.range(0.35, 0.85), val = r.range(0.55, 0.95);
+    const pal = {
+      primary: H(hue, sat * 0.55, clamp(val + 0.05, 0, 1)), secondary: H(fract(hue + off[0]), sat, val * 0.8), accent: H(fract(hue + off[1]), clamp(sat + 0.15, 0, 1), 1),
+      cloth: H(fract(hue + r.pick([0, off[0], off[1]])), clamp(sat + 0.1, 0, 1), val * 0.9), cloth2: H(fract(hue + off[1] + 0.02), sat * 0.8, clamp(val + 0.1, 0, 1)),
+      dark: H(hue, sat * 0.5, 0.22), light: H(hue, sat * 0.2, 0.95),
+    };
+    // architecture & city form lean on values
+    const arch = r.weighted([['dome', 1 + T.artistry * 0.5], ['gable', 1.2], ['stepped', 0.6 + T.piety * 1.6], ['spire', 0.6 + T.piety * 0.8 + T.artistry * 0.5], ['organic', 0.4 + T.artistry * 1.4 + (planet && planet.type === 'fungal' ? 2 : 0)],
+      ['monolith', 0.5 + T.order * 1.5], ['crystal', 0.3 + (planet && planet.type === 'crystal' ? 3 : 0) + T.artistry * 0.4], ['tent', 0.5 + (1 - T.order) * 0.8 + (planet && (planet.type === 'desert' || planet.type === 'arid') ? 1.5 : 0)]]);
+    const layout = r.weighted([['grid', 0.4 + T.order * 2], ['radial', 0.4 + T.piety * 1.6], ['organic', 0.4 + (1 - T.order) * 1.4], ['linear', 0.4 + T.mercantile * 1.2], ['ring', 0.3 + T.aggression * 1.6], ['terraced', 0.4 + T.piety * 0.6 + T.artistry * 0.6]]);
+    const tech = r.weighted([['brass', 1], ['chrome', 1 + T.order * 0.6], ['bio', 0.6 + T.artistry + (planet && (planet.type === 'jungle' || planet.type === 'fungal') ? 1.5 : 0)], ['crystal', 0.5 + T.piety * 0.6], ['brutal', 0.5 + T.aggression], ['neon', 0.7 + T.mercantile * 0.6], ['stone', 0.5 + T.piety * 0.8]]);
+    const soil = planet && planet.pal ? planet.pal[B.MOUNTAIN] || planet.pal.cliff : [0.6, 0.55, 0.5];
+    const material = r.weighted([['stone', 1.2], ['wood', planet && planet.life.bio > 0.5 ? 1.6 : 0.4], ['clay', 1], ['bone', 0.4 + T.aggression * 0.4], ['hide', 0.5]]);
+    const matCol = { stone: Color.mix(soil, [0.72, 0.7, 0.66], 0.5), wood: H(r.range(0.05, 0.1), 0.45, 0.42), clay: H(r.range(0.03, 0.08), 0.5, 0.62), bone: [0.9, 0.87, 0.76], hide: H(r.range(0.06, 0.1), 0.35, 0.55) }[material];
+    const tk = TECH[tech];
+    const melee = r.pick(MELEE), ranged = r.pick(RANGED);
+    const namerFn = namer(seed);
+    const nr = new RNG.Rand(RNG.hash(seed, 'names'));
+    const root = namerFn(nr, 2, 3), place = namerFn(nr, 2, 3);
+    const suffix = r.pick(SUFFIX);
+    const adj = root.replace(/[aeiouy']+$/, '') + suffix;
+    const govNation = T.piety > 0.68 ? r.pick(NATION.piety) : T.mercantile > 0.68 ? r.pick(NATION.trade) : T.order > 0.55 || T.aggression > 0.7 ? r.pick(NATION.order) : r.pick(NATION.free);
+    const tribeNoun = r.pick(TRIBE);
+    return {
+      seed, T, pal, scheme, arch, layout, tech, techName: tk.name, metal: Color.mix(tk.metal, pal.primary, 0.15), glow: tk.glow, material, matCol,
+      roofCol: Color.mix(pal.secondary, matCol, material === 'stone' ? 0.25 : 0.1), road: Color.mix(soil, [0.55, 0.52, 0.48], 0.6),
+      walls: T.aggression > 0.55 || layout === 'ring', monument: r.pick(['obelisk', 'statue', 'pyramid', 'orb', 'arch', 'totem']),
+      cloth: r.pick(Object.keys(CLOTH)), clothPat: r.pick([0, 1, 2, 5, 7]), head: r.weighted(Object.keys(HEAD).map((k) => [k, k === 'none' ? 1.2 : 1])), melee, ranged,
+      veh2: r.pick(['cart', 'wagon', 'sled', 'litter']), veh3: r.pick(['hovercar', 'rover', 'walker', 'monorail']), veh4: r.pick(['skiff', 'gravsled', 'drone', 'pod']),
+      hull: r.weighted([['needle', 1], ['saucer', 1], ['wedge', 1 + T.aggression], ['ring', 0.6 + T.curiosity * 0.6], ['organic', 0.4 + (tech === 'bio' ? 3 : 0)], ['crystal', 0.3 + (tech === 'crystal' ? 3 : 0)], ['block', 0.5 + T.order * 0.8], ['spindle', 0.8]]),
+      emblem: emblem(r), emblemBg: r.chance(0.5) ? pal.primary : pal.dark,
+      namer: namerFn, root, place, adj, govNation, tribeNoun, sysGov: r.pick(SYSGOV), stellarGov: r.pick(STELLAR),
+      height: r.range(0.8, 1.35), density: r.range(0.7, 1.2),
+    };
+  }
+  function weapon(c, stage, ranged) { const w = ranged ? c.ranged : c.melee; return w[clamp(stage, 1, 4)]; }
+  function values(c) {
+    const T = c.T, out = [];
+    const add = (v, hi, lo) => { if (v > 0.68) out.push(hi); else if (v < 0.25 && lo) out.push(lo); };
+    add(T.aggression, 'warlike', 'peaceful'); add(T.xeno, 'open to outsiders', 'insular'); add(T.curiosity, 'inquisitive'); add(T.piety, 'devout', 'secular');
+    add(T.mercantile, 'mercantile'); add(T.order, 'hierarchical', 'egalitarian'); add(T.drive, 'expansionist'); add(T.artistry, 'artistic');
+    if (T.ruthless > 0.75) out.push('ruthless');
+    return out.length ? out.slice(0, 4) : ['pragmatic'];
+  }
+  return { make, weapon, values, ARCH, LAYOUT, CLOTH, HEAD, VEH, HULL, TECH };
+})();
+
+const Civ = (() => {
+  const RS = 4;                 // region size, in sectors
+  const STEP = 600;             // simulation step, universal seconds
+  const XP_STAGE = [0, 0, 90, 420, 1500];
+  const STAGE_MULT = [0, 1, 2.3, 5, 8.5];
+  const STAGES = [null, { key: 'tribal', name: 'Tribal' }, { key: 'nation', name: 'Nation' }, { key: 'system', name: 'System colonization' }, { key: 'stellar', name: 'Intergalactic' }];
+  const CRADLE_TYPES = new Set(['terran', 'ocean', 'jungle', 'arid', 'tundra', 'fungal', 'desert', 'toxic']);
+  const HAB_TYPES = new Set(['terran', 'ocean', 'jungle', 'arid', 'tundra', 'fungal']);
+  const REACH_MAX = 120;
+  const TECHS = [null,
+    ['fire-keeping', 'stone tools', 'the bow', 'pottery', 'weaving', 'animal taming', 'star lore', 'copper smelting', 'the wheel', 'writing'],
+    ['bronze casting', 'iron working', 'mathematics', 'astronomy', 'the printing press', 'optics', 'steam power', 'electricity', 'radio', 'powered flight', 'computing', 'rocketry'],
+    ['orbital launch', 'fusion power', 'closed-loop habitats', 'asteroid mining', 'artificial gravity', 'solar sails', 'dome engineering', 'ion drives', 'genetic tailoring', 'quantum computing'],
+    ['fold drives', 'atmospheric processors', 'stellar cartography', 'matter compilers', 'terraforming engines', 'gravitic shielding', 'stellar lances', 'hyperspace relays', 'ecumenopolis design']];
+  const ACTIVITIES = [null,
+    ['a great hunt fed every hearth', 'a bountiful harvest was gathered', 'the first shrine was raised', 'elders recorded the old songs', 'a long drought was survived'],
+    ['a grand cathedral was completed', 'a canal joined two rivers', 'the first university opened', 'a census counted every citizen', 'a golden age of art began'],
+    ['a space elevator was completed', 'the orbital shipyards launched a fleet', 'a planet-wide network went live', 'the first child was born off-world'],
+    ['a Dyson swarm began to rise', 'a generation ark reached its destination', 'a galactic archive was founded', 'a new artificial moon was assembled']];
+  const DISASTERS = ['a plague', 'a great famine', 'a devastating earthquake', 'a supervolcano eruption', 'a meteor strike', 'a civil war'];
+  const regions = new Map();
+  const jobs = [];
+  let universeKey = '';
+
+  const stageName = (s) => (STAGES[s] ? STAGES[s].name : 'Pre-sapient');
+  const stageKey = (s) => (STAGES[s] ? STAGES[s].key : 'none');
+  function habitable(b, R) { if (R && R.terraformed.has(b.seed)) return true; return b.kind === 'rocky' && HAB_TYPES.has(b.type) && b.pressure > 0.25 && b.pressure < 5 && b.tempC > -25 && b.tempC < 50; }
+  function isCradle(b) { return b.kind === 'rocky' && b.life.has && b.life.count >= 4 && CRADLE_TYPES.has(b.type) && b.habitability > 0.12; }
+
+  function regionKey(star) { return star.pocket != null ? 'pocket:' + star.pocket : Math.floor(star.sx / RS) + ',' + Math.floor(star.sz / RS); }
+  function ageOf(key, t) {
+    const h = RNG.hash(Universe.seed, key, 'civ-age'), L = 3600 * (20 + (h % 29)), off = (h >>> 7) % L, age = Math.floor((t + off) / L);
+    return { age, L, T0: age * L - off, T1: (age + 1) * L - off };
+  }
+  function ageAt(key, age) { const A = ageOf(key, 0); return { age, L: A.L, T0: age * A.L + A.T0, T1: (age + 1) * A.L + A.T0 }; }
+  function starsOf(key) {
+    if (key.startsWith('pocket:')) return [Universe.pocketStar(key.slice(7))];
+    const [rx, rz] = key.split(',').map(Number), out = [];
+    for (let sx = rx * RS; sx < rx * RS + RS; sx++) for (let sz = rz * RS; sz < rz * RS + RS; sz++) out.push(...Universe.sector(sx, sz).stars);
+    return out;
+  }
+  const bodiesOf = (sys) => { const o = []; for (const p of sys.planets) { o.push(p); for (const m of p.moons) o.push(m); } return o; };
+
+  // ---------------------------------------------------------------- region build
+  function* build(key, A) {
+    const R = {
+      key, age: A.age, L: A.L, T0: A.T0, T1: A.T1, seed: RNG.hash(Universe.seed, key, 'civ', A.age), steps: Math.floor(A.L / STEP),
+      stars: [], byStar: new Map(), civs: [], events: [], step: -1, holdings: new Map(), terraformed: new Map(), projects: [], ready: false, universe: Universe.name,
+    };
+    R.k = 200 / R.steps;
+    const stars = starsOf(key);
+    let n = 0;
+    for (const s of stars) {
+      const gate = key.startsWith('pocket:') ? 0.9 : 0.32;
+      const rec = { star: s, sys: null, idx: R.stars.length, homes: [] };
+      R.stars.push(rec); R.byStar.set(s.id, rec);
+      if (RNG.unit(RNG.hash(s.seed, 'civ-gate', A.age)) > gate || s.cls === 'BH' || s.cls === 'NS') continue;
+      rec.sys = SystemGen.generate(s);
+      for (const b of bodiesOf(rec.sys)) {
+        if (!isCradle(b) || RNG.unit(RNG.hash(b.seed, 'sapience', A.age)) > (key.startsWith('pocket:') ? 0.6 : 0.15)) continue;
+        const nt = 2 + (RNG.hash(b.seed, 'tribes', A.age) % 3);
+        for (let k = 0; k < nt; k++) R.civs.push(newCiv(R, rec, b, k));
+        rec.homes.push(b);
+      }
+      if (++n % 3 === 0) yield;
+    }
+    R.civs.forEach((c, i) => { c.idx = i; });
+    R.ready = true;
+    return R;
+  }
+  function newCiv(R, rec, body, k) {
+    const seed = RNG.hash(body.seed, 'civ', R.age, k), r = new RNG.Rand(seed);
+    const culture = Culture.make(seed, body);
+    const civ = {
+      seed, k, region: R, rec, home: body, culture, code: `${Codes.ofPlanet(body)}$${R.age}.${k}`, pace: clamp(Math.exp(r.gauss() * 0.55), 0.3, 2),
+      dawn: R.T0 + R.L * (0.015 + 0.1 * r.next() + (k ? 0.012 * k * r.next() : 0)),
+      stage: 0, xp: 0, pop: 0, alive: true, fate: null, fateT: 0, killer: null,
+      settle: 0, lost: 0, colonies: [], holdings: [], techI: [0, 0, 0, 0, 0], stageT: [0, 0, 0, 0, 0], rel: new Map(), hist: [], wars: 0, battles: 0, trades: 0,
+      reach: 0, stellarList: null, absorbed: [], lastSettleLog: -1e9,
+    };
+    return civ;
+  }
+
+  // ---------------------------------------------------------------- simulation
+  function log(R, t, text, kind, civs, extra) {
+    const e = Object.assign({ t, text, kind, civs: civs.map((c) => c.idx) }, extra || {});
+    R.events.push(e);
+    if (R.events.length > 900) R.events.splice(0, R.events.length - 700);
+    for (const c of civs) { c.hist.push(e); if (c.hist.length > 160) c.hist.splice(0, c.hist.length - 120); }
+    return e;
+  }
+  const nameOf = (c, s = c.stage) => civName(c, s);
+  function relOf(a, b) {
+    let r = a.rel.get(b.idx);
+    if (!r) { r = { s: 'neutral', trade: false, since: 0, contact: 0, wars: 0 }; a.rel.set(b.idx, r); b.rel.set(a.idx, r); }
+    return r;
+  }
+  function contact(R, a, b, t, how) {
+    const r = relOf(a, b);
+    if (r.contact) return r;
+    r.contact = t; r.since = t;
+    if (how) log(R, t, `${nameOf(a)} ${how} ${nameOf(b)}`, 'contact', [a, b]);
+    return r;
+  }
+  function popCap(c) {
+    const f = 0.5 + c.home.habitability;
+    return [0, 1800, 4e6, 1.5e9, 2.5e10][c.stage] * f * (1 + 0.25 * c.colonies.length + 0.4 * c.holdings.length) * (1 + 0.08 * c.settle);
+  }
+  function settleCap(s) { return [0, 5, 14, 22, 30][s]; }
+  function strength(c, rnd) {
+    const T = c.culture.T;
+    return (Math.log10(Math.max(10, c.pop)) + 1) * Math.pow(c.stage, 1.6) * (0.6 + 0.8 * T.aggression) * (1 + 0.1 * c.holdings.length + 0.05 * c.colonies.length) * rnd.range(0.55, 1.45);
+  }
+  function gain(c, v) { c.xp += v * (0.6 + 0.4 * c.pace); }
+
+  function stepRegion(R, s) {
+    const t = R.T0 + (s + 1) * STEP, rnd = new RNG.Rand(RNG.hash(R.seed, 'step', s)), k = R.k;
+    const live = R.civs.filter((c) => c.alive);
+    for (const c of live) {
+      const T = c.culture.T;
+      if (!c.stage) {
+        if (t < c.dawn) continue;
+        c.stage = 1; c.stageT[1] = t; c.pop = 60 + rnd.next() * 90; c.settle = 1;
+        log(R, t, `${nameOf(c)} emerged on ${c.home.title} — the first sapient ${c.home.life.has ? 'people' : 'minds'} of their line`, 'dawn', [c]);
+        for (const o of live) if (o !== c && o.stage && o.home === c.home) contact(R, c, o, t, 'met the neighbouring');
+        continue;
+      }
+      const sm = STAGE_MULT[c.stage];
+      // growth
+      const cap = popCap(c), before = c.pop;
+      c.pop += c.pop * (0.035 + 0.02 * T.drive) * (1 - c.pop / cap) * rnd.range(0.6, 1.3);
+      c.pop = Math.max(30, c.pop);
+      gain(c, k * c.pace * (1.1 * (0.7 + 0.35 * T.curiosity + 0.25 * T.drive) * sm + 0.35 * Math.max(0, Math.log10(Math.max(c.pop / Math.max(before, 1), 1)) * 40)));
+      // discoveries & technology
+      if (rnd.chance(0.04 + 0.06 * T.curiosity)) {
+        const list = TECHS[c.stage], i = c.techI[c.stage];
+        gain(c, k * 6 * sm);
+        if (i < list.length) { c.techI[c.stage]++; log(R, t, `${nameOf(c)} discovered ${list[i]}`, 'discovery', [c]); }
+      }
+      // successful activities
+      if (rnd.chance(0.05 + 0.03 * T.artistry)) { gain(c, k * 3 * sm); c.pop *= 1.02; if (rnd.chance(0.3)) log(R, t, `${nameOf(c)}: ${rnd.pick(ACTIVITIES[c.stage])}`, 'activity', [c]); }
+      // disasters
+      if (rnd.chance(0.007)) { c.pop *= rnd.range(0.7, 0.9); gain(c, k * 2); log(R, t, `${nameOf(c)} endured ${rnd.pick(DISASTERS)}`, 'disaster', [c]); }
+      // exploration: new settlements
+      if (c.stage <= 4 && c.settle < settleCap(c.stage) && rnd.chance(0.03 + 0.06 * T.drive)) {
+        c.settle++; gain(c, k * 4 * sm);
+        if (t - c.lastSettleLog > STEP * 8) { c.lastSettleLog = t; log(R, t, `${nameOf(c)} founded ${settlementName(c, c.settle - 1)}`, 'settle', [c]); }
+      }
+      // colonization of the home system (stage 3+)
+      if (c.stage >= 3 && rnd.chance(0.05 + 0.07 * T.drive)) colonize(R, c, t, rnd);
+      // intergalactic expansion, terraforming (stage 4)
+      if (c.stage >= 4) {
+        c.reach = Math.min(REACH_MAX, 14 + ((t - c.stageT[4]) / STEP) * 1.1 * (0.6 + T.drive));
+        if (rnd.chance(0.05 + 0.08 * T.drive)) expand(R, c, t, rnd);
+        if (rnd.chance(0.035 + 0.03 * T.curiosity)) terraform(R, c, t, rnd);
+      }
+      // stage progression (the XP itself is never shown)
+      while (c.stage < 4 && c.xp >= XP_STAGE[c.stage + 1]) advance(R, c, t, rnd);
+    }
+    // terraforming projects
+    for (let i = R.projects.length - 1; i >= 0; i--) {
+      const p = R.projects[i];
+      if (!p.civ.alive) { R.projects.splice(i, 1); continue; }
+      if (t >= p.end) {
+        R.projects.splice(i, 1);
+        R.terraformed.set(p.body.seed, { civ: p.civ, t });
+        for (const col of allColonies(R)) if (col.body && col.body.seed === p.body.seed) col.kind = 'city';
+        gain(p.civ, k * 30);
+        log(R, t, `${nameOf(p.civ)} terraformed ${p.body.title} into a habitable world`, 'terraform', [p.civ], { body: p.body.title });
+      }
+    }
+    contacts(R, t, live);
+    diplomacy(R, t, rnd);
+  }
+  function allColonies(R) { const o = []; for (const c of R.civs) for (const col of c.colonies) o.push(col); for (const h of R.holdings.values()) o.push(h); return o; }
+  function advance(R, c, t, rnd) {
+    const from = nameOf(c);
+    c.stage++; c.stageT[c.stage] = t;
+    c.pop = Math.max(c.pop, [0, 0, 20000, 8e6, 2e9][c.stage]);
+    const msg = [null, null, `${from} unified into ${nameOf(c)}`, `${nameOf(c)} reached orbit — the colonization of the ${c.rec.star.name} system begins`, `${nameOf(c)} mastered interstellar travel and looked to the neighbouring stars`][c.stage];
+    log(R, t, msg, 'stage', [c], { stage: c.stage });
+    if (c.stage === 2) {
+      // allied tribes on the same world may join the new nation peacefully
+      for (const o of R.civs) {
+        if (o === c || !o.alive || o.home !== c.home || o.stage !== 1) continue;
+        const r = c.rel.get(o.idx);
+        if (r && r.s === 'allied' && rnd.chance(0.55)) absorb(R, c, o, t, 'united');
+      }
+    }
+    if (c.stage === 3) for (const o of R.civs) if (o !== c && o.alive && o.stage && o.rec === c.rec && o.home !== c.home) contact(R, c, o, t, 'made first contact with');
+  }
+  function absorb(R, winner, loser, t, how) {
+    loser.alive = false; loser.fateT = t; loser.killer = winner.idx;
+    loser.fate = how === 'united' ? `United with ${nameOf(winner)}` : how === 'conquered' ? `Conquered by ${nameOf(winner)}` : `Exterminated by ${nameOf(winner)}`;
+    if (how !== 'exterminated') {
+      winner.pop += loser.pop * (how === 'united' ? 0.9 : 0.5); winner.settle = Math.min(settleCap(Math.max(winner.stage, 2)) + 4, winner.settle + Math.ceil(loser.settle * 0.6));
+      winner.absorbed.push(loser.idx);
+    }
+    for (const col of loser.colonies) if (how !== 'exterminated') { col.civ = winner; winner.colonies.push(col); }
+    loser.colonies = [];
+    for (const h of loser.holdings) { if (how !== 'exterminated') { h.civ = winner; winner.holdings.push(h); } else R.holdings.delete(h.star.id); }
+    loser.holdings = [];
+    for (const r of loser.rel.values()) { r.s = 'neutral'; r.trade = false; }
+    gain(winner, R.k * (how === 'united' ? 12 : 25) * STAGE_MULT[winner.stage]);
+    const text = how === 'united' ? `${nameOf(loser)} joined ${nameOf(winner)} peacefully` : how === 'conquered' ? `${nameOf(winner)} conquered ${nameOf(loser)}` : `${nameOf(winner)} exterminated ${nameOf(loser)}`;
+    log(R, t, text, how === 'united' ? 'alliance' : how === 'conquered' ? 'conquest' : 'extermination', [winner, loser]);
+  }
+  function colonize(R, c, t, rnd) {
+    const sys = c.rec.sys, taken = new Set(c.colonies.map((x) => x.body));
+    const homes = new Set(); for (const o of R.civs) if (o.alive && o.stage) homes.add(o.home);
+    const cand = bodiesOf(sys).filter((b) => b.kind === 'rocky' && b !== c.home && !taken.has(b) && !homes.has(b));
+    if (!cand.length) return;
+    cand.sort((a, b) => (habitable(b, R) - habitable(a, R)) * 2 + Math.abs(a.a - c.home.a) - Math.abs(b.a - c.home.a));
+    const body = cand[rnd.chance(0.7) ? 0 : Math.floor(rnd.next() * cand.length)];
+    const col = { civ: c, body, star: c.rec.star, kind: habitable(body, R) ? 'city' : 'dome', t, name: colonyName(c, c.colonies.length), founder: c.idx };
+    c.colonies.push(col);
+    gain(c, R.k * 8);
+    log(R, t, `${nameOf(c)} founded ${col.kind === 'dome' ? 'the domed colony' : 'the colony'} ${col.name} on ${body.title}`, 'colony', [c], { body: body.title });
+  }
+  function stellarTargets(R, c) {
+    if (c.stellarList) return c.stellarList;
+    const o = c.rec.star.pos, list = [];
+    for (const rec of R.stars) { if (rec === c.rec) continue; const d = V3.dist(rec.star.pos, o); if (d < REACH_MAX) list.push([d, rec]); }
+    list.sort((a, b) => a[0] - b[0]);
+    return (c.stellarList = list);
+  }
+  function expand(R, c, t, rnd) {
+    for (const [d, rec] of stellarTargets(R, c)) {
+      if (d > c.reach) break;
+      if (R.holdings.has(rec.star.id)) continue;
+      // a living civilization's home: meet it instead of settling there
+      const natives = R.civs.filter((o) => o.alive && o.stage && o.rec === rec);
+      if (natives.length) { for (const o of natives) contact(R, c, o, t, 'discovered'); continue; }
+      if (!rec.sys) rec.sys = SystemGen.generate(rec.star);
+      const rocky = bodiesOf(rec.sys).filter((b) => b.kind === 'rocky');
+      if (!rocky.length) { R.holdings.set(rec.star.id, { civ: c, star: rec.star, rec, body: null, kind: 'station', t, name: colonyName(c, 50 + c.holdings.length), founder: c.idx }); c.holdings.push(R.holdings.get(rec.star.id)); gain(c, R.k * 10); return; }
+      rocky.sort((a, b) => habitable(b, R) - habitable(a, R) || b.habitability - a.habitability);
+      const body = rocky[0];
+      const h = { civ: c, star: rec.star, rec, body, kind: habitable(body, R) ? 'city' : 'dome', t, name: colonyName(c, 50 + c.holdings.length), founder: c.idx };
+      R.holdings.set(rec.star.id, h); c.holdings.push(h);
+      gain(c, R.k * 12);
+      log(R, t, `${nameOf(c)} settled ${h.name} on ${body.title} in the ${rec.star.name} system`, 'expansion', [c], { star: rec.star.name });
+      return;
+    }
+  }
+  function terraform(R, c, t, rnd) {
+    if (R.projects.some((p) => p.civ === c)) return;
+    const pool = c.colonies.concat(c.holdings).filter((x) => x.body && x.kind === 'dome' && !R.terraformed.has(x.body.seed) && x.body.radius > 0.15);
+    if (!pool.length) return;
+    const col = pool[Math.floor(rnd.next() * pool.length)];
+    R.projects.push({ civ: c, body: col.body, start: t, end: t + STEP * rnd.int(18, 36) });
+    log(R, t, `${nameOf(c)} began terraforming ${col.body.title}`, 'terraform', [c], { body: col.body.title });
+  }
+  function contacts(R, t, live) {
+    // intergalactic civilizations meet whoever lies within their reach
+    for (const a of live) {
+      if (a.stage < 4) continue;
+      for (const b of live) {
+        if (a === b || !b.stage || (a.rel.get(b.idx) || {}).contact) continue;
+        if (b.rec === a.rec) { contact(R, a, b, t, 'made first contact with'); continue; }
+        const d = V3.dist(a.rec.star.pos, b.rec.star.pos);
+        if (d < a.reach + (b.stage >= 4 ? b.reach : 0)) contact(R, a, b, t, b.stage >= 4 ? 'made first contact with' : 'discovered the primitive');
+      }
+    }
+  }
+  function diplomacy(R, t, rnd) {
+    const live = R.civs.filter((c) => c.alive && c.stage);
+    for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+      const a = live[i], b = live[j];
+      if (!a.alive || !b.alive) continue;
+      const r = a.rel.get(b.idx);
+      if (!r || !r.contact) continue;
+      const A = a.culture.T, Bt = b.culture.T, aggr = (A.aggression + Bt.aggression) / 2, xeno = (A.xeno + Bt.xeno) / 2, merc = (A.mercantile + Bt.mercantile) / 2;
+      const neighbours = a.home === b.home ? 1 : 0.6, gap = Math.abs(a.stage - b.stage);
+      if (r.s === 'neutral') {
+        const pWar = (0.0015 + 0.014 * aggr * aggr * (1 - xeno * 0.6)) * neighbours + (gap >= 2 ? 0.004 * Math.max(A.ruthless, Bt.ruthless) : 0);
+        const pAlly = (0.002 + 0.014 * xeno * xeno * (1 - aggr * 0.5)) * neighbours;
+        const x = rnd.next();
+        if (x < pWar) war(R, a, b, t, rnd);
+        else if (x < pWar + pAlly) { r.s = 'allied'; r.since = t; gain(a, R.k * 5); gain(b, R.k * 5); log(R, t, `${nameOf(a)} and ${nameOf(b)} formed an alliance`, 'alliance', [a, b]); }
+      } else if (r.s === 'allied') {
+        const x = rnd.next();
+        if (x < 0.002 * Math.max(A.ruthless, Bt.ruthless)) { log(R, t, `${nameOf(a.culture.T.ruthless > b.culture.T.ruthless ? a : b)} betrayed its alliance`, 'war', [a, b]); war(R, a, b, t, rnd, true); }
+        else if (x < 0.004 * (1 - xeno) + 0.002) { r.s = 'neutral'; r.since = t; log(R, t, `The alliance between ${nameOf(a)} and ${nameOf(b)} lapsed`, 'contact', [a, b]); }
+        // allies of higher stage lift up their partners
+        if (gap >= 1) gain(a.stage < b.stage ? a : b, R.k * 1.5 * gap);
+      } else if (r.s === 'war') {
+        battle(R, a, b, r, t, rnd);
+        if (a.alive && b.alive && rnd.chance(0.03 + 0.05 * xeno + Math.min(0.06, (t - r.since) / STEP * 0.003))) {
+          r.s = 'neutral'; r.since = t; log(R, t, `${nameOf(a)} and ${nameOf(b)} signed a peace treaty`, 'peace', [a, b]);
+        }
+      }
+      // trade — barter among allied tribes, international / interplanetary / interstellar trade later
+      if (a.alive && b.alive) {
+        const minS = Math.min(a.stage, b.stage), can = r.s !== 'war' && (minS >= 2 || r.s === 'allied');
+        if (!can && r.trade) { r.trade = false; }
+        else if (can && !r.trade && rnd.chance(0.015 + 0.05 * merc)) {
+          r.trade = true;
+          const kind = minS >= 4 && a.rec !== b.rec ? 'interstellar trade routes' : minS >= 3 ? 'interplanetary trade routes' : minS >= 2 ? 'international trade' : 'barter';
+          log(R, t, `${nameOf(a)} and ${nameOf(b)} opened ${kind}`, 'trade', [a, b]);
+        } else if (can && r.trade) {
+          const v = R.k * 0.9 * STAGE_MULT[minS] * (0.5 + merc);
+          gain(a, v); gain(b, v); a.trades++; b.trades++;
+        }
+      }
+    }
+  }
+  function war(R, a, b, t, rnd, silent) {
+    const r = relOf(a, b);
+    if (r.s === 'war') return;
+    r.s = 'war'; r.since = t; r.trade = false; r.wars++; a.wars++; b.wars++;
+    const agg = a.culture.T.aggression >= b.culture.T.aggression ? a : b, def = agg === a ? b : a;
+    if (!silent) log(R, t, `${nameOf(agg)} declared war on ${nameOf(def)}`, 'war', [agg, def]);
+    // alliances drag partners in
+    for (const [side, foe] of [[agg, def], [def, agg]]) for (const [idx, rr] of side.rel) {
+      const ally = R.civs[idx];
+      if (rr.s !== 'allied' || !ally.alive || ally === foe || !rnd.chance(0.45)) continue;
+      const fr = contact(R, ally, foe, t, null);
+      if (fr.s !== 'war') { fr.s = 'war'; fr.since = t; fr.trade = false; log(R, t, `${nameOf(ally)} joined the war against ${nameOf(foe)}`, 'war', [ally, foe]); }
+    }
+  }
+  function battle(R, a, b, r, t, rnd) {
+    if (!rnd.chance(0.55)) return;
+    const sa = strength(a, rnd), sb = strength(b, rnd), win = sa >= sb ? a : b, lose = win === a ? b : a;
+    const k = R.k, sm = STAGE_MULT[Math.min(a.stage, b.stage)];
+    win.battles++; lose.battles++;
+    gain(win, k * 5 * sm); gain(lose, k * 1.5 * sm);
+    lose.pop *= rnd.range(0.9, 0.97); win.pop *= rnd.range(0.97, 1.0);
+    const ratio = Math.max(sa, sb) / Math.max(0.01, Math.min(sa, sb));
+    // what is lost depends on the stage of the conflict
+    if (lose.holdings.length && win.stage >= 4 && rnd.chance(0.35)) {
+      const h = lose.holdings.splice(Math.floor(rnd.next() * lose.holdings.length), 1)[0];
+      h.civ = win; win.holdings.push(h);
+      log(R, t, `${nameOf(win)} seized ${h.name} in the ${h.star.name} system from ${nameOf(lose)}`, 'conquest', [win, lose]);
+      return;
+    }
+    if (lose.colonies.length && win.stage >= 3 && (win.rec === lose.rec || win.stage >= 4) && rnd.chance(0.3)) {
+      const col = lose.colonies.splice(Math.floor(rnd.next() * lose.colonies.length), 1)[0];
+      col.civ = win; win.colonies.push(col);
+      log(R, t, `${nameOf(win)} captured ${col.name} on ${col.body.title} from ${nameOf(lose)}`, 'conquest', [win, lose]);
+      return;
+    }
+    if (rnd.chance(0.3 + Math.min(0.3, (ratio - 1) * 0.2))) {
+      let n = win.stage >= 4 ? rnd.int(1, 3) : 1;
+      n = Math.min(n, Math.max(0, lose.settle)); lose.settle -= n; lose.lost += n;
+      if (lose.stage <= 2 && win.home === lose.home) win.settle++;
+      if (rnd.chance(0.35)) log(R, t, `${nameOf(win)} won a decisive battle against ${nameOf(lose)}`, 'battle', [win, lose]);
+    }
+    const doomed = lose.settle <= 0 || (lose.stage < win.stage - 1 && ratio > 3 && rnd.chance(0.08)) ||
+      (win.stage >= 4 && !lose.holdings.length && !lose.colonies.length && rnd.chance(0.012 * Math.min(3, ratio)));
+    if (doomed) {
+      const T = win.culture.T;
+      absorb(R, win, lose, t, T.ruthless > 0.74 || (win.stage >= 4 && T.ruthless > 0.64) ? 'exterminated' : 'conquered');
+    }
+  }
+
+  // ---------------------------------------------------------------- names
+  function civName(c, s = c.stage) {
+    const C = c.culture;
+    switch (s) {
+      case 0: case 1: return C.T.order > 0.5 ? `${C.tribeNoun} of ${C.root}` : `${C.root} ${C.tribeNoun}`;
+      case 2: return C.govNation.includes(' ') || C.T.order < 0.4 ? `${C.adj} ${C.govNation}` : `${C.govNation} of ${C.place}`;
+      case 3: return `${C.adj} ${C.sysGov}`;
+      default: return `${C.adj} ${C.stellarGov}`;
+    }
+  }
+  function settlementName(c, i) { return c.culture.namer(new RNG.Rand(RNG.hash(c.seed, 'town', i)), 2, 3); }
+  function colonyName(c, i) { const r = new RNG.Rand(RNG.hash(c.seed, 'colony', i)); return r.chance(0.35) ? `New ${c.culture.namer(r, 1, 2)}` : c.culture.namer(r, 2, 3); }
+
+  // ---------------------------------------------------------------- region access
+  function checkUniverse() { if (universeKey !== Universe.name) { universeKey = Universe.name; regions.clear(); jobs.length = 0; } }
+  function advanceTo(R, t) {
+    const target = Math.min(R.steps - 1, Math.floor((t - R.T0) / STEP) - 1);
+    while (R.step < target) { R.step++; stepRegion(R, R.step); }
+    R.t = t;
+    return R;
+  }
+  function getJob(key, A) {
+    const id = key + '#' + A.age;
+    let e = regions.get(id);
+    if (!e) {
+      e = { id, key, A, gen: build(key, A), R: null, used: 0 };
+      regions.set(id, e);
+      if (regions.size > 14) { let old = null; for (const v of regions.values()) if (v !== e && (!old || v.used < old.used)) old = v; if (old) regions.delete(old.id); }
+    }
+    e.used = performance.now();
+    return e;
+  }
+  function finish(e) { if (!e.R) { let r; do { r = e.gen.next(); } while (!r.done); e.R = r.value; } return e.R; }
+  // full synchronous access (system / planet / surface views)
+  function region(star, t) { checkUniverse(); const key = regionKey(star), e = getJob(key, ageOf(key, t)); return advanceTo(finish(e), t); }
+  function regionByKey(key, t) { checkUniverse(); return advanceTo(finish(getJob(key, ageOf(key, t))), t); }
+  // non-blocking access for the galaxy view: returns null until built
+  function peek(key, t) {
+    checkUniverse();
+    const e = getJob(key, ageOf(key, t));
+    if (!e.R) { if (!jobs.includes(e)) jobs.push(e); return null; }
+    return advanceTo(e.R, t);
+  }
+  function pump(ms) {
+    const t0 = performance.now();
+    while (jobs.length && performance.now() - t0 < ms) {
+      const e = jobs[0];
+      if (e.R) { jobs.shift(); continue; }
+      const r = e.gen.next();
+      if (r.done) { e.R = r.value; jobs.shift(); }
+    }
+  }
+  // past ages (bookmarked civilizations): simulate that age to its end
+  function regionAge(star, age, t) {
+    checkUniverse();
+    const key = regionKey(star), A = ageAt(key, age);
+    if (A.T0 > t) return null;
+    return advanceTo(finish(getJob(key, A)), Math.min(t, A.T1));
+  }
+
+  // ---------------------------------------------------------------- queries
+  function atSystem(star, t) {
+    const R = region(star, t), rec = R.byStar.get(star.id);
+    const out = { R, natives: [], colonies: [], holding: R.holdings.get(star.id) || null, present: [] };
+    if (!rec) return out;
+    for (const c of R.civs) if (c.rec === rec && c.stage) out.natives.push(c);
+    for (const c of R.civs) for (const col of c.colonies) if (col.star.id === star.id) out.colonies.push(col);
+    const seen = new Set();
+    for (const c of out.natives) if (c.alive) seen.add(c);
+    for (const col of out.colonies) seen.add(col.civ);
+    if (out.holding) seen.add(out.holding.civ);
+    out.present = [...seen].filter((c) => c.alive);
+    return out;
+  }
+  function atBody(body, t) {
+    body = body.original || body;
+    const R = region(body.star, t);
+    const natives = R.civs.filter((c) => c.home.seed === body.seed && c.stage);
+    const colonies = [];
+    for (const c of R.civs) for (const col of c.colonies) if (col.body.seed === body.seed) colonies.push(col);
+    const h = R.holdings.get(body.star.id);
+    if (h && h.body && h.body.seed === body.seed) colonies.push(h);
+    const tf = R.terraformed.get(body.seed) || null, proj = R.projects.find((p) => p.body.seed === body.seed) || null;
+    return { R, natives, colonies, terraformed: tf, project: proj };
+  }
+  function byCode(code, t) {
+    const m = String(code).match(/^(.*)\$(\d+)\.(\d+)$/);
+    if (!m) return null;
+    const addr = Codes.parse(m[1]); if (!addr) return null;
+    const res = Codes.resolve(addr); if (!res || !res.planet) return null;
+    const R = regionAge(res.star, +m[2], t);
+    if (!R) return null;
+    return R.civs.find((c) => c.home.seed === res.planet.seed && c.k === +m[3]) || null;
+  }
+  function relations(c) {
+    const out = [];
+    for (const [idx, r] of c.rel) { const o = c.region.civs[idx]; if (r.contact) out.push({ civ: o, s: r.s, trade: r.trade, since: r.since }); }
+    out.sort((a, b) => (b.s === 'war') - (a.s === 'war') || (b.s === 'allied') - (a.s === 'allied') || b.trade - a.trade);
+    return out;
+  }
+  // routes inside one star system: supply lines to colonies + trade between partners
+  function systemRoutes(star, t) {
+    const S = atSystem(star, t), out = [];
+    const bodyOf = (c) => (c.rec.star.id === star.id ? c.home : (c.colonies.find((x) => x.star.id === star.id) || {}).body);
+    for (const col of S.colonies) if (col.civ.alive) {
+      const src = col.civ.rec.star.id === star.id ? col.civ.home : null;
+      if (src) out.push({ a: src, b: col.body, civ: col.civ, kind: 'supply' });
+    }
+    for (const c of S.present) {
+      const mine = S.colonies.filter((x) => x.civ === c);
+      for (let i = 1; i < mine.length; i++) out.push({ a: mine[i - 1].body, b: mine[i].body, civ: c, kind: 'trade' });
+    }
+    const pres = S.present;
+    for (let i = 0; i < pres.length; i++) for (let j = i + 1; j < pres.length; j++) {
+      const r = pres[i].rel.get(pres[j].idx);
+      if (!r || (!r.trade && r.s !== 'war')) continue;
+      const a = bodyOf(pres[i]), b = bodyOf(pres[j]);
+      if (a && b && a !== b) out.push({ a, b, civ: pres[i], civ2: pres[j], kind: r.s === 'war' ? 'war' : 'trade' });
+    }
+    return out;
+  }
+  // interstellar picture of a region for the galaxy map
+  function starMap(R) {
+    const owners = [], routes = [];
+    for (const c of R.civs) {
+      if (!c.alive || c.stage < 3) continue;
+      owners.push({ star: c.rec.star, civ: c, home: true });
+      for (const h of c.holdings) { owners.push({ star: h.star, civ: c, home: false }); routes.push({ a: c.rec.star, b: h.star, civ: c, kind: 'supply' }); }
+    }
+    const live = R.civs.filter((c) => c.alive && c.stage >= 4);
+    for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+      const a = live[i], b = live[j], r = a.rel.get(b.idx);
+      if (!r || !r.contact || a.rec === b.rec) continue;
+      if (r.trade || r.s === 'war' || r.s === 'allied') routes.push({ a: a.rec.star, b: b.rec.star, civ: a, civ2: b, kind: r.s === 'war' ? 'war' : r.trade ? 'trade' : 'allied' });
+    }
+    return { owners, routes };
+  }
+  function color(c) { return c.culture.pal.accent; }
+  const variants = new Map();
+  // the world as it is at time t: terraformed bodies get a habitable variant
+  function worldOf(body, t) {
+    if (!body || body.isGiant) return body;
+    body = body.original || body;
+    let I = null;
+    try { I = atBody(body, t); } catch (e) { return body; }
+    if (!I.terraformed) return body;
+    let v = variants.get(body.seed);
+    if (!v) { v = PlanetGen.terraform(body, I.terraformed.civ); variants.set(body.seed, v); if (variants.size > 24) variants.delete(variants.keys().next().value); }
+    return v;
+  }
+  function recent(R, t, span) { const out = []; for (let i = R.events.length - 1; i >= 0 && R.events[i].t > t - span; i--) out.push(R.events[i]); return out; }
+
+  // ---------------------------------------------------------------- the people
+  const PEOPLE_W = { biped: 5, quadruped: 3, octopod: 2.5, hexapod: 2, avian: 1.4, serpent: 1.2, blob: 1, floater: 0.4 };
+  function people(c) {
+    if (c._people) return c._people;
+    const p = c.home.prepare(), r = new RNG.Rand(RNG.hash(c.seed, 'people'));
+    let com = [];
+    for (let back = 0; back < 6 && !com.length; back++) com = Ecology.community(p, c.dawn - back * 3600 * 10).filter((s) => PEOPLE_W[s.fam]);
+    let sp = com.length ? r.weighted(com.map((s) => [s, PEOPLE_W[s.fam] * (s.diet === 'omnivore' ? 2 : s.diet === 'carnivore' ? 1.2 : 1) * (s.slot === 0 ? 1.5 : 1)])) : null;
+    if (!sp) return null;
+    // the sapient line: the founding species, a little larger-brained and upright
+    const g = Float32Array.from(sp.g);
+    g[G.head] = lerp(g[G.head], 1, 0.35); g[G.hunch] *= 0.5; g[G.social] = lerp(g[G.social], 1, 0.6); g[G.percep] = lerp(g[G.percep], 1, 0.4); g[G.append] = lerp(g[G.append], 1, 0.6);
+    const pheno = Genetics.express(g, sp.fam);
+    const demonym = c.culture.adj;
+    c._people = Object.assign({}, sp, { g, pheno, prey: [], predators: [], sapient: true, civ: c, common: demonym, ancestorSp: sp, code: sp.code + '~' + c.k });
+    return c._people;
+  }
+
+  // ---------------------------------------------------------------- geography (lazy, visual only)
+  function landDir(p, r, around, maxAng, tries = 40) {
+    const o = {};
+    let best = null, bs = -1e9;
+    for (let i = 0; i < tries; i++) {
+      let d;
+      if (around) { const a = r.range(0, TAU), rad = maxAng * Math.sqrt(r.next()); d = rotateDir(around, a, rad); }
+      else { const y = r.range(-0.8, 0.8), th = r.range(0, TAU), rr = Math.sqrt(1 - y * y); d = [Math.cos(th) * rr, y, Math.sin(th) * rr]; }
+      p.sample(d[0], d[1], d[2], o);
+      if (BIOMES[o.b].water || o.b === B.ICESHEET) continue;
+      const score = (BIOMES[o.b].prod || 0.2) + (o.e < 0.08 ? 0.3 : 0) - Math.max(0, o.e - 0.45) * 2 - (o.b === B.SNOW || o.b === B.MOUNTAIN ? 0.6 : 0) + r.next() * 0.3;
+      if (score > bs) { bs = score; best = d; }
+    }
+    return best;
+  }
+  function rotateDir(d, a, rad) {
+    let e = V3.cross([0, 1, 0], d); if (V3.len(e) < 1e-4) e = [1, 0, 0]; e = V3.norm(e);
+    const n = V3.cross(d, e), s = Math.sin(rad), cs = Math.cos(rad);
+    return V3.norm([d[0] * cs + (e[0] * Math.cos(a) + n[0] * Math.sin(a)) * s, d[1] * cs + (e[1] * Math.cos(a) + n[1] * Math.sin(a)) * s, d[2] * cs + (e[2] * Math.cos(a) + n[2] * Math.sin(a)) * s]);
+  }
+  // deterministic site list of a civilization on its home world (settlement i keeps its place forever)
+  function originOf(c) {
+    if (c._origin) return c._origin;
+    const p = c.home.prepare(), Rs = 4200 * Math.sqrt(Math.max(0.15, p.radius));
+    const first = c.region.civs.find((o) => o.home.seed === c.home.seed && o.k === 0);
+    const r = new RNG.Rand(RNG.hash(c.seed, 'origin'));
+    if (!first || first === c) c._origin = landDir(p, r, null, 0) || [0, 1, 0];
+    else c._origin = landDir(p, r, rotateDir(originOf(first), r.range(0, TAU), (170 + 140 * c.k) / Rs), 70 / Rs) || rotateDir(originOf(first), r.range(0, TAU), (170 + 140 * c.k) / Rs);
+    return c._origin;
+  }
+  // deterministic site list (settlement i keeps its place forever); computed lazily
+  function homeSites(c, n = 34) {
+    const out = c._sites || (c._sites = []);
+    if (out.length >= n) return out;
+    const p = c.home.prepare(), Rs = 4200 * Math.sqrt(Math.max(0.15, p.radius)), origin = originOf(c);
+    if (!out.length) out.push({ dir: origin, i: 0, name: settlementName(c, 0) });
+    for (let i = out.length; i < n; i++) {
+      const r = new RNG.Rand(RNG.hash(c.seed, 'site', i)), ang = (45 + 42 * Math.pow(i, 1.35)) / Rs;
+      const guess = rotateDir(origin, r.range(0, TAU), ang * r.range(0.6, 1.1));
+      out.push({ dir: landDir(p, r, guess, ang * 0.35, 14) || guess, i, name: settlementName(c, i) });
+    }
+    return out;
+  }
+  function colonySite(col) {
+    if (col._dir) return col._dir;
+    const p = col.body.prepare(), r = new RNG.Rand(RNG.hash(col.body.seed, 'colony-site', col.founder, col.t));
+    col._dir = (!p.isGiant && landDir(p, r, null, 0)) || V3.norm([r.range(-1, 1), r.range(-0.5, 0.5), r.range(-1, 1)]);
+    return col._dir;
+  }
+  // every settlement on a body at time t, with owner, style and size
+  // who controls what a fallen civilization left behind (null: nobody — ruins)
+  function ownerOf(c) {
+    let o = c, n = 0;
+    while (o && !o.alive && n++ < 12) { if (o.killer == null || o.fate.startsWith('Exterminated')) return null; o = o.region.civs[o.killer]; }
+    return o && o.alive ? o : null;
+  }
+  function sitesOn(body, t) {
+    const I = atBody(body, t), out = [];
+    for (const c of I.natives) {
+      const n = Math.min(34, c.alive ? Math.max(1, c.settle) : Math.max(1, Math.min(c.settle + c.lost, 4))), sites = homeSites(c, n);
+      const owner = ownerOf(c);
+      const stage = c.alive ? c.stage : owner ? owner.stage : c.stage;
+      for (let i = 0; i < Math.min(n, sites.length); i++) {
+        out.push({ civ: c, owner, ruined: !owner, dir: sites[i].dir, name: sites[i].name, capital: i === 0, stage, kind: 'city', size: siteSize(stage, i), seed: RNG.hash(c.seed, 'city', i) });
+      }
+    }
+    for (const col of I.colonies) {
+      if (!col.body) continue;
+      const age = (t - col.t) / STEP;
+      out.push({ civ: col.civ, owner: ownerOf(col.civ), ruined: !ownerOf(col.civ), dir: colonySite(col), name: col.name, capital: false, stage: Math.max(3, col.civ.stage), kind: I.terraformed ? 'city' : col.kind, size: clamp(14 + age * 0.5, 14, 34), seed: RNG.hash(col.civ.seed, 'colony-city', col.name), colony: true });
+    }
+    return out;
+  }
+  function siteSize(stage, i) { const base = [0, 11, 20, 28, 34][clamp(stage, 1, 4)]; return base * (i === 0 ? 1.35 : 1 - Math.min(0.45, i * 0.03)); }
+
+  return {
+    STEP, STAGES, stageName, stageKey, region, regionByKey, peek, pump, regionKey, regionAge, ageOf, atSystem, atBody, byCode, relations, systemRoutes, starMap,
+    civName, settlementName, colonyName, color, recent, people, homeSites, colonySite, sitesOn, habitable, isCradle, rotateDir, ownerOf, worldOf, RS,
+    get pending() { return jobs.length; },
+  };
+})();
 </script>
 
 <!-- ===== GFX · WebGL2 helpers, geometry, mesh builder ===== -->
@@ -2519,12 +3344,12 @@ class MeshBuilder {
   }
   // world = T * Ry(yaw) * Rx(pitch) * S
   mat(x, y, z, yaw, pitch, sx, sy, sz) { return M4.compose(this.m, x, y, z, yaw, pitch, sx, sy, sz); }
-  add(prim, m, col, sway0 = 0, sway1 = 0, emit = 0) {
+  add(prim, m, col, sway0 = 0, sway1 = 0, emit = 0, glass = 0) {
     const P = prim.pos, N = prim.nrm, H = prim.hgt, I = prim.idx, cnt = P.length / 3;
     if (this.nv + cnt > this.cv || this.ni + I.length > this.ci) this._alloc(Math.max(this.cv * 2, this.nv + cnt), Math.max(this.ci * 2, this.ni + I.length));
     const m0 = m[0], m1 = m[1], m2 = m[2], m4 = m[4], m5 = m[5], m6 = m[6], m8 = m[8], m9 = m[9], m10 = m[10];
     const s0 = 1 / (m0 * m0 + m1 * m1 + m2 * m2 || 1), s1 = 1 / (m4 * m4 + m5 * m5 + m6 * m6 || 1), s2 = 1 / (m8 * m8 + m9 * m9 + m10 * m10 || 1);
-    const cr = clamp(col[0], 0, 1) * 255, cg = clamp(col[1], 0, 1) * 255, cb = clamp(col[2], 0, 1) * 255, em = clamp(emit, 0, 1) * 255;
+    const cr = clamp(col[0], 0, 1) * 255, cg = clamp(col[1], 0, 1) * 255, cb = clamp(col[2], 0, 1) * 255, em = clamp(emit, 0, 1) * 255, gl = clamp(glass, 0, 1) * 255;
     const base = this.nv;
     for (let k = 0; k < cnt; k++) {
       const x = P[k * 3], y = P[k * 3 + 1], z = P[k * 3 + 2], o = (base + k) * 3, o4 = (base + k) * 4;
@@ -2534,7 +3359,7 @@ class MeshBuilder {
       const l = Math.hypot(wx, wy, wz) || 1;
       this.n[o] = wx / l; this.n[o + 1] = wy / l; this.n[o + 2] = wz / l;
       this.c[o4] = cr; this.c[o4 + 1] = cg; this.c[o4 + 2] = cb; this.c[o4 + 3] = 255;
-      this.e[o4] = clamp(sway0 + (sway1 - sway0) * H[k], 0, 1) * 255; this.e[o4 + 1] = em; this.e[o4 + 2] = 0; this.e[o4 + 3] = 0;
+      this.e[o4] = clamp(sway0 + (sway1 - sway0) * H[k], 0, 1) * 255; this.e[o4 + 1] = em; this.e[o4 + 2] = gl; this.e[o4 + 3] = 0;
     }
     for (let k = 0; k < I.length; k++) this.i[this.ni + k] = I[k] + base;
     this.nv += cnt; this.ni += I.length;
@@ -2614,13 +3439,15 @@ void main(){
 in vec3 vW; in vec3 vN; in vec3 vC; in vec2 vE;
 uniform float uOutline; uniform float uTex; uniform float uNight;
 void main(){
+  // screen-door glass (dome cities): dithered see-through, no outline
+  if (vE.y > 0.004 && bayer4(gl_FragCoord.xy) < vE.y) discard;
   vec3 n = normalize(vN);
   vec3 base = vC;
   if (uTex > 0.0) { float h = hash12(floor(vW.xz * 2.0) + floor(vW.y * 2.0) * 7.0); base *= 1.0 + (h - 0.5) * 0.13 * uTex; }
   vec3 c = toon(base, n);
   c += base * vE.x * (0.5 + uNight * 1.6);
   oC = vec4(fog(c, vW), 1.0);
-  oI = vec4(encN(normalize(mat3(uView) * n)), uOutline, 1.0);
+  oI = vec4(encN(normalize(mat3(uView) * n)), vE.y > 0.004 ? 0.0 : uOutline, 1.0);
 }`];
 
   // instanced primitives: creatures, shadows
@@ -3158,11 +3985,64 @@ class Camera {
    ============================================================================= */
 const Rig = (() => {
   const st = new MatStack(80);
-  let R = null, P = null, A = null, lod = 1;
+  let R = null, P = null, A = null, lod = 1, O = null;
   const WHITE = [0.97, 0.96, 0.92], BONE = [0.95, 0.93, 0.84];
   const S = (x, y, z, rx, ry, rz, ca, cb, pat = 0, ps = 1, e = 0, ol = 1) => R.sphere.add(st.m, x, y, z, rx, ry, rz, ca, cb || ca, pat, ps, e, ol);
   const C = (x, y, z, rx, h, rz, ca, cb, pat = 0, e = 0) => R.cone.add(st.m, x, y, z, rx, h, rz, ca, cb || ca, pat, 1, e, 1);
   const Y = (x, y, z, r, h, ca, e = 0) => R.cyl.add(st.m, x, y, z, r, h, r, ca, ca, 0, 1, e, 1);
+  const X = (x, y, z, sx, sy, sz, ca, cb, e = 0) => R.box.add(st.m, x, y, z, sx, sy, sz, ca, cb || ca, 0, 1, e, 1);
+  const WOOD = [0.42, 0.3, 0.18];
+  // ---- sapient outfits: garments, headgear and weapons styled by culture and stage
+  function headgear(hs) {
+    if (!O) return;
+    const c = O.cloth, t = O.trim, m = O.metal, g = O.glow, hi = O.stage >= 3 ? 0.9 : 0;
+    if (O.kind === 'suit') { S(0, hs * 0.05, hs * 0.08, hs * 1.02, hs * 0.96, hs * 1.06, Color.mix(g, [0.75, 0.9, 1], 0.55), m, 7, 1, 0.25); return; }
+    switch (O.head) {
+      case 'hood': S(0, hs * 0.12, -hs * 0.12, hs * 0.9, hs * 0.82, hs * 0.9, c, t, 5); break;
+      case 'crown': for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU; C(Math.cos(a) * hs * 0.42, hs * 0.5, Math.sin(a) * hs * 0.42, hs * 0.09, hs * 0.32, hs * 0.09, [1, 0.8, 0.3], null, 0, 0.3); } break;
+      case 'helm': S(0, hs * 0.28, -hs * 0.02, hs * 0.86, hs * 0.58, hs * 0.9, m, m, 7); if (lod) { st.push(); st.translate(0, hs * 0.75, -hs * 0.1); st.rotX(-0.4); C(0, 0, 0, hs * 0.06, hs * 0.5, hs * 0.3, t); st.pop(); } break;
+      case 'plume': for (let i = -1; i <= 1; i++) { st.push(); st.translate(i * hs * 0.18, hs * 0.55, -hs * 0.1); st.rotX(-0.5); st.rotZ(-i * 0.3); C(0, 0, 0, hs * 0.08, hs * 0.9, hs * 0.08, i ? t : O.accent); st.pop(); } break;
+      case 'antenna': for (const s2 of [-1, 1]) { st.push(); st.translate(s2 * hs * 0.3, hs * 0.5, 0); st.rotZ(-s2 * 0.35); Y(0, 0, 0, hs * 0.03, hs * 0.7, m); S(0, hs * 0.72, 0, hs * 0.09, hs * 0.09, hs * 0.09, g, null, 0, 1, 1); st.pop(); } break;
+      case 'circlet': S(0, hs * 0.32, 0, hs * 0.84, hs * 0.08, hs * 0.88, O.accent); S(0, hs * 0.34, hs * 0.86, hs * 0.1, hs * 0.1, hs * 0.06, g, null, 0, 1, 0.9); break;
+      case 'mask': S(0, hs * 0.06, hs * 0.6, hs * 0.56, hs * 0.5, hs * 0.18, t, c, 3, 2); break;
+      case 'horned': for (const s2 of [-1, 1]) { st.push(); st.translate(s2 * hs * 0.4, hs * 0.45, 0); st.rotZ(-s2 * 0.7); C(0, 0, 0, hs * 0.1, hs * 0.55, hs * 0.1, [0.9, 0.86, 0.76]); st.pop(); } break;
+    }
+    if (hi && O.head !== 'antenna' && O.head !== 'none' && lod) S(hs * 0.6, hs * 0.1, hs * 0.3, hs * 0.08, hs * 0.08, hs * 0.08, g, null, 0, 1, 1);
+  }
+  // garment around a torso ellipsoid centred at (0, 0, zc) in the current frame
+  function garment(bw, bh, bl, zc, upright) {
+    if (!O) return;
+    const c = O.cloth, t = O.trim, k = O.kind;
+    if (k === 'suit') { S(0, -bh * 0.02, zc, bw * 0.56, bh * 0.56, bl * 0.4, O.metal, O.accent, 7); if (lod) S(0, bh * 0.1, zc - bl * 0.36, bw * 0.3, bh * 0.35, bl * 0.12, O.metal, null, 0, 1, 0); return; }
+    S(0, -bh * 0.04, zc, bw * 0.55, bh * 0.5, bl * 0.34, c, t, O.pat, 3);
+    if (k === 'harness' || k === 'sash' || k === 'wrap') { st.push(); st.translate(0, 0, zc); st.rotZ(0.7); S(0, 0, 0, bw * 0.6, bh * 0.1, bl * 0.12, t, null); st.pop(); }
+    if (k === 'coat' || k === 'poncho') S(0, bh * 0.28, zc + bl * 0.1, bw * 0.6, bh * 0.22, bl * 0.3, t, c, 0);
+    if ((k === 'robe' || k === 'coat') && upright) { st.push(); st.translate(0, -bh * 0.35 - P.legL * 0.75, zc); C(0, 0, 0, bw * 0.62, P.legL * 0.9, bw * 0.62, c, t, 7); st.pop(); }
+    if (k === 'tunic' && lod) S(0, -bh * 0.3, zc, bw * 0.5, bh * 0.08, bl * 0.3, O.metal);
+  }
+  function weapon(L) {
+    if (!O || !O.weapon) return;
+    const w = O.weapon, hi = O.stage >= 3, m = O.metal, g = O.glow, shaft = hi ? m : WOOD, e = hi ? 0.9 : 0;
+    const gun = hi && (w === 'bow' || w === 'sling' || w === 'javelin' || w === 'blowpipe');
+    if (gun) { X(0, L * 0.35, 0, L * 0.05, L * 0.3, L * 0.07, m, O.accent); Y(0, L * 0.6, 0, L * 0.022, L * 0.28, m); S(0, L * 0.88, 0, L * 0.035, L * 0.035, L * 0.035, g, null, 0, 1, 1); return; }
+    switch (w) {
+      case 'spear': case 'javelin': Y(0, 0, 0, L * 0.022, L, shaft); C(0, L, 0, L * 0.05, L * 0.16, L * 0.05, hi ? g : [0.75, 0.75, 0.78], null, 0, e); break;
+      case 'blade': Y(0, 0, 0, L * 0.03, L * 0.2, WOOD); X(0, L * 0.2, 0, L * 0.09, L * 0.02, L * 0.03, m); X(0, L * 0.55, 0, L * 0.04, L * 0.34, L * 0.012, hi ? g : [0.82, 0.84, 0.88], null, e); break;
+      case 'axe': Y(0, 0, 0, L * 0.025, L * 0.8, shaft); X(L * 0.07, L * 0.72, 0, L * 0.1, L * 0.08, L * 0.015, hi ? g : m, null, e); break;
+      case 'mace': Y(0, 0, 0, L * 0.03, L * 0.62, shaft); S(0, L * 0.66, 0, L * 0.1, L * 0.1, L * 0.1, hi ? g : m, null, 0, 1, e); break;
+      case 'staff': Y(0, 0, 0, L * 0.025, L, shaft); S(0, L, 0, L * 0.06, L * 0.06, L * 0.06, hi ? g : O.accent, null, 0, 1, hi ? 1 : 0.2); break;
+      case 'glaive': Y(0, 0, 0, L * 0.022, L * 0.85, shaft); st.push(); st.translate(0, L * 0.85, 0); st.rotZ(0.35); C(0, 0, 0, L * 0.06, L * 0.28, L * 0.015, hi ? g : [0.8, 0.8, 0.84], null, 0, e); st.pop(); break;
+      case 'bow': S(0, L * 0.45, 0, L * 0.025, L * 0.45, L * 0.1, WOOD); Y(0, 0, -L * 0.08, L * 0.006, L * 0.9, [0.9, 0.9, 0.85]); break;
+      case 'sling': Y(0, 0, 0, L * 0.01, L * 0.5, [0.6, 0.5, 0.35]); S(0, L * 0.5, 0, L * 0.05, L * 0.05, L * 0.05, WOOD); break;
+      case 'blowpipe': Y(0, 0, 0, L * 0.018, L * 0.9, WOOD); break;
+      case 'tool': Y(0, 0, 0, L * 0.022, L * 0.7, WOOD); X(0, L * 0.7, L * 0.06, L * 0.02, L * 0.02, L * 0.08, [0.6, 0.6, 0.62]); break;
+    }
+  }
+  // weapon carried on the back when the body has no free hands
+  function backWeapon(bw, bh, zc) {
+    if (!O || !O.weapon || !lod) return;
+    st.push(); st.translate(bw * 0.3, bh * 0.45, zc); st.rotZ(0.35); st.rotX(1.25); st.translate(0, -P.S * 0.35, 0); weapon(P.S * 0.8); st.pop();
+  }
   const EYES = {
     1: [[0, 0.3, 0.6]], 2: [[0.5, 0.2, 0.5], [-0.5, 0.2, 0.5]], 3: [[0.5, 0.16, 0.5], [-0.5, 0.16, 0.5], [0, 0.46, 0.55]],
     4: [[0.52, 0.1, 0.48], [-0.52, 0.1, 0.48], [0.36, 0.42, 0.55], [-0.36, 0.42, 0.55]],
@@ -3212,6 +4092,7 @@ const Rig = (() => {
     st.pop();
     if (lod && P.jaw > 0.72) for (const s of [-1, 1]) { st.push(); st.translate(s * hs * 0.28, -hs * 0.34, hs * 0.5 + snL * 0.7); st.rotX(Math.PI); C(0, 0, 0, hs * 0.07, hs * 0.3 * P.jaw, hs * 0.07, WHITE); st.pop(); }
     eyes(hs); horns(hs); ears(hs); crest(hs);
+    if (O) headgear(hs);
   }
   function spikes(n, z0, z1, y0, y1) {
     if (!n || !lod) return;
@@ -3285,6 +4166,7 @@ const Rig = (() => {
     S(0, bodyH * 0.1 * P.hunch, bodyL * 0.2, bodyW * 0.55 * cs, bodyH * 0.53 * cs, bodyL * 0.33, P.main, P.second, P.pattern, P.patScale);
     S(0, -bodyH * 0.2, bodyL * 0.02, bodyW * 0.42, bodyH * 0.3, bodyL * 0.5, P.belly, P.belly, 0, 1, 0, 0.5);
     torsoExtras(bodyW, bodyH, bodyL, cs);
+    if (O) { garment(bodyW * cs, bodyH * cs, bodyL * 0.9, 0.02 * bodyL, false); backWeapon(bodyW, bodyH * cs, 0); }
     spikes(P.spikes, bodyL * 0.32, -bodyL * 0.5, bodyH * 0.5 * cs + bodyH * 0.1 * P.hunch, bodyH * 0.42);
     st.push();
     st.translate(0, bodyH * 0.28 * cs, bodyL * 0.44);
@@ -3326,6 +4208,8 @@ const Rig = (() => {
     S(0, 0, bodyL * 0.08, bodyW * 0.5, bodyH * 0.52, bodyL * 0.46, P.main, P.second, P.pattern, P.patScale);
     S(0, -bodyH * 0.18, bodyL * 0.12, bodyW * 0.4, bodyH * 0.32, bodyL * 0.4, P.belly, P.belly, 0, 1, 0, 0.5);
     torsoExtras(bodyW, bodyH, bodyL, 1);
+    const hands = P.append > 0.2;
+    if (O) { garment(bodyW, bodyH, bodyL, bodyL * 0.08, true); if (!hands) backWeapon(bodyW, bodyH, 0); }
     spikes(P.spikes, bodyL * 0.35, -bodyL * 0.4, bodyH * 0.5, bodyH * 0.45);
     if (P.append > 0.2) for (const side of [1, -1]) {
       const al = P.S * lerp(0.15, 0.42, P.append);
@@ -3334,7 +4218,8 @@ const Rig = (() => {
       S(0, -al * 0.45, 0, legT * 0.7, al * 0.55, legT * 0.7, P.main);
       st.translate(0, -al * 0.9, 0); st.rotX(-1.0);
       S(0, -al * 0.4, 0, legT * 0.55, al * 0.5, legT * 0.55, P.main);
-      if (lod) { st.translate(0, -al * 0.8, 0); st.rotX(Math.PI - 0.4); C(0, 0, 0, legT * 0.3, al * 0.35, legT * 0.3, P.accent); }
+      if (O && O.weapon && side > 0) { st.translate(0, -al * 0.85, 0); st.rotX(-0.2 - A.attack * 0.9); st.translate(0, -P.S * 0.3, 0); weapon(P.S * 0.9); }
+      else if (lod) { st.translate(0, -al * 0.8, 0); st.rotX(Math.PI - 0.4); C(0, 0, 0, legT * 0.3, al * 0.35, legT * 0.3, P.accent); }
       st.pop();
     }
     st.push();
@@ -3376,6 +4261,7 @@ const Rig = (() => {
     const bodyY = lerp(legL * 0.5, bodyH * 0.32, sl) + Math.abs(Math.sin(ph * 2)) * 0.02 * walk;
     st.push(); st.translate(0, bodyY, 0);
     S(0, 0, 0, bodyW * 0.42, bodyH * 0.36, bodyL * 0.26, P.main, P.second);
+    if (O) { garment(bodyW * 0.8, bodyH * 0.72, bodyL * 0.6, 0, false); backWeapon(bodyW * 0.8, bodyH * 0.72, 0); }
     st.push(); st.translate(0, bodyH * 0.12, -bodyL * 0.5); st.rotX(-0.12 + Math.sin(A.t * 1.4 + A.seed * 5) * 0.04);
     S(0, 0, 0, bodyW * 0.55, bodyH * 0.48, bodyL * 0.42, P.main, P.second, P.pattern === 0 ? 2 : P.pattern, P.patScale, P.glow * 0.8);
     if (lod && (P.tailTip === 2 || P.jaw > 0.78)) { st.push(); st.translate(0, 0, -bodyL * 0.4); st.rotX(-Math.PI / 2 - 0.35); C(0, 0, 0, bodyW * 0.08, bodyL * 0.28, bodyW * 0.08, P.dark); st.pop(); }
@@ -3404,6 +4290,7 @@ const Rig = (() => {
     const bodyY = lerp(legL * 0.42, bodyH * 0.3, sl) + Math.abs(Math.sin(ph * 2)) * 0.02 * walk;
     st.push(); st.translate(0, bodyY, 0);
     S(0, 0, bodyL * 0.1, bodyW * 0.45, bodyH * 0.36, bodyL * 0.3, P.main, P.second);
+    if (O) { garment(bodyW * 0.85, bodyH * 0.72, bodyL * 0.65, bodyL * 0.1, false); backWeapon(bodyW * 0.85, bodyH * 0.72, bodyL * 0.1); }
     st.push(); st.translate(0, bodyH * 0.2, -bodyL * 0.45); st.rotX(-0.25 + Math.sin(A.t * 1.2) * 0.03);
     S(0, 0, 0, bodyW * 0.68, bodyH * 0.6, bodyL * 0.5, P.main, P.second, P.pattern === 0 ? 3 : P.pattern, P.patScale, P.glow * 0.8);
     st.pop();
@@ -3468,6 +4355,7 @@ const Rig = (() => {
     st.rotX(fly > 0.5 ? (A.climb || 0) : -0.25 + A.eat * 0.4);
     S(0, 0, 0, bodyW * 0.46, bodyH * 0.46, bodyL * 0.5, P.main, P.belly, 1, 1, P.glow * 0.5);
     torsoExtras(bodyW * 0.8, bodyH * 0.6, bodyL * 0.6, 0.8);
+    if (O) { garment(bodyW * 0.9, bodyH * 0.9, bodyL * 1.1, 0, false); if (fly < 0.5) backWeapon(bodyW * 0.9, bodyH * 0.9, 0); }
     st.push(); st.translate(0, bodyH * 0.32, bodyL * 0.42); st.rotX(0.25 - A.eat * 0.7); st.rotY(A.look);
     S(0, headS * 0.3, headS * 0.2, headS * 0.62, headS * 0.58, headS * 0.62, P.main, P.second);
     st.push(); st.translate(0, headS * 0.22, headS * 0.72); st.rotX(Math.PI / 2 + 0.15); C(0, 0, 0, headS * 0.22, headS * (0.45 + P.snout * 0.8), headS * 0.16, P.accent[0] > 0.9 ? [1, 0.78, 0.3] : P.accent); st.pop();
@@ -3520,6 +4408,7 @@ const Rig = (() => {
     const is = 1 / Math.sqrt(sq);
     S(0, bodyH * 0.5 * sq, 0, bodyW * 0.62 * is, bodyH * 0.55 * sq, bodyL * 0.55 * is, P.main, P.belly, 1, 1, P.glow * 0.8);
     if (lod) S(bodyW * 0.22, bodyH * 0.88 * sq, bodyL * 0.18, bodyW * 0.12, bodyH * 0.07, bodyL * 0.1, WHITE, WHITE, 0, 1, 0.3, 0);
+    if (O) { st.push(); st.translate(0, bodyH * 0.45 * sq, 0); garment(bodyW * 1.1 * is, bodyH * 0.8 * sq, bodyL * 1.1 * is, 0, false); backWeapon(bodyW * 1.1, bodyH * 0.9, 0); if (lod) { st.translate(0, bodyH * 0.55, bodyL * 0.1); headgear(bodyW * 0.45); } st.pop(); }
     if (P.armor || P.segs > 3) {
       st.push(); st.translate(0, bodyH * 0.8 * sq, -bodyL * 0.12);
       S(0, 0, 0, bodyW * 0.5, bodyH * 0.45, bodyL * 0.42, P.second, P.accent, 2, 5);
@@ -3546,6 +4435,7 @@ const Rig = (() => {
     const puls = 1 + Math.sin(A.t * 1.6 + A.seed * 10) * 0.06;
     S(0, 0, 0, bodyW * 1.05 * puls, bodyH * 0.95 / puls, bodyL * 0.75 * puls, P.main, P.second, P.pattern || 3, P.patScale, P.glow * 0.8);
     S(0, -bodyH * 0.55, 0, bodyW * 0.72, bodyH * 0.22, bodyL * 0.52, P.belly, P.belly, 0, 1, P.glow * 0.4);
+    if (O) S(0, -bodyH * 0.2, 0, bodyW * 1.08, bodyH * 0.18, bodyL * 0.8, O.cloth, O.trim, 2, 4);
     if (P.crest || P.fins > 0.5) { st.push(); st.translate(0, bodyH * 0.75, 0); C(0, 0, 0, bodyW * 0.05, bodyH * (0.4 + P.crest * 0.6), bodyL * 0.5, P.accent, P.second, 5); st.pop(); }
     if (lod) for (const s of [-1, 1]) S(s * bodyW * 0.45, -bodyH * 0.25, bodyL * 0.55, headS * 0.14, headS * (A.sleep > 0.5 ? 0.03 : 0.14), headS * 0.1, P.eye, P.eye, 0, 1, P.glow ? 1.2 : 0);
     const n = 3 + Math.round(P.append * 5), segs = lod ? 4 + Math.round(P.segs / 3) : 3, segL = bodyH * 0.35;
@@ -3565,7 +4455,7 @@ const Rig = (() => {
   const FN = { quadruped, biped, hexapod, octopod, avian, aquatic, blob, floater };
 
   function draw(renderer, a, lodOn = true) {
-    R = renderer.batch; P = a.P; A = a.anim; lod = lodOn ? 1 : 0;
+    R = renderer.batch; P = a.P; A = a.anim; lod = lodOn ? 1 : 0; O = a.outfit || null;
     if (P.fam === 'serpent') serpent(a);
     else {
       st.reset(); st.translate(a.x, a.y, a.z); st.rotY(a.heading); st.rotX(a.pitch || 0); st.rotZ(a.roll || 0); st.scale(a.grow || 1);
@@ -3579,8 +4469,8 @@ const Rig = (() => {
     renderer.batch.shadow.add(st.m, a.x, gy + 0.05, a.z, r * (P.fam === 'serpent' ? 0.6 : 1), 1, r, [alpha, 0, 0], [0, 0, 0], 0, 1, 0, 0);
   }
   // neutral pose for sprite portraits
-  function portraitAgent(P, seed = 0.3) {
-    const a = { x: 0, y: 0, z: 0, heading: 0, pitch: 0, roll: 0, grow: 1, P, anim: { t: 0.4, phase: 0.8, walk: 0.35, run: 0, eat: 0, jaw: 0.2, look: 0.3, sleep: 0, attack: 0, fly: P.fam === 'avian' ? 1 : 0, flap: 0.35, seed, headBob: 0, dead: 0 } };
+  function portraitAgent(P, seed = 0.3, outfit = null) {
+    const a = { outfit, x: 0, y: 0, z: 0, heading: 0, pitch: 0, roll: 0, grow: 1, P, anim: { t: 0.4, phase: 0.8, walk: 0.35, run: 0, eat: 0, jaw: 0.2, look: 0.3, sleep: 0, attack: 0, fly: P.fam === 'avian' ? 1 : 0, flap: 0.35, seed, headBob: 0, dead: 0 } };
     if (P.fam === 'serpent') {
       a.trail = []; const segL = P.bodyL * 0.24;
       for (let i = 1; i < P.segs * 3 + 6; i++) a.trail.push([Math.sin(i * 0.22) * segL * 2.2, 0, -i * segL * 0.34]);
@@ -3614,6 +4504,7 @@ class Ecosystem {
       const ang = r.range(0, TAU), d = edge ? rad * r.range(0.85, 1.05) : rad * Math.sqrt(r.next());
       const x = cx + Math.cos(ang) * d, z = cz + Math.sin(ang) * d;
       if (!W.loaded(x, z)) continue;
+      if (W.domes && W.domes.some((d) => (x - d.x) ** 2 + (z - d.z) ** 2 < d.r2)) continue;
       const gy = W.heightAt(x, z), wl = W.waterAt(x, z), depth = wl - gy;
       let pool;
       if (depth > 1.4 && !W.frozenAt(x, z)) pool = this.groups.water.length ? this.groups.water : this.groups.air;
@@ -3675,7 +4566,8 @@ class Ecosystem {
   kill(a, cause, by) {
     if (a.state === 'dead') return;
     a.state = 'dead'; a.cause = cause; a.dead = 0.001; a.v = 0; a.stateT = 25; this.stats.deaths++;
-    if (cause === 'predation') { this.stats.kills++; this.emit(`${this.label(by)} #${by.id} brought down ${/^[AEIOU]/.test(a.sp.common) ? 'an' : 'a'} ${this.label(a)}`, 'hunt', by); }
+    if (cause === 'battle') { this.stats.kills++; if (by && by.cit && a.cit) this.emit(`${a.name} of ${Civ.civName(a.cit.civ)} fell fighting ${Civ.civName(by.cit.civ)}`, 'hunt', by); }
+    else if (cause === 'predation') { this.stats.kills++; this.emit(`${this.label(by)} #${by.id} brought down ${/^[AEIOU]/.test(a.sp.common) ? 'an' : 'a'} ${this.label(a)}`, 'hunt', by); }
     else if (cause === 'age' && this.world.onScreen && this.world.onScreen(a)) this.emit(`${this.label(a)} #${a.id} died of old age (${Math.round(a.age / 60)} min)`, 'death', a);
     else if (cause === 'starvation') this.emit(`${this.label(a)} #${a.id} starved`, 'death', a);
   }
@@ -3818,7 +4710,8 @@ class Ecosystem {
   }
   step(a, dt, env) {
     const P = a.P, sp = a.sp, W = this.world;
-    a.age += dt; a.grow = this.growOf(a); a.stateT += dt;
+    a.age += dt; a.grow = a.cit ? 1 : this.growOf(a); a.stateT += dt;
+    if (a.cit) { a.energy = 1; a.thirst = 0; a.age = Math.min(a.age, P.life * 0.5); }
     a.mateCD -= dt; a.huntCD -= dt; a.drinkCD -= dt;
     a.energy -= dt * 0.0045 * P.metab * (a.state === 'hunt' || a.state === 'flee' ? 2.2 : 1);
     if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * 0.0035);
@@ -3826,7 +4719,7 @@ class Ecosystem {
     if (a.age > P.life) { this.kill(a, 'age'); return; }
     if (a.energy <= 0) { this.kill(a, 'starvation'); return; }
     a.thinkT -= dt;
-    if (a.thinkT <= 0) { a.thinkT = 0.3 + Math.random() * 0.25; this.think(a, env); }
+    if (a.thinkT <= 0) { a.thinkT = 0.3 + Math.random() * 0.25; if (a.cit && this.civ) this.civ.think(a, env); else this.think(a, env); }
     // --- behavior -> desired motion ---
     let tx = a.tx, tz = a.tz, spd = 0, run = 0;
     const tgt = a.target;
@@ -3853,7 +4746,7 @@ class Ecosystem {
         a.energy = Math.min(1, a.energy + dt * 0.05);
         if (sp.habitat !== 'land') { spd = P.speed * 0.25; tx = a.x + Math.sin(a.heading) * 5; tz = a.z + Math.cos(a.heading) * 5; eat = 0; }
         else if (Math.sin(anim.t * 0.7 + anim.seed * 20) > 0.85) { spd = P.speed * 0.15; tx = a.x + Math.sin(a.heading + 0.3) * 3; tz = a.z + Math.cos(a.heading + 0.3) * 3; }
-        if (a.energy > 0.97) a.state = 'wander';
+        if (a.energy > 0.97 && !a.cit) a.state = 'wander';
         break;
       case 'drink': {
         const d = Math.hypot(tx - a.x, tz - a.z), px = a.x + Math.sin(a.heading) * (P.bodyL * 0.6 + 0.6), pz = a.z + Math.cos(a.heading) * (P.bodyL * 0.6 + 0.6);
@@ -3868,6 +4761,14 @@ class Ecosystem {
         tx = tgt.x; tz = tgt.z; spd = P.speed * 0.45;
         if (Math.hypot(tgt.x - a.x, tgt.z - a.z) < (P.bodyL + tgt.P.bodyL) * 0.5 + 0.8) this.breed(a, tgt);
         break;
+      case 'fight': {
+        if (!tgt || tgt.state === 'dead' || a.stateT > 16) { a.state = 'wander'; a.target = null; a.tx = a.x; a.tz = a.z; break; }
+        tx = tgt.x; tz = tgt.z;
+        const reach = (P.bodyL + tgt.P.bodyL) * 0.5 + 0.7;
+        if (Math.hypot(tgt.x - a.x, tgt.z - a.z) > reach) { spd = P.speed * 0.8; run = 1; attack = 0.3; }
+        else { attack = 0.5 + 0.5 * Math.sin(anim.t * 9 + a.id); jaw = 0.4; a.heading += clamp(angleDelta(a.heading, Math.atan2(tgt.x - a.x, tgt.z - a.z)), -dt * 4, dt * 4); if (Math.random() < dt * 0.12) this.kill(tgt, 'battle', a); }
+        break;
+      }
       case 'follow': if (tgt) { tx = tgt.x; tz = tgt.z; spd = Math.hypot(tx - a.x, tz - a.z) > 2.5 ? tgt.v + 0.8 : 0; } break;
       case 'herd': spd = P.speed * 0.4; if (Math.hypot(tx - a.x, tz - a.z) < 3) a.state = 'wander'; break;
       default: spd = Math.hypot(tx - a.x, tz - a.z) > 1.5 ? P.speed * (sp.habitat === 'air' ? 0.6 : 0.32) : 0;
@@ -3992,6 +4893,8 @@ const Nav = {
   // is (x,z) a legal position for this creature?
   ok(W, a, x, z) {
     if (!W.loaded(x, z)) return false;
+    if (a.bound) { const dx = x - a.bound.x, dz = z - a.bound.z; if (dx * dx + dz * dz > a.bound.r2) return false; }
+    else if (W.domes && W.domes.length && !a.cit) for (const d of W.domes) { const dx = x - d.x, dz = z - d.z; if (dx * dx + dz * dz < d.r2) return false; }
     const hab = a.sp.habitat;
     if (hab === 'air') return true;
     const d = W.waterAt(x, z) - W.heightAt(x, z);
@@ -4160,6 +5063,693 @@ const Nav = {
 };
 </script>
 
+<!-- ===== Cities · settlements, citizens, traffic and spacecraft ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   CITIES · settlements of a civilization laid out on the surface. Layout,
+   architecture, materials, colors, walls, fields, monuments, domes and
+   landing pads all follow the owner's culture and technological stage.
+   Terrain under a city is levelled and painted (roads, plazas, fields); the
+   buildings are baked into the chunk meshes like vegetation.
+   ============================================================================= */
+const CityGen = (() => {
+  const P = () => Geo.PRIM;
+  const segDist = (px, pz, r) => {
+    const vx = r[2] - r[0], vz = r[3] - r[1], wx = px - r[0], wz = pz - r[1];
+    const t = clamp((vx * wx + vz * wz) / (vx * vx + vz * vz || 1), 0, 1);
+    return Math.hypot(wx - vx * t, wz - vz * t);
+  };
+
+  // project every settlement of the planet that lies near the landing site into local coordinates
+  function plan(S, body, t) {
+    const out = [];
+    let sites = [];
+    try { sites = Civ.sitesOn(body, t); } catch (e) { console.warn(e); return out; }
+    for (const site of sites) {
+      const d = site.dir, dot = V3.dot(d, S.dir0);
+      if (dot < 0.97) continue;
+      const k = S.Rs / dot, x = V3.dot(d, S.bx) * k, z = V3.dot(d, S.bz) * k;
+      if (Math.hypot(x, z) > 1100) continue;
+      const c = layout(S, site, x, z);
+      if (c) out.push(c);
+    }
+    // keep cities from overlapping: later (smaller) ones yield
+    out.sort((a, b) => b.R - a.R);
+    const kept = [];
+    for (const c of out) if (!kept.some((o) => Math.hypot(o.x - c.x, o.z - c.z) < o.R * 1.5 + c.R * 1.5)) kept.push(c);
+    return kept;
+  }
+
+  function layout(S, site, x, z) {
+    const civ = site.civ, C = civ.culture, st = clamp(site.stage, 1, 4), r = new RNG.Rand(site.seed);
+    const o = {};
+    S.sample(x, z, o);
+    const dry = (q) => q.w < -1e8 || q.h > q.w + 0.7;
+    if (!dry(o)) {
+      let best = null;
+      for (let k = 0; k < 40 && !best; k++) { const a = k * 2.39996, d = 8 + k * 4; const px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d; S.sample(px, pz, o); if (dry(o)) best = [px, pz]; }
+      if (!best) return null;
+      x = best[0]; z = best[1]; S.sample(x, z, o);
+    }
+    // everything is built to the scale of the people who live there
+    let sp = null; try { sp = Civ.people(site.civ); } catch (e) { sp = null; }
+    const K = sp ? clamp(sp.pheno.S * 0.8, 0.7, 2.4) : 1;
+    const R = clamp(site.size * (0.85 + 0.3 * C.density) * Math.pow(K, 0.6), 8, 70);
+    const city = {
+      site, civ, owner: site.owner, C, stage: st, x, z, R, R2: R * 1.45, K, PR: R * (st <= 2 ? 1.75 : 1.3), h0: Math.max(o.h, o.w > -1e8 ? o.w + 0.8 : -1e9), yaw: r.range(0, TAU),
+      ruined: !!site.ruined, dome: site.kind === 'dome', colony: !!site.colony, roads: [], builds: [], fields: [], wall: null, pads: [], lamps: [], name: site.name, capital: site.capital,
+      seed: site.seed, layout: C.layout, arch: C.arch, occupied: site.owner && site.owner !== civ,
+    };
+    // occupancy on a half-unit grid; footprints are treated as discs
+    const occ = new Set(), cellK = (cx, cz) => cx * 73856093 ^ cz * 19349663;
+    const cells = (bx, bz, rad, fn) => {
+      for (let i = Math.floor((bx - rad) * 2); i <= Math.floor((bx + rad) * 2); i++) for (let j = Math.floor((bz - rad) * 2); j <= Math.floor((bz + rad) * 2); j++) {
+        if (Math.hypot(i * 0.5 + 0.25 - bx, j * 0.5 + 0.25 - bz) <= rad && fn(cellK(i, j)) === false) return false;
+      }
+      return true;
+    };
+    const free = (bx, bz, w, d) => cells(bx, bz, Math.max(w, d) * 0.95 + 0.25, (k) => !occ.has(k));
+    const mark = (bx, bz, w, d) => { cells(bx, bz, Math.max(w, d), (k) => { occ.add(k); }); };
+    const road = (x0, z0, x1, z1, w) => { city.roads.push([x0, z0, x1, z1, w]); const n = Math.ceil(Math.hypot(x1 - x0, z1 - z0) * 2); for (let i = 0; i <= n; i++) { const f = i / (n || 1); mark(x0 + (x1 - x0) * f, z0 + (z1 - z0) * f, w * 0.5, w * 0.5); } };
+    const cy = Math.cos(city.yaw), sy = Math.sin(city.yaw);
+    const W = (u, v) => [x + u * cy - v * sy, z + u * sy + v * cy];
+    const RW = [0, 1.3, 1.8, 2.4, 2.8][st] * Math.pow(K, 0.7);
+    // --- street network ---
+    const plaza = city.plaza = { r: [0, 3.2, 4.5, 6, 7.5][st] * (site.capital ? 1.25 : 1) * K };
+    mark(x, z, plaza.r, plaza.r);
+    switch (C.layout) {
+      case 'grid': {
+        const B = [0, 7, 8, 9, 10][st] * K;
+        for (let k = -Math.floor(R / B); k <= Math.floor(R / B); k++) {
+          const e = Math.sqrt(Math.max(0, R * R - (k * B) * (k * B)));
+          if (e < 3) continue;
+          road(...W(k * B, -e), ...W(k * B, e), RW); road(...W(-e, k * B), ...W(e, k * B), RW);
+        }
+        break;
+      }
+      case 'radial': {
+        const n = r.int(5, 8);
+        for (let i = 0; i < n; i++) { const a = (i / n) * TAU; road(x + Math.cos(a) * plaza.r, z + Math.sin(a) * plaza.r, x + Math.cos(a) * R, z + Math.sin(a) * R, RW); }
+        for (const f of [0.45, 0.8]) { const rr = R * f, m = Math.max(8, Math.round(rr / 3)); for (let i = 0; i < m; i++) { const a0 = (i / m) * TAU, a1 = ((i + 1) / m) * TAU; road(x + Math.cos(a0) * rr, z + Math.sin(a0) * rr, x + Math.cos(a1) * rr, z + Math.sin(a1) * rr, RW * 0.8); } }
+        break;
+      }
+      case 'ring': {
+        for (const f of [0.5, 0.88]) { const rr = R * f, m = Math.max(8, Math.round(rr / 3)); for (let i = 0; i < m; i++) { const a0 = (i / m) * TAU, a1 = ((i + 1) / m) * TAU; road(x + Math.cos(a0) * rr, z + Math.sin(a0) * rr, x + Math.cos(a1) * rr, z + Math.sin(a1) * rr, RW); } }
+        for (let i = 0; i < 4; i++) { const a = city.yaw + (i / 4) * TAU; road(x + Math.cos(a) * plaza.r, z + Math.sin(a) * plaza.r, x + Math.cos(a) * R, z + Math.sin(a) * R, RW); }
+        break;
+      }
+      case 'linear': {
+        road(...W(-R, 0), ...W(R, 0), RW * 1.3);
+        const B = [0, 8, 9, 10, 11][st] * K;
+        for (let k = -Math.floor(R / B); k <= Math.floor(R / B); k++) { if (!k) continue; const e = Math.sqrt(Math.max(0, R * R - (k * B) * (k * B))) * 0.45; if (e > 3) road(...W(k * B, -e), ...W(k * B, e), RW * 0.8); }
+        break;
+      }
+      case 'terraced': {
+        for (const f of [0.35, 0.65, 0.92]) { const rr = R * f, m = Math.max(8, Math.round(rr / 3)); for (let i = 0; i < m; i++) { const a0 = (i / m) * TAU, a1 = ((i + 1) / m) * TAU; road(x + Math.cos(a0) * rr, z + Math.sin(a0) * rr, x + Math.cos(a1) * rr, z + Math.sin(a1) * rr, RW * 0.9); } }
+        const a = city.yaw; road(x + Math.cos(a) * plaza.r, z + Math.sin(a) * plaza.r, x + Math.cos(a) * R, z + Math.sin(a) * R, RW);
+        break;
+      }
+      default: { // organic: meandering lanes branching from the plaza
+        const n = r.int(3, 5);
+        for (let i = 0; i < n; i++) {
+          let a = city.yaw + (i / n) * TAU + r.range(-0.3, 0.3), px = x + Math.cos(a) * plaza.r, pz = z + Math.sin(a) * plaza.r;
+          while (Math.hypot(px - x, pz - z) < R) {
+            a += r.range(-0.45, 0.45); const nx = px + Math.cos(a) * 5 * K, nz = pz + Math.sin(a) * 5 * K;
+            road(px, pz, nx, nz, RW * 0.9);
+            if (r.chance(0.18)) { const b = a + r.sign() * r.range(1, 1.6); road(nx, nz, nx + Math.cos(b) * 7 * K, nz + Math.sin(b) * 7 * K, RW * 0.7); }
+            px = nx; pz = nz;
+          }
+        }
+      }
+    }
+    // --- buildings line the streets ---
+    const maxB = Math.round([0, 12, 34, 52, 70][st] * (site.capital ? 1.3 : 1) * (R / ([0, 11, 20, 28, 34][st] || 20) / Math.pow(K, 0.6)) * (city.ruined ? 0.7 : 1));
+    const bw = [0, [0.9, 1.5], [1.0, 1.8], [1.2, 2.2], [1.4, 2.5]][st].map((v) => v * K);
+    const bh = [0, [1.3, 2.2], [2.2, 4.5], [4, 12], [7, 22]][st].map((v) => v * K);
+    let tries = 0;
+    while (city.builds.length < maxB && tries++ < maxB * 16 + 60) {
+      const rd = city.roads[Math.floor(r.next() * city.roads.length)];
+      if (!rd) break;
+      const f = r.next(), px = rd[0] + (rd[2] - rd[0]) * f, pz = rd[1] + (rd[3] - rd[1]) * f;
+      const L = Math.hypot(rd[2] - rd[0], rd[3] - rd[1]) || 1, nx = -(rd[3] - rd[1]) / L, nz = (rd[2] - rd[0]) / L, side = r.sign();
+      const w = r.range(bw[0], bw[1]), d = r.range(bw[0], bw[1]) * r.range(0.8, 1.2);
+      const off = rd[4] * 0.5 + Math.max(w, d) + 0.6;
+      const bx = px + nx * off * side, bz = pz + nz * off * side;
+      const dc = Math.hypot(bx - x, bz - z);
+      if (dc > R - Math.max(w, d) * 0.5 || dc < plaza.r + Math.max(w, d) || !free(bx, bz, w, d)) continue;
+      const core = 1 - dc / R;
+      let hgt = r.range(bh[0], bh[1]) * (1 + core * (st >= 3 ? 1.2 : 0.4)) * C.height;
+      if (city.ruined) hgt *= r.range(0.25, 0.6);
+      mark(bx, bz, w, d);
+      city.builds.push({ x: bx, z: bz, w, d, h: hgt, yaw: Math.atan2(-nx * side, -nz * side), kind: 'house', v: r.next() });
+    }
+    // --- the center: palace / temple / capitol + monument ---
+    const ch = [0, 3.2, 8, 20, 34][st] * (site.capital ? 1.3 : 0.85) * C.height * (city.ruined ? 0.4 : 1) * K;
+    city.center = { x, z, w: plaza.r * 0.55, h: ch, kind: ['', 'longhouse', 'temple', 'capitol', 'spire'][st] };
+    const ma = city.yaw + Math.PI * 0.75, md = plaza.r * 0.75;
+    city.monument = { x: x + Math.cos(ma) * md, z: z + Math.sin(ma) * md, kind: C.monument, h: [0, 2.5, 4, 5, 6][st] * K };
+    // --- walls ---
+    if ((C.walls || st === 2 && C.T.aggression > 0.4) && !city.dome && st <= 3) city.wall = { r: R * 1.02, gates: city.roads.filter((rd) => Math.hypot(rd[2] - x, rd[3] - z) > R * 0.9).map((rd) => Math.atan2(rd[3] - z, rd[2] - x)) };
+    // --- fields and pads ---
+    if (st <= 2 && !city.dome) {
+      const n = r.int(4, 9);
+      for (let i = 0; i < n; i++) { const a = r.range(0, TAU), d = R * r.range(1.12, 1.5); city.fields.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, w: r.range(3, 6) * K, d: r.range(2.5, 5) * K, yaw: a + r.range(-0.3, 0.3), crop: r.next() }); }
+    }
+    if (st >= 3 && !city.ruined) {
+      const n = st === 4 ? r.int(2, 4) : r.int(1, 2);
+      for (let i = 0; i < n; i++) { const a = city.yaw + 0.4 + (i / n) * TAU; const d = city.dome ? R * 1.22 : R * r.range(0.95, 1.12); city.pads.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, r: (st === 4 ? 3.6 : 3) * Math.max(1, Math.pow(K, 0.6)) }); }
+    }
+    city.R2 = Math.max(city.R2, ...city.pads.map((q) => Math.hypot(q.x - x, q.z - z) + q.r + 3));
+    city.PR = Math.max(city.PR, city.R2);
+    // bucket roads on an 8-unit grid for fast ground painting
+    city.roadGrid = new Map();
+    for (const rd of city.roads) {
+      const pad = rd[4] * 0.5 + 0.5;
+      for (let i = Math.floor((Math.min(rd[0], rd[2]) - pad) / 8); i <= Math.floor((Math.max(rd[0], rd[2]) + pad) / 8); i++)
+        for (let j = Math.floor((Math.min(rd[1], rd[3]) - pad) / 8); j <= Math.floor((Math.max(rd[1], rd[3]) + pad) / 8); j++) {
+          const k = i * 100003 + j; let l = city.roadGrid.get(k); if (!l) city.roadGrid.set(k, (l = [])); l.push(rd);
+        }
+    }
+    return city;
+  }
+
+  // levelled ground height inside a city (terraced cities climb toward the center)
+  function groundH(c, d) { return c.layout === 'terraced' ? c.h0 + Math.max(0, Math.floor((1 - d / (c.R * 0.95)) * 3.2)) * 1.1 : c.h0; }
+  // modifies a terrain sample (called from Surface.sample)
+  function flatten(S, x, z, o) {
+    for (const c of S.cities) {
+      const dx = x - c.x, dz = z - c.z;
+      if (Math.abs(dx) > c.R2 || Math.abs(dz) > c.R2) continue;
+      const d = Math.hypot(dx, dz), inner = c.R2 - (c.R2 - c.R) * 0.25, k = 1 - smoothstep(Math.max(c.R, inner * 0.9), c.R2, d);
+      if (k <= 0) continue;
+      o.h = lerp(o.h, groundH(c, d), k);
+      if (k > 0.25 && o.w > o.h - 0.1) o.w = Math.min(o.w, o.h - 0.4);
+      if (k > 0.5 && o.w < o.h) o.city = c;
+    }
+  }
+  function blocked(S, x, z) {
+    for (const c of S.cities) {
+      const dx = x - c.x, dz = z - c.z;
+      if (dx * dx + dz * dz < c.R2 * c.R2 * 0.95) return true;
+      for (const f of c.fields) if (inRect(f, x, z)) return true;
+    }
+    return false;
+  }
+  function inRect(f, x, z) { const c = Math.cos(f.yaw), s = Math.sin(f.yaw), u = (x - f.x) * c + (z - f.z) * s, v = -(x - f.x) * s + (z - f.z) * c; return Math.abs(u) < f.w && Math.abs(v) < f.d ? [u, v] : null; }
+  // ground colours: streets, plazas, dome floors, crop fields
+  function paint(S, x, z, col) {
+    for (const c of S.cities) {
+      const dx = x - c.x, dz = z - c.z, d2 = dx * dx + dz * dz;
+      if (d2 > c.PR * c.PR) continue;
+      const d = Math.sqrt(d2), C = c.C, st = c.stage, ruin = c.ruined;
+      const roadCol = st === 1 ? Color.mix(col, [0.42, 0.33, 0.24], 0.55) : st === 2 ? C.road : st === 3 ? Color.mix(C.metal, [0.22, 0.22, 0.26], 0.6) : Color.mix(C.metal, [0.14, 0.15, 0.2], 0.7);
+      for (const f of c.fields) {
+        const uv = inRect(f, x, z);
+        if (uv) { const row = fract(uv[0] * 0.5) < 0.5; const crop = S.planet.flora ? Color.hsv(fract(S.planet.floraHue + (f.crop - 0.5) * 0.25), 0.55, 0.62) : [0.6, 0.55, 0.3]; return Color.mix(col, row ? crop : Color.mix(crop, [0.45, 0.33, 0.2], 0.6), ruin ? 0.25 : 0.8); }
+      }
+      if (d > c.R2) continue;
+      const cell = c.roadGrid.get(Math.floor(x / 8) * 100003 + Math.floor(z / 8)) || [];
+      for (const rd of cell) if (segDist(x, z, rd) < rd[4] * 0.5) { const v = (Math.floor(x) + Math.floor(z)) & 1 ? 0.04 : -0.03; return Color.mix(col, Color.shade(roadCol, st >= 2 ? v : 0), ruin ? 0.35 : 0.85); }
+      for (const p of c.pads) if (Math.hypot(x - p.x, z - p.z) < p.r + 0.6) return Color.mix(C.metal, [0.2, 0.2, 0.22], 0.5);
+      if (d < c.plaza.r) { const v = ((Math.floor(x * 0.5) + Math.floor(z * 0.5)) & 1) ? 0.06 : -0.04; return Color.mix(col, Color.shade(st >= 3 ? C.metal : C.road, v), ruin ? 0.3 : 0.9); }
+      if (c.dome && d < c.R * 1.06) return Color.mix(col, Color.shade(C.metal, -0.15), 0.75);
+      if (d < c.R) return Color.mix(col, roadCol, ruin ? 0.1 : st === 1 ? 0.18 : 0.3);
+    }
+    return col;
+  }
+
+  // ------------------------------------------------------------------ geometry
+  function bake(S, ch, mb) {
+    let top = -1e9;
+    const x0 = ch.x0, z0 = ch.z0, x1 = x0 + S.CS, z1 = z0 + S.CS;
+    const inChunk = (x, z) => x >= x0 && x < x1 && z >= z0 && z < z1;
+    for (const c of S.cities) {
+      if (c.x + c.PR < x0 || c.x - c.PR > x1 || c.z + c.PR < z0 || c.z - c.PR > z1) continue;
+      const g = (x, z) => Surface.interp(ch, ch.H, clamp(x, x0, x1 - 0.01), clamp(z, z0, z1 - 0.01));
+      for (const b of c.builds) if (inChunk(b.x, b.z)) top = Math.max(top, building(mb, c, b, g(b.x, b.z)));
+      if (inChunk(c.x, c.z)) top = Math.max(top, center(mb, c, g(c.x, c.z)));
+      if (inChunk(c.monument.x, c.monument.z)) top = Math.max(top, monument(mb, c, g(c.monument.x, c.monument.z)));
+      for (const p of c.pads) if (inChunk(p.x, p.z)) pad(mb, c, p, g(p.x, p.z));
+      if (c.wall) wall(mb, c, g, inChunk);
+      if (c.dome && inChunk(c.x, c.z)) top = Math.max(top, dome(mb, c, g(c.x, c.z)));
+      lamps(mb, c, g, inChunk);
+      for (const f of c.fields) if (inChunk(f.x, f.z) && !c.ruined) { const y = g(f.x, f.z); mb.add(P().sphereLo, mb.mat(f.x + f.w * 0.7, y + 0.2, f.z, 0, 0, 0.7, 0.6, 0.7), [0.85, 0.72, 0.35], 0.01, 0.03); }
+      if (inChunk(c.x, c.z)) ch.pois.push({ type: 'city', name: c.name, x: c.x, y: c.h0, z: c.z, r: c.plaza.r + 2, city: c, desc: '' });
+    }
+    return top;
+  }
+  const wallCol = (c, b) => {
+    const C = c.C, st = c.stage;
+    let col = st <= 1 ? C.matCol : st === 2 ? Color.mix(C.matCol, C.pal.primary, 0.45) : st === 3 ? Color.mix(C.pal.primary, C.metal, 0.35) : Color.mix(C.pal.primary, C.metal, 0.55);
+    col = Color.shade(col, (b.v - 0.5) * 0.18);
+    if (c.ruined) col = Color.mix(col, [0.35, 0.33, 0.32], 0.6);
+    return col;
+  };
+  // lit window bands: flush with flat facades, or a ring on round towers
+  function windows(mb, c, b, y, hgt) {
+    if (c.ruined || c.stage < 2) return;
+    const C = c.C, glow = c.stage >= 3 ? C.glow : [1, 0.78, 0.4], col = Color.mix(glow, [0.12, 0.12, 0.16], 0.45), floors = Math.max(1, Math.floor(hgt / (c.stage >= 3 ? 2.4 : 1.6)));
+    const cy = Math.cos(b.yaw), sy = Math.sin(b.yaw), step = c.stage >= 3 ? 2 : 1, round = b.round;
+    for (let f = 0; f < floors; f += step) {
+      const wy = y + 0.9 + f * (hgt / floors);
+      if (wy > y + hgt - 0.4) break;
+      if (round) { mb.add(P().cylLo, mb.mat(b.x, wy - 0.12, b.z, b.yaw, 0, b.w * 1.015, 0.24, b.w * 1.015), col, 0, 0, 0.7); continue; }
+      mb.add(P().box, mb.mat(b.x + sy * b.d, wy, b.z + cy * b.d, b.yaw, 0, b.w * 0.62, 0.2, 0.03), col, 0, 0, 0.7);
+      if (c.stage >= 3) mb.add(P().box, mb.mat(b.x + cy * b.w, wy, b.z - sy * b.w, b.yaw, 0, 0.03, 0.2, b.d * 0.62), col, 0, 0, 0.7);
+    }
+  }
+  function roofShape(mb, c, b, x, y, z, w, d, col) {
+    const arch = c.arch, yaw = b.yaw, box = P().box, sph = P().sphereLo, con = P().coneLo, cyl = P().cylLo;
+    switch (arch) {
+      case 'gable': { const s = d * 1.08 / Math.SQRT2; mb.add(box, mb.mat(x, y, z, yaw, Math.PI / 4, w * 1.08, s, s), col); return y + d * 1.08; }
+      case 'dome': mb.add(sph, mb.mat(x, y, z, yaw, 0, w * 1.02, Math.min(w, d) * 0.85, d * 1.02), col); return y + Math.min(w, d) * 0.85;
+      case 'stepped': mb.add(box, mb.mat(x, y + 0.35, z, yaw, 0, w * 0.72, 0.35, d * 0.72), col); mb.add(box, mb.mat(x, y + 0.95, z, yaw, 0, w * 0.45, 0.25, d * 0.45), Color.shade(col, 0.1)); return y + 1.2;
+      case 'spire': mb.add(con, mb.mat(x, y, z, yaw, 0, w * 0.95, Math.max(w, d) * 2.2, d * 0.95), col); return y + Math.max(w, d) * 2.2;
+      case 'organic': mb.add(sph, mb.mat(x, y, z, yaw, 0, w * 1.1, Math.min(w, d) * 1.1, d * 1.1), col); mb.add(sph, mb.mat(x + w * 0.3, y + Math.min(w, d) * 0.7, z, yaw, 0, w * 0.45, w * 0.45, w * 0.45), Color.shade(col, 0.12)); return y + Math.min(w, d) * 1.2;
+      case 'monolith': mb.add(box, mb.mat(x, y + 0.15, z, yaw, 0, w * 1.12, 0.15, d * 1.12), Color.shade(col, -0.15)); return y + 0.3;
+      case 'crystal': mb.add(con, mb.mat(x, y, z, yaw + 0.5, 0, w * 0.9, Math.max(w, d) * 1.6, d * 0.9), col, 0, 0, c.ruined ? 0 : 0.18); return y + Math.max(w, d) * 1.6;
+      default: mb.add(con, mb.mat(x, y, z, yaw, 0, w * 1.25, Math.max(w, d) * 1.1, d * 1.25), col); return y + Math.max(w, d) * 1.1; // tent
+    }
+  }
+  function building(mb, c, b, y0) {
+    const C = c.C, st = c.stage, box = P().box, cyl = P().cylLo, sph = P().sphereLo, con = P().coneLo;
+    const wc = wallCol(c, b), rc = c.ruined ? Color.mix(C.roofCol, [0.3, 0.28, 0.26], 0.6) : Color.shade(C.roofCol, (b.v - 0.5) * 0.15);
+    const y = y0 - 0.25, hgt = b.h;
+    if (st === 1) {
+      // huts, tents and longhouses
+      if (c.arch === 'tent' || c.arch === 'spire') { mb.add(con, mb.mat(b.x, y, b.z, b.yaw, 0, b.w * 1.1, hgt * 1.35, b.d * 1.1), rc); mb.add(cyl, mb.mat(b.x, y + hgt * 1.3, b.z, 0, 0, 0.08, 0.5, 0.08), C.matCol); return y + hgt * 1.8; }
+      if (c.arch === 'dome' || c.arch === 'organic') { mb.add(sph, mb.mat(b.x, y, b.z, b.yaw, 0, b.w, hgt, b.d), rc); mb.add(box, mb.mat(b.x + Math.sin(b.yaw) * b.d * 0.9, y + 0.45, b.z + Math.cos(b.yaw) * b.d * 0.9, b.yaw, 0, 0.35, 0.45, 0.2), [0.12, 0.08, 0.06]); return y + hgt; }
+      mb.add(box, mb.mat(b.x, y + hgt * 0.3, b.z, b.yaw, 0, b.w, hgt * 0.3, b.d), wc);
+      return c.ruined ? y + hgt * 0.6 : roofShape(mb, c, b, b.x, y + hgt * 0.6, b.z, b.w, b.d, rc);
+    }
+    if (c.ruined) {
+      mb.add(box, mb.mat(b.x, y + hgt * 0.5, b.z, b.yaw, 0, b.w, hgt * 0.5, b.d), wc);
+      mb.add(box, mb.mat(b.x + b.w * 0.8, y + 0.2, b.z, b.yaw + 0.7, 0.3, b.w * 0.4, 0.2, 0.3), Color.shade(wc, -0.2));
+      return y + hgt;
+    }
+    const cy = Math.cos(b.yaw), sy = Math.sin(b.yaw);
+    b.round = c.arch === 'dome' || c.arch === 'organic' || c.arch === 'tent';
+    if (st >= 3 && b.v < 0.3 && c.arch !== 'monolith') {
+      // modern slab towers mixed into the traditional skyline, trimmed in the culture's colours
+      b.round = false;
+      mb.add(box, mb.mat(b.x, y + hgt * 0.5, b.z, b.yaw, 0, b.w * 0.85, hgt * 0.5, b.d * 0.85), Color.mix(wc, C.metal, 0.4));
+      mb.add(box, mb.mat(b.x, y + hgt + 0.25, b.z, b.yaw, 0, b.w * 0.95, 0.25, b.d * 0.95), rc);
+      windows(mb, c, { ...b, w: b.w * 0.85, d: b.d * 0.85 }, y, hgt);
+      return y + hgt + 0.5;
+    }
+    switch (c.arch) {
+      case 'dome': case 'organic':
+        mb.add(cyl, mb.mat(b.x, y, b.z, b.yaw, 0, b.w, hgt, b.w), wc);
+        roofShape(mb, c, { ...b, d: b.w }, b.x, y + hgt, b.z, b.w, b.w, rc);
+        if (st >= 3) mb.add(cyl, mb.mat(b.x, y + hgt * 0.62, b.z, 0, 0, b.w * 1.05, 0.14, b.w * 1.05), C.glow, 0, 0, 0.7);
+        break;
+      case 'stepped': {
+        const n = st >= 3 ? 4 : 3;
+        for (let i = 0; i < n; i++) { const k = 1 - i * 0.2, hh = hgt / n; mb.add(box, mb.mat(b.x, y + hh * (i + 0.5), b.z, b.yaw, 0, b.w * k, hh * 0.5, b.d * k), Color.shade(wc, i * 0.04)); }
+        if (st >= 3) mb.add(box, mb.mat(b.x, y + hgt + 0.2, b.z, b.yaw, 0, b.w * 0.25, 0.2, b.d * 0.25), C.glow, 0, 0, 0.8);
+        break;
+      }
+      case 'spire':
+        mb.add(box, mb.mat(b.x, y + hgt * 0.5, b.z, b.yaw, 0, b.w, hgt * 0.5, b.d), wc);
+        roofShape(mb, c, b, b.x, y + hgt, b.z, b.w, b.d, rc);
+        if (st >= 3) mb.add(sph, mb.mat(b.x, y + hgt + Math.max(b.w, b.d) * 2.2, b.z, 0, 0, 0.25, 0.25, 0.25), C.glow, 0, 0, 1);
+        break;
+      case 'monolith':
+        mb.add(box, mb.mat(b.x, y + hgt * 0.5, b.z, b.yaw, 0, b.w, hgt * 0.5, b.d), wc);
+        if (st >= 3) mb.add(box, mb.mat(b.x + cy * b.w * 0.3, y + hgt * 0.78, b.z - sy * b.w * 0.3, b.yaw, 0, b.w * 1.3, hgt * 0.08, b.d * 0.7), Color.shade(wc, -0.12));
+        roofShape(mb, c, b, b.x, y + hgt, b.z, b.w, b.d, rc);
+        break;
+      case 'crystal':
+        mb.add(box, mb.mat(b.x, y + hgt * 0.42, b.z, b.yaw + 0.785, 0, b.w * 0.85, hgt * 0.42, b.d * 0.85), wc);
+        roofShape(mb, c, b, b.x, y + hgt * 0.84, b.z, b.w, b.d, Color.mix(C.glow, rc, 0.5));
+        break;
+      case 'tent':
+        mb.add(cyl, mb.mat(b.x, y, b.z, b.yaw, 0, b.w, hgt * 0.7, b.d), wc);
+        roofShape(mb, c, b, b.x, y + hgt * 0.7, b.z, b.w, b.d, rc);
+        break;
+      default: // gable
+        mb.add(box, mb.mat(b.x, y + hgt * 0.5, b.z, b.yaw, 0, b.w, hgt * 0.5, b.d), wc);
+        roofShape(mb, c, b, b.x, y + hgt, b.z, b.w, b.d, rc);
+    }
+    if (st === 2 && b.v > 0.6) mb.add(box, mb.mat(b.x - cy * b.w * 0.5, y + hgt + 0.6, b.z + sy * b.w * 0.5, b.yaw, 0, 0.22, 0.6, 0.22), Color.shade(wc, -0.25));
+    if (st === 4 && b.v > 0.55) { mb.add(cyl, mb.mat(b.x, y + hgt * 0.9, b.z, 0, 0, Math.max(b.w, b.d) * 1.35, 0.12, Math.max(b.w, b.d) * 1.35), C.glow, 0, 0, 0.9); }
+    windows(mb, c, b, y, hgt);
+    return y + hgt + Math.max(b.w, b.d) * 2.4;
+  }
+  function center(mb, c, y0) {
+    const C = c.C, st = c.stage, box = P().box, cyl = P().cylLo, sph = P().sphereLo, con = P().coneLo, y = y0 - 0.2, cc = c.center;
+    const wc = wallCol(c, { v: 0.7 }), rc = c.ruined ? [0.35, 0.33, 0.3] : C.pal.secondary, trim = c.ruined ? [0.3, 0.3, 0.3] : C.pal.accent;
+    const w = cc.w, hgt = cc.h;
+    if (st === 1) {
+      // fire pit and a chief's longhouse
+      const K = c.K;
+      for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU; mb.add(sph, mb.mat(c.x + Math.cos(a) * 0.9 * K, y + 0.15, c.z + Math.sin(a) * 0.9 * K, 0, 0, 0.3 * K, 0.2 * K, 0.3 * K), [0.4, 0.38, 0.36]); }
+      if (!c.ruined) mb.add(con, mb.mat(c.x, y, c.z, 0, 0, 0.55 * K, 1.0 * K, 0.55 * K), [1, 0.55, 0.15], 0.1, 0.4, 1);
+      const lx = c.x - Math.cos(c.yaw) * (c.plaza.r + 2.2 * K), lz = c.z - Math.sin(c.yaw) * (c.plaza.r + 2.2 * K);
+      const b = { x: lx, z: lz, w: 3.2 * K, d: 1.8 * K, h: hgt, yaw: c.yaw + Math.PI / 2, v: 0.8 };
+      building(mb, Object.assign({}, c, { stage: 1, arch: c.arch === 'tent' ? 'gable' : c.arch }), b, y0);
+      return y + hgt * 2;
+    }
+    if (c.ruined) {
+      mb.add(box, mb.mat(c.x, y + hgt * 0.5, c.z, c.yaw, 0, w, hgt * 0.5, w), wc);
+      for (let i = 0; i < 5; i++) { const a = i * 1.3; mb.add(box, mb.mat(c.x + Math.cos(a) * w * 1.3, y + 0.3, c.z + Math.sin(a) * w * 1.3, a, 0.4, 0.8, 0.3, 0.5), Color.shade(wc, -0.2)); }
+      return y + hgt;
+    }
+    let tp = y + hgt;
+    switch (c.arch) {
+      case 'stepped': { const n = 4 + st; for (let i = 0; i < n; i++) { const k = 1 - i / (n + 1); mb.add(box, mb.mat(c.x, y + (hgt / n) * (i + 0.5), c.z, c.yaw, 0, w * 1.6 * k, hgt / n / 2, w * 1.6 * k), Color.shade(wc, i * 0.03)); } mb.add(box, mb.mat(c.x, tp + 0.6, c.z, c.yaw, 0, w * 0.3, 0.6, w * 0.3), trim, 0, 0, st >= 3 ? 0.8 : 0.2); tp += 1.2; break; }
+      case 'dome': case 'organic': mb.add(cyl, mb.mat(c.x, y, c.z, 0, 0, w * 1.3, hgt * 0.55, w * 1.3), wc); mb.add(sph, mb.mat(c.x, y + hgt * 0.55, c.z, 0, 0, w * 1.3, w * 1.1, w * 1.3), rc); mb.add(cyl, mb.mat(c.x, y + hgt * 0.55 + w * 1.05, c.z, 0, 0, 0.15, hgt * 0.35, 0.15), trim, 0, 0, st >= 3 ? 0.7 : 0); tp = y + hgt * 0.9 + w; break;
+      case 'spire': case 'crystal': mb.add(box, mb.mat(c.x, y + hgt * 0.35, c.z, c.yaw, 0, w, hgt * 0.35, w), wc); mb.add(con, mb.mat(c.x, y + hgt * 0.7, c.z, c.yaw + (c.arch === 'crystal' ? 0.5 : 0), 0, w * 0.9, hgt * 0.9, w * 0.9), c.arch === 'crystal' ? Color.mix(C.glow, rc, 0.4) : rc, 0, 0, c.arch === 'crystal' ? 0.3 : 0); for (const s of [-1, 1]) { mb.add(box, mb.mat(c.x + Math.cos(c.yaw) * w * 1.4 * s, y + hgt * 0.3, c.z + Math.sin(c.yaw) * w * 1.4 * s, c.yaw, 0, w * 0.3, hgt * 0.3, w * 0.3), wc); mb.add(con, mb.mat(c.x + Math.cos(c.yaw) * w * 1.4 * s, y + hgt * 0.6, c.z + Math.sin(c.yaw) * w * 1.4 * s, c.yaw, 0, w * 0.35, hgt * 0.4, w * 0.35), rc); } tp = y + hgt * 1.6; break;
+      case 'tent': mb.add(cyl, mb.mat(c.x, y, c.z, 0, 0, w * 1.4, hgt * 0.4, w * 1.4), wc); mb.add(con, mb.mat(c.x, y + hgt * 0.4, c.z, 0, 0, w * 1.7, hgt * 0.8, w * 1.7), rc); tp = y + hgt * 1.2; break;
+      default: mb.add(box, mb.mat(c.x, y + hgt * 0.5, c.z, c.yaw, 0, w * 1.4, hgt * 0.5, w), wc); roofShape(mb, c, { yaw: c.yaw }, c.x, y + hgt, c.z, w * 1.4, w, rc); tp = y + hgt + w;
+    }
+    if (st >= 3) { // antenna mast and beacon
+      mb.add(cyl, mb.mat(c.x, tp, c.z, 0, 0, 0.12, st === 4 ? 8 : 4, 0.12), C.metal);
+      mb.add(sph, mb.mat(c.x, tp + (st === 4 ? 8 : 4), c.z, 0, 0, 0.35, 0.35, 0.35), C.glow, 0, 0, 1);
+      if (st === 4) mb.add(cyl, mb.mat(c.x, y + hgt * 0.75, c.z, 0, 0, w * 2.4, 0.18, w * 2.4), C.glow, 0, 0, 0.9);
+      tp += st === 4 ? 8.5 : 4.5;
+    }
+    windows(mb, c, { x: c.x, z: c.z, w: w * 1.3, d: w, yaw: c.yaw, v: 0.5 }, y, Math.min(hgt, 24));
+    return tp;
+  }
+  // the civilization's emblem as a voxel banner
+  function emblem(mb, c, x, y, z, yaw, s) {
+    const C = c.C, bits = C.emblem, box = P().box, cy = Math.cos(yaw), sy = Math.sin(yaw);
+    mb.add(box, mb.mat(x, y, z, yaw, 0, s * 4, s * 4, s * 0.3), C.emblemBg);
+    for (let j = 0; j < 7; j++) for (let i = 0; i < 7; i++) if (bits[j * 7 + i]) {
+      const u = (i - 3) * s, v = (3 - j) * s;
+      mb.add(box, mb.mat(x + cy * u, y + v, z - sy * u, yaw, 0, s * 0.5, s * 0.5, s * 0.42), C.pal.accent, 0, 0, c.stage >= 3 ? 0.5 : 0.1);
+    }
+  }
+  function monument(mb, c, y0) {
+    const C = c.C, m = c.monument, st = c.stage, y = y0 - 0.2, box = P().box, cyl = P().cylLo, sph = P().sphereLo, con = P().coneLo, K = c.K;
+    const stone = c.ruined ? [0.4, 0.38, 0.36] : st >= 3 ? C.metal : C.matCol, trim = C.pal.accent, H = m.h;
+    const S = (sx, sy, sz) => [sx * K, sy * K, sz * K];
+    const yaw = Math.atan2(c.x - m.x, c.z - m.z);
+    if (c.ruined) { mb.add(box, mb.mat(m.x, y + 0.4, m.z, 0.3, 0.9, 0.35, H * 0.4, 0.35), stone); return y + 1; }
+    switch (m.kind) {
+      case 'obelisk': mb.add(box, mb.mat(m.x, y + H * 0.5, m.z, yaw, 0, 0.35 * K, H * 0.5, 0.35 * K), stone); mb.add(con, mb.mat(m.x, y + H, m.z, yaw + 0.785, 0, ...S(0.5, 0.6, 0.5)), trim, 0, 0, st >= 3 ? 0.6 : 0); break;
+      case 'statue': mb.add(box, mb.mat(m.x, y + 0.5 * K, m.z, yaw, 0, ...S(0.7, 0.5, 0.7)), stone); mb.add(sph, mb.mat(m.x, y + 1.9 * K, m.z, yaw, 0, ...S(0.45, 0.9, 0.35)), trim); mb.add(sph, mb.mat(m.x, y + 3.0 * K, m.z, yaw, 0, ...S(0.32, 0.32, 0.32)), trim); break;
+      case 'pyramid': mb.add(con, mb.mat(m.x, y, m.z, 0.785, 0, 1.3 * K, H * 0.6, 1.3 * K), stone); break;
+      case 'orb': mb.add(cyl, mb.mat(m.x, y, m.z, 0, 0, 0.5 * K, H * 0.5, 0.5 * K), stone); mb.add(sph, mb.mat(m.x, y + H * 0.5 + 0.7 * K, m.z, 0, 0, ...S(0.7, 0.7, 0.7)), trim, 0, 0, 0.8); break;
+      case 'arch': for (const s of [-1, 1]) mb.add(box, mb.mat(m.x + Math.cos(yaw) * s * 1.2 * K, y + H * 0.5, m.z - Math.sin(yaw) * s * 1.2 * K, yaw, 0, 0.3 * K, H * 0.5, 0.3 * K), stone); mb.add(box, mb.mat(m.x, y + H, m.z, yaw, 0, ...S(1.6, 0.3, 0.35)), stone); break;
+      default: for (let i = 0; i < 3; i++) mb.add(box, mb.mat(m.x, y + (0.6 + i * 1.1) * K, m.z, yaw + i * 0.2, 0, ...S(0.4 - i * 0.05, 0.55, 0.4 - i * 0.05)), i === 1 ? trim : stone); break; // totem
+    }
+    if (st >= 2 || c.capital) {
+      const bx = m.x + Math.sin(yaw) * 1.2 * K, bz = m.z + Math.cos(yaw) * 1.2 * K;
+      mb.add(cyl, mb.mat(bx - Math.cos(yaw) * 1.1 * K, y, bz + Math.sin(yaw) * 1.1 * K, 0, 0, 0.07 * K, H + 1.6 * K, 0.07 * K), C.pal.dark);
+      emblem(mb, c, bx, y + H + 0.3 * K, bz, yaw, 0.17 * K);
+    }
+    return y + H + 2 * K;
+  }
+  function pad(mb, c, p, y0) {
+    const C = c.C, cyl = P().cylLo, box = P().box;
+    mb.add(cyl, mb.mat(p.x, y0 - 0.4, p.z, 0, 0, p.r, 0.55, p.r), Color.mix(C.metal, [0.25, 0.25, 0.28], 0.4));
+    mb.add(cyl, mb.mat(p.x, y0 + 0.14, p.z, 0, 0, p.r * 0.92, 0.04, p.r * 0.92), Color.shade(C.metal, -0.25));
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; mb.add(box, mb.mat(p.x + Math.cos(a) * p.r * 0.95, y0 + 0.22, p.z + Math.sin(a) * p.r * 0.95, a, 0, 0.12, 0.08, 0.12), C.glow, 0, 0, 1); }
+    if (c.dome) { // pressurised walkway back to the dome
+      const a = Math.atan2(p.z - c.z, p.x - c.x), d0 = c.R * 1.02, d1 = Math.hypot(p.x - c.x, p.z - c.z) - p.r;
+      const mx = c.x + Math.cos(a) * (d0 + d1) / 2, mz = c.z + Math.sin(a) * (d0 + d1) / 2;
+      mb.add(box, mb.mat(mx, y0 + 0.7, mz, Math.PI / 2 - a, 0, 0.7, 0.7, Math.max(0.5, (d1 - d0) / 2)), Color.shade(C.metal, 0.1));
+    }
+  }
+  function wall(mb, c, g, inChunk) {
+    const C = c.C, st = c.stage, W = c.wall, K = c.K, n = Math.max(16, Math.round(W.r * TAU / ((st === 1 ? 0.7 : 3) * K))), box = P().box, cyl = P().cylLo, con = P().coneLo;
+    const col = c.ruined ? [0.38, 0.36, 0.34] : st === 1 ? C.matCol : st === 2 ? Color.mix(C.matCol, [0.6, 0.58, 0.55], 0.4) : C.metal;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU;
+      if (W.gates.some((ga) => Math.abs(angleDelta(ga, a)) < (st === 1 ? 0.08 : 0.12))) continue;
+      if (c.ruined && (i * 7) % 5 < 2) continue;
+      const x = c.x + Math.cos(a) * W.r, z = c.z + Math.sin(a) * W.r;
+      if (!inChunk(x, z)) continue;
+      const y = g(x, z);
+      if (st === 1) mb.add(cyl, mb.mat(x, y - 0.3, z, 0, 0, 0.28 * K, (2.1 + ((i * 13) % 5) * 0.12) * K, 0.28 * K), Color.shade(col, (i % 3) * 0.05));
+      else if (st === 2) {
+        mb.add(box, mb.mat(x, y + 0.9 * K, z, -a, 0, 0.45 * K, 1.2 * K, TAU * W.r / n * 0.52), col);
+        if (i % 6 === 0) { mb.add(cyl, mb.mat(x, y - 0.2, z, 0, 0, 1.0 * K, 3.4 * K, 1.0 * K), col); mb.add(con, mb.mat(x, y + 3.2 * K, z, 0, 0, 1.2 * K, 1.6 * K, 1.2 * K), C.pal.secondary); }
+      } else if (i % 2 === 0) { mb.add(cyl, mb.mat(x, y - 0.2, z, 0, 0, 0.18 * K, 2.6 * K, 0.18 * K), col); mb.add(sph(), mb.mat(x, y + 2.6 * K, z, 0, 0, 0.22 * K, 0.22 * K, 0.22 * K), C.glow, 0, 0, 1); }
+    }
+  }
+  const sph = () => P().sphereLo;
+  function dome(mb, c, y0) {
+    const C = c.C, R = c.R * 1.08;
+    mb.add(P().cylLo, mb.mat(c.x, y0 - 0.5, c.z, 0, 0, R, 0.9, R), Color.shade(C.metal, -0.1));
+    if (!c.ruined) mb.add(P().sphere, mb.mat(c.x, y0, c.z, 0, 0, R, R * 0.62, R), Color.mix(C.glow, [0.75, 0.9, 1], 0.6), 0, 0, 0.08, 0.74);
+    else for (let i = 0; i < 8; i++) { const a = i * 0.8; mb.add(P().box, mb.mat(c.x + Math.cos(a) * R, y0 + 1, c.z + Math.sin(a) * R, a, 0.5, 0.3, 1.4, 0.8), Color.shade(C.metal, -0.3)); }
+    // ribs
+    if (!c.ruined) for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; mb.add(P().box, mb.mat(c.x + Math.cos(a) * R * 0.99, y0 + 0.8, c.z + Math.sin(a) * R * 0.99, Math.PI / 2 - a, 0, 0.25, 1.4, 0.25), C.metal); }
+    return y0 + R * 0.62;
+  }
+  function lamps(mb, c, g, inChunk) {
+    if (c.ruined) return;
+    const C = c.C, st = c.stage, cyl = P().cylLo, sph = P().sphereLo;
+    const gap = (st === 1 ? 14 : 9) * c.K;
+    for (const rd of c.roads) {
+      const L = Math.hypot(rd[2] - rd[0], rd[3] - rd[1]), n = Math.floor(L / gap);
+      for (let i = 1; i <= n; i++) {
+        const f = (i * gap) / L, nx = -(rd[3] - rd[1]) / L, nz = (rd[2] - rd[0]) / L, off = rd[4] * 0.5 + 0.35;
+        const x = rd[0] + (rd[2] - rd[0]) * f + nx * off, z = rd[1] + (rd[3] - rd[1]) * f + nz * off;
+        if (!inChunk(x, z) || Math.hypot(x - c.x, z - c.z) > c.R) continue;
+        const K = c.K, y = g(x, z), hh = (st === 1 ? 1.1 : st === 2 ? 1.8 : 2.6) * K;
+        mb.add(cyl, mb.mat(x, y - 0.1, z, 0, 0, 0.06 * K, hh, 0.06 * K), st >= 3 ? C.metal : C.pal.dark);
+        mb.add(sph, mb.mat(x, y + hh, z, 0, 0, 0.16 * K, 0.16 * K, 0.16 * K), st === 1 ? [1, 0.6, 0.2] : st === 2 ? [1, 0.85, 0.5] : C.glow, 0, 0, 1);
+      }
+    }
+  }
+  return { plan, flatten, paint, blocked, bake, groundH };
+})();
+
+/* =============================================================================
+   SHIPS & VEHICLES · instanced models styled by culture
+   ============================================================================= */
+const CivModels = (() => {
+  const st = new MatStack(24);
+  let R = null;
+  const S = (x, y, z, sx, sy, sz, ca, cb, pat = 0, e = 0) => R.batch.sphere.add(st.m, x, y, z, sx, sy, sz, ca, cb || ca, pat, 1, e, 1);
+  const Bx = (x, y, z, sx, sy, sz, ca, cb, e = 0) => R.batch.box.add(st.m, x, y, z, sx, sy, sz, ca, cb || ca, 0, 1, e, 1);
+  const Cn = (x, y, z, sx, sy, sz, ca, e = 0) => R.batch.cone.add(st.m, x, y, z, sx, sy, sz, ca, ca, 0, 1, e, 1);
+  const Cy = (x, y, z, r, hh, ca, e = 0) => R.batch.cyl.add(st.m, x, y, z, r, hh, r, ca, ca, 0, 1, e, 1);
+  // a spacecraft pointing along +z, roughly unit length
+  function hull(C, kind) {
+    const m = C.metal, p = C.pal.primary, a = C.pal.accent, g = C.glow;
+    switch (kind) {
+      case 'saucer': S(0, 0, 0, 0.55, 0.12, 0.55, m, p, 5); S(0, 0.1, 0, 0.22, 0.14, 0.22, Color.mix(g, [1, 1, 1], 0.4), null, 0, 0.3); for (let i = 0; i < 6; i++) { const t = (i / 6) * TAU; S(Math.cos(t) * 0.5, -0.02, Math.sin(t) * 0.5, 0.05, 0.03, 0.05, g, null, 0, 1); } break;
+      case 'wedge': Bx(0, 0, -0.05, 0.28, 0.08, 0.42, m, p); st.push(); st.translate(0, 0, 0.35); st.rotX(Math.PI / 2); Cn(0, 0, 0, 0.26, 0.3, 0.08, p); st.pop(); for (const s of [-1, 1]) Bx(s * 0.34, 0, -0.25, 0.12, 0.03, 0.18, a); S(0, 0, -0.48, 0.12, 0.06, 0.04, g, null, 0, 1); break;
+      case 'ring': S(0, 0, 0, 0.14, 0.14, 0.34, m, p, 1); for (let i = 0; i < 10; i++) { const t = (i / 10) * TAU; Bx(Math.cos(t) * 0.36, Math.sin(t) * 0.36, -0.2, 0.08, 0.08, 0.05, a); } S(0, 0, -0.38, 0.08, 0.08, 0.05, g, null, 0, 1); break;
+      case 'organic': S(0, 0, 0.18, 0.2, 0.18, 0.26, p, a, 3); S(0, 0, -0.16, 0.16, 0.14, 0.2, p, a, 3); for (const s of [-1, 1]) { st.push(); st.translate(s * 0.12, -0.08, -0.3); st.rotX(-2.4); Cn(0, 0, 0, 0.04, 0.3, 0.04, a); st.pop(); } S(0, 0.05, 0.36, 0.06, 0.06, 0.06, g, null, 0, 1); break;
+      case 'crystal': st.push(); st.rotX(Math.PI / 2); Cn(0, 0, 0, 0.2, 0.55, 0.2, Color.mix(g, p, 0.4), 0.3); st.rotX(Math.PI); Cn(0, 0, 0, 0.2, 0.35, 0.2, Color.mix(g, m, 0.5), 0.2); st.pop(); break;
+      case 'block': Bx(0, 0, 0.05, 0.22, 0.18, 0.36, m, p); Bx(0, 0.22, -0.12, 0.14, 0.08, 0.16, p); for (const s of [-1, 1]) Cy(s * 0.14, -0.1, -0.44, 0.07, 0.12, g, 1); break;
+      case 'spindle': S(0, 0, 0, 0.1, 0.1, 0.5, m, p, 1); for (const s of [-1, 1]) { Bx(s * 0.18, 0, -0.1, 0.16, 0.02, 0.05, a); S(s * 0.34, 0, -0.1, 0.06, 0.06, 0.22, p, m); S(s * 0.34, 0, -0.33, 0.04, 0.04, 0.03, g, null, 0, 1); } break;
+      default: // needle
+        S(0, 0, -0.05, 0.11, 0.11, 0.42, m, p, 1); st.push(); st.translate(0, 0, 0.36); st.rotX(Math.PI / 2); Cn(0, 0, 0, 0.1, 0.22, 0.1, a); st.pop();
+        for (const s of [-1, 1]) Bx(s * 0.16, 0, -0.32, 0.12, 0.02, 0.1, a); Bx(0, 0.14, -0.32, 0.02, 0.1, 0.1, a); S(0, 0, -0.48, 0.07, 0.07, 0.04, g, null, 0, 1);
+    }
+  }
+  function ship(renderer, C, x, y, z, yaw, pitch, scale) { R = renderer; st.reset(); st.translate(x, y, z); st.rotY(yaw); st.rotX(pitch); st.scale(scale); hull(C, C.hull); }
+  function vehicle(renderer, C, kind, x, y, z, yaw, t, k = 1) {
+    R = renderer; st.reset(); st.translate(x, y, z); st.rotY(yaw); st.scale(k);
+    const m = C.metal, p = C.pal.primary, a = C.pal.accent, g = C.glow, wood = C.matCol;
+    switch (kind) {
+      case 'cart': case 'wagon': Bx(0, 0.55, 0, 0.45, 0.22, 0.7, wood, null); if (kind === 'wagon') S(0, 0.8, 0, 0.44, 0.4, 0.65, C.pal.cloth, null, 5); for (const s of [-1, 1]) for (const f of [-0.45, 0.45]) { st.push(); st.translate(s * 0.5, 0.32, f); st.rotZ(Math.PI / 2); st.rotY(t * 4); Cy(0, -0.05, 0, 0.3, 0.1, [0.25, 0.18, 0.12]); st.pop(); } break;
+      case 'sled': case 'litter': Bx(0, 0.35, 0, 0.4, 0.12, 0.75, wood); S(0, 0.6, 0, 0.3, 0.25, 0.4, C.pal.cloth, null, 5); for (const s of [-1, 1]) Bx(s * 0.38, 0.12, 0, 0.04, 0.05, 0.85, C.pal.dark); break;
+      case 'rover': Bx(0, 0.65, 0, 0.5, 0.25, 0.8, p, m); S(0, 0.95, 0.2, 0.3, 0.18, 0.3, Color.mix(g, [0.6, 0.8, 1], 0.5), null, 0, 0.3); for (const s of [-1, 1]) for (const f of [-0.55, 0, 0.55]) { st.push(); st.translate(s * 0.55, 0.3, f); st.rotZ(Math.PI / 2); Cy(0, -0.08, 0, 0.28, 0.16, [0.12, 0.12, 0.14]); st.pop(); } break;
+      case 'walker': Bx(0, 1.5, 0, 0.45, 0.3, 0.6, p, m); for (let k = 0; k < 4; k++) { const s = k & 1 ? 1 : -1, f = k < 2 ? 0.4 : -0.4, ph = Math.sin(t * 5 + k * Math.PI / 2) * 0.35; st.push(); st.translate(s * 0.4, 1.3, f); st.rotX(ph); Cy(0, -1.3, 0, 0.07, 1.3, m); st.pop(); } S(0, 1.55, 0.6, 0.12, 0.12, 0.08, g, null, 0, 1); break;
+      case 'monorail': case 'pod': S(0, 0.5, 0, 0.45, 0.4, 0.9, p, m, 5); S(0, 0.6, 0.55, 0.3, 0.25, 0.3, Color.mix(g, [0.7, 0.9, 1], 0.5), null, 0, 0.4); break;
+      case 'drone': S(0, 0, 0, 0.25, 0.14, 0.25, m, p, 5); for (let i = 0; i < 4; i++) { const q = (i / 4) * TAU + 0.785; Cy(Math.cos(q) * 0.35, 0.02, Math.sin(q) * 0.35, 0.16, 0.02, a); } S(0, -0.08, 0, 0.08, 0.06, 0.08, g, null, 0, 1); break;
+      default: // hovercar / skiff / gravsled
+        S(0, 0, 0, 0.45, 0.2, 0.9, p, m, 5); S(0, 0.16, 0.15, 0.28, 0.18, 0.36, Color.mix(g, [0.7, 0.9, 1], 0.5), null, 0, 0.35);
+        if (kind === 'skiff') for (const s of [-1, 1]) Bx(s * 0.5, 0, -0.2, 0.2, 0.03, 0.3, a);
+        S(0, -0.18, -0.2, 0.3, 0.05, 0.5, g, null, 0, 1);
+    }
+  }
+  return { ship, vehicle };
+})();
+
+/* =============================================================================
+   SOCIETY · citizens, raiders, traffic and spacecraft around the cities in view
+   ============================================================================= */
+class CivLife {
+  constructor(view) {
+    this.view = view; this.cities = view.surface.cities || []; this.spawnT = 0; this.traffic = []; this.flights = []; this.raids = []; this.raidT = 20;
+    for (const c of this.cities) { c.pop = 0; c.people = c.ruined ? null : Civ.people(c.owner || c.civ); c.cult = (c.owner || c.civ).culture; }
+    this.initTraffic();
+  }
+  outfit(c, role, r) {
+    const C = c.cult, st = (c.owner || c.civ).stage, breath = !c.dome && this.view.planet.pressure > 0.2 && this.view.planet.pressure < 6;
+    const swap = r.chance(0.35);
+    return {
+      cloth: role === 'guard' ? Color.mix(C.pal.cloth, C.pal.dark, 0.35) : swap ? C.pal.cloth2 : C.pal.cloth, trim: swap ? C.pal.cloth : C.pal.accent, pat: C.clothPat,
+      kind: !breath && st >= 3 ? 'suit' : C.cloth, head: role === 'guard' ? (C.head === 'none' ? 'helm' : C.head) : r.chance(0.6) ? C.head : 'none',
+      weapon: role === 'guard' || role === 'raider' ? (r.chance(0.35) ? C.ranged[0] : C.melee[0]) : role === 'worker' ? 'tool' : null, stage: st, metal: C.metal, glow: C.glow, accent: C.pal.accent,
+    };
+  }
+  spawnCitizen(c, role, x, z) {
+    const eco = this.view.eco, sp = c.people;
+    const bound = c.dome ? { x: c.x, z: c.z, r2: (c.R * 1.02) ** 2 } : null;
+    if (!sp || !Nav.ok(this.view, { sp, P: sp.pheno, cit: true, bound }, x, z)) return null;
+    const a = eco.spawn(sp, x, z, { age: sp.pheno.life * 0.3 });
+    const r = new RNG.Rand(RNG.hash(c.seed, 'cit', a.id));
+    const owner = c.owner || c.civ;
+    a.cit = { city: c, civ: owner, role, home: [x, z] };
+    a.outfit = this.outfit(c, role, r);
+    a.name = owner.culture.namer(r, 1, 2);
+    a.mateCD = 1e9;
+    if (bound) a.bound = bound;
+    c.pop++;
+    return a;
+  }
+  // points inside a city that citizens walk between
+  spot(c, r) {
+    for (let k = 0; k < 8; k++) {
+      const b = c.builds.length && r.next() < 0.7 ? c.builds[Math.floor(r.next() * c.builds.length)] : null;
+      const p = b ? [b.x + Math.sin(b.yaw) * (b.d + 1.2), b.z + Math.cos(b.yaw) * (b.d + 1.2)] : [c.x + r.range(-1, 1) * c.plaza.r, c.z + r.range(-1, 1) * c.plaza.r];
+      if (Math.hypot(p[0] - c.x, p[1] - c.z) < c.R * 1.05) return p;
+    }
+    return [c.x, c.z];
+  }
+  update(dt, env) {
+    const v = this.view, eco = v.eco, tg = v.cam.cur.target, rad = clamp(v.viewExtent() + 10, 30, 120);
+    this.spawnT -= dt;
+    if (this.spawnT <= 0) {
+      this.spawnT = 0.8;
+      const r = new RNG.Rand((Math.random() * 4294967295) >>> 0), q = v.app.quality === 'low' ? 0.6 : v.app.quality === 'high' ? 1.25 : 1;
+      for (const c of this.cities) {
+        if (c.ruined || !c.people) continue;
+        c.pop = eco.agents.filter((a) => a.cit && a.cit.city === c && a.state !== 'dead').length;
+        const near = Math.hypot(c.x - tg[0], c.z - tg[2]) < rad + c.R;
+        const want = Math.round(clamp(3 + c.stage * 2.5 + c.R * 0.25, 4, 24) * q);
+        if (!near || c.pop >= want || eco.agents.length >= eco.cap + 30) continue;
+        for (let i = 0; i < 3 && c.pop < want; i++) {
+          const role = r.chance(0.26) ? 'guard' : r.chance(c.stage <= 2 ? 0.3 : 0.1) ? 'worker' : 'civilian';
+          const p = this.spot(c, r);
+          this.spawnCitizen(c, role, p[0] + r.range(-0.5, 0.5), p[1] + r.range(-0.5, 0.5));
+        }
+      }
+    }
+    this.raidT -= dt;
+    if (this.raidT <= 0) { this.raidT = 35 + Math.random() * 50; this.raid(); }
+    this.updateTraffic(dt, env);
+  }
+  // wars between neighbouring peoples on this world spill onto the surface
+  raid() {
+    const v = this.view, tg = v.cam.cur.target;
+    for (const c of this.cities) {
+      if (c.ruined || c.dome || Math.hypot(c.x - tg[0], c.z - tg[2]) > v.viewExtent() + c.R) continue;
+      const owner = c.owner || c.civ;
+      const foes = Civ.relations(owner).filter((q) => q.s === 'war' && q.civ.alive && q.civ.home === (v.planet.original || v.planet) && q.civ.stage <= 2 && owner.stage <= 2);
+      if (!foes.length) continue;
+      const foe = foes[Math.floor(Math.random() * foes.length)].civ, sp = Civ.people(foe);
+      if (!sp) continue;
+      const fake = { civ: foe, owner: foe, cult: foe.culture, people: sp, seed: RNG.hash(foe.seed, 'raid', Math.floor(v.app.t)), R: 8, x: c.x, z: c.z, dome: false, pop: 0, builds: [], plaza: { r: 3 } };
+      const a0 = Math.random() * TAU, d = c.R * 1.6 + 8, n = 3 + Math.floor(Math.random() * 4);
+      let made = 0;
+      for (let i = 0; i < n; i++) {
+        const x = c.x + Math.cos(a0) * d + (Math.random() - 0.5) * 6, z = c.z + Math.sin(a0) * d + (Math.random() - 0.5) * 6;
+        const a = this.spawnCitizen(fake, 'raider', x, z);
+        if (a) { a.cit.target = c; a.tx = c.x; a.tz = c.z; made++; }
+      }
+      if (made) v.app.ui.log(`Raiders of ${Civ.civName(foe)} are attacking ${c.name}!`, 'hunt');
+      return;
+    }
+  }
+  hostile(a, b) {
+    if (!b.cit || b.state === 'dead' || b.cit.civ === a.cit.civ) return false;
+    const r = a.cit.civ.rel.get(b.cit.civ.idx);
+    return !!r && r.s === 'war';
+  }
+  think(a, env) {
+    const eco = this.view.eco, c = a.cit.city, role = a.cit.role, W = this.view;
+    const set = (s, t) => { if (a.state !== s) { a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
+    if (a.state === 'fight' && a.target && a.target.state !== 'dead' && a.stateT < 14) return;
+    if (role === 'guard' || role === 'raider') {
+      let foe = null, fd = role === 'raider' ? 40 : 22;
+      for (const b of eco.agents) { if (!this.hostile(a, b)) continue; const d = Math.hypot(b.x - a.x, b.z - a.z); if (d < fd) { fd = d; foe = b; } }
+      if (foe) { set('fight', foe); return; }
+    }
+    if (role === 'raider') {
+      if (a.stateT > 50 || a.cit.retreat) { a.cit.retreat = true; set('wander', null); const ang = Math.atan2(a.z - c.z, a.x - c.x); a.tx = a.x + Math.cos(ang) * 30; a.tz = a.z + Math.sin(ang) * 30; return; }
+      set('wander', null); a.tx = c.x + (Math.random() - 0.5) * c.R; a.tz = c.z + (Math.random() - 0.5) * c.R; return;
+    }
+    const night = env.night > 0.62;
+    if (night && role !== 'guard' && a.sp.fam !== 'floater') {
+      if (Math.hypot(a.x - a.cit.home[0], a.z - a.cit.home[1]) > 2.5 && a.state !== 'sleep') { set('wander', null); a.tx = a.cit.home[0]; a.tz = a.cit.home[1]; return; }
+      set('sleep', null); return;
+    }
+    if (a.nav.lockT > 0 && a.state === 'wander') return;
+    if (a.state === 'graze' && a.stateT < 12) return;
+    if (a.state === 'wander' && Math.hypot(a.tx - a.x, a.tz - a.z) > 1.5 && a.stateT < 25) return;
+    const r = new RNG.Rand((Math.random() * 4294967295) >>> 0);
+    if (a.state === 'wander' && Math.hypot(a.tx - a.x, a.tz - a.z) <= 1.5 && r.chance(role === 'worker' ? 0.7 : 0.35)) { set('graze', null); return; }
+    let p;
+    if (role === 'worker' && c.fields.length && r.chance(0.7)) { const f = c.fields[Math.floor(r.next() * c.fields.length)]; p = [f.x + r.range(-f.w, f.w) * 0.6, f.z + r.range(-f.d, f.d) * 0.6]; }
+    else if (role === 'guard' && c.wall && r.chance(0.6)) { const ang = r.range(0, TAU); p = [c.x + Math.cos(ang) * c.R * 0.92, c.z + Math.sin(ang) * c.R * 0.92]; }
+    else p = this.spot(c, r);
+    const q = Nav.nearestValid(W, a, p[0], p[1], 4);
+    set('wander', null); a.stateT = 0;
+    if (q) { a.tx = q[0]; a.tz = q[1]; } else { a.tx = a.x; a.tz = a.z; }
+  }
+  // ---- traffic: carts on roads, hover vehicles over the city, shuttles on pads, ships overhead
+  initTraffic() {
+    const r = new RNG.Rand(12345);
+    for (const c of this.cities) {
+      if (c.ruined) continue;
+      const C = c.cult, st = (c.owner || c.civ).stage;
+      if (st >= 2 && c.roads.length) {
+        const n = st === 2 ? Math.min(4, 1 + Math.floor(c.roads.length / 6)) : Math.min(7, 2 + Math.floor(c.builds.length / 8));
+        for (let i = 0; i < n; i++) this.traffic.push({ c, kind: st === 2 ? C.veh2 : st === 3 ? C.veh3 : r.chance(0.5) ? C.veh4 : C.veh3, road: Math.floor(r.next() * c.roads.length), f: r.next(), dir: r.sign(), speed: st === 2 ? r.range(1.2, 2) : r.range(3, 7), alt: 0, t: r.next() * 10 });
+      }
+      for (const p of c.pads) this.flights.push({ c, pad: p, phase: r.range(0, 1), period: r.range(50, 110), big: false });
+      if (st >= 4 || (st >= 3 && c.capital)) this.flights.push({ c, over: true, phase: r.next(), period: r.range(70, 140), big: true, ang: r.range(0, TAU) });
+    }
+  }
+  updateTraffic(dt) {
+    for (const v of this.traffic) {
+      const rd = v.c.roads[v.road], L = Math.hypot(rd[2] - rd[0], rd[3] - rd[1]) || 1;
+      v.f += (v.dir * v.speed * dt) / L; v.t += dt;
+      if (v.f > 1 || v.f < 0) {
+        const ex = v.f > 1 ? [rd[2], rd[3]] : [rd[0], rd[1]];
+        const next = [];
+        v.c.roads.forEach((q, i) => { if (i === v.road) return; if (Math.hypot(q[0] - ex[0], q[1] - ex[1]) < 1.5) next.push([i, 1]); else if (Math.hypot(q[2] - ex[0], q[3] - ex[1]) < 1.5) next.push([i, -1]); });
+        if (next.length) { const [i, d] = next[Math.floor(Math.random() * next.length)]; v.road = i; v.dir = d; v.f = d > 0 ? 0 : 1; }
+        else { v.dir = -v.dir; v.f = clamp(v.f, 0, 1); }
+      }
+    }
+  }
+  draw(R, visible) {
+    const v = this.view, T = v.app.anim;
+    for (const q of this.traffic) {
+      const rd = q.c.roads[q.road], x = lerp(rd[0], rd[2], q.f), z = lerp(rd[1], rd[3], q.f);
+      const air = q.kind === 'hovercar' || q.kind === 'skiff' || q.kind === 'gravsled' || q.kind === 'drone';
+      const L = Math.hypot(rd[2] - rd[0], rd[3] - rd[1]) || 1, side = air ? 0 : rd[4] * 0.22 * q.dir;
+      const nx = -(rd[3] - rd[1]) / L, nz = (rd[2] - rd[0]) / L;
+      const px = x + nx * side, pz = z + nz * side;
+      const y = v.heightAt(px, pz) + (air ? 3.2 + Math.sin(T * 0.8 + q.t) * 0.4 + (q.kind === 'drone' ? 3 : 0) : 0);
+      if (!visible(px, y, pz, 3)) continue;
+      CivModels.vehicle(R, q.c.cult, q.kind, px, y, pz, Math.atan2((rd[2] - rd[0]) * q.dir, (rd[3] - rd[1]) * q.dir), T + q.t, q.c.K);
+    }
+    for (const f of this.flights) {
+      const ph = fract(T / f.period + f.phase), C = f.c.cult;
+      if (f.over) {
+        // a large vessel crossing high above the city
+        const k = ph * 2 - 1, d = 160;
+        const x = f.c.x + Math.cos(f.ang) * k * d, z = f.c.z + Math.sin(f.ang) * k * d, y = f.c.h0 + 34 + Math.sin(ph * 6) * 1.5;
+        if (visible(x, y, z, 30)) CivModels.ship(R, C, x, y, z, Math.atan2(Math.cos(f.ang), Math.sin(f.ang)), 0, 22);
+        continue;
+      }
+      // shuttle cycle: rest → lift off → away → descend → rest
+      const p = f.pad, y0 = v.heightAt(p.x, p.z) + 0.6;
+      let y = y0, show = true, tilt = 0;
+      if (ph < 0.35) y = y0;
+      else if (ph < 0.5) { const k = (ph - 0.35) / 0.15; y = y0 + k * k * 70; tilt = -k * 0.2; }
+      else if (ph < 0.8) show = false;
+      else if (ph < 0.95) { const k = 1 - (ph - 0.8) / 0.15; y = y0 + k * k * 70; }
+      if (show && visible(p.x, y, p.z, 8)) CivModels.ship(R, C, p.x, y, p.z, f.phase * TAU, tilt, 4.2 * Math.max(1, f.c.K * 0.8));
+    }
+  }
+}
+</script>
+
 <!-- ===== Views · galaxy, system, planet, surface ===== -->
 <script>
 'use strict';
@@ -4217,7 +5807,21 @@ class GalaxyView {
     this.app = app; this.name = 'galaxy';
     this.cam = new Camera({ target: [0, 0, 0], dist: 240, yaw: 0.6, pitch: 0.9, fov: 0.95, near: 1, far: 9000, edge: 5 });
     this.stars = []; this.selected = null; this.hover = null; this.key = ''; this.nebulae = [];
-    this.stream = null; this.grid = null;
+    this.stream = null; this.grid = null; this.civT = 1; this.civMap = null;
+  }
+  // territories, routes and fleets of civilizations in the regions around the camera
+  refreshCiv() {
+    const t = this.app.t, c = this.cam.cur;
+    if (c.dist > 1500) { this.civMap = null; return; }
+    const S = Universe.SECTOR * Civ.RS, tg = c.target, rx = Math.floor(tg[0] / S), rz = Math.floor(tg[2] / S), n = c.dist > 700 ? 2 : 1;
+    const owners = [], routes = [];
+    for (let x = rx - n; x <= rx + n; x++) for (let z = rz - n; z <= rz + n; z++) {
+      const R = Civ.peek(x + ',' + z, t);
+      if (!R) continue;
+      const m = Civ.starMap(R);
+      owners.push(...m.owners); routes.push(...m.routes);
+    }
+    this.civMap = { owners, routes };
   }
   enter(p = {}) {
     if (p.star && p.star.pos && !p.star.pocket) {
@@ -4270,6 +5874,10 @@ class GalaxyView {
     if (this.app.autopilot || this.app.splashOn) this.cam.goal.yaw += dt * (this.app.splashOn ? 0.06 : 0.03);
     this.cam.update(dt);
     this.ensure();
+    if (!this.app.splashOn) {
+      Civ.pump(this.app.mobile ? 3 : 6);
+      this.civT += dt; if (this.civT > 0.6) { this.civT = 0; this.refreshCiv(); }
+    }
   }
   render(R) {
     const gl = R.gl, cam = this.cam.compute(R.aspect), o = this.cam.origin, pal = Universe.palette, T = this.app.anim;
@@ -4288,8 +5896,40 @@ class GalaxyView {
       const s = this.selected;
       drawGlow(R, cam, [s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2]], 4 + this.cam.cur.dist * 0.02, 0, Color.mul(s.color, 0.8), null, 0.9, 1, T);
     }
+    if (this.civMap) this.renderCiv(R, cam, T);
     R.blend('none'); gl.depthMask(true);
     R.end(cam.info());
+  }
+  renderCiv(R, cam, T) {
+    const gl = R.gl, o = this.cam.origin, M = this.civMap, k = clamp(this.cam.cur.dist / 240, 0.6, 3);
+    for (const w of M.owners) {
+      const col = Color.mul(w.civ.culture.pal.accent, w.home ? 0.55 : 0.38);
+      drawGlow(R, cam, [w.star.pos[0] - o[0], w.star.pos[1], w.star.pos[2] - o[2]], (w.home ? 9 : 6) * k, 0, col, null, 0.75, 3, T);
+      if (w.home && w.civ.stage >= 4) drawGlow(R, cam, [w.star.pos[0] - o[0], w.star.pos[1], w.star.pos[2] - o[2]], 5 * k, 2, Color.mul(w.civ.culture.pal.accent, 0.6), null, 0.8, 1, T);
+    }
+    const L = this.civLines || (this.civLines = new GFX.Stream(4000, gl.LINES)), P = this.civPts || (this.civPts = new GFX.Stream(1500, gl.POINTS));
+    L.reset(); P.reset();
+    for (const r of M.routes) {
+      const a = r.a.pos, b = r.b.pos, war = r.kind === 'war', col = war ? [1, 0.3, 0.25] : r.kind === 'trade' ? [1, 0.82, 0.35] : r.kind === 'allied' ? [0.55, 0.8, 1] : Color.mix(r.civ.culture.pal.accent, [1, 1, 1], 0.2);
+      const n = 16;
+      for (let i = 0; i < n; i++) {
+        if (war && (i + Math.floor(T * 6)) % 3 === 0) continue;
+        const f0 = i / n, f1 = (i + 1) / n, al = war ? 0.7 : 0.45;
+        L.push(lerp(a[0], b[0], f0) - o[0], lerp(a[1], b[1], f0), lerp(a[2], b[2], f0) - o[2], ...col, al);
+        L.push(lerp(a[0], b[0], f1) - o[0], lerp(a[1], b[1], f1), lerp(a[2], b[2], f1) - o[2], ...col, al);
+      }
+      const d = V3.dist(a, b), ships = war ? 3 : 2;
+      for (let j = 0; j < ships; j++) {
+        let f = fract(T * (6 / Math.max(10, d)) + j / ships + (r.a.seed % 97) / 97);
+        if (j % 2) f = 1 - f;
+        P.push(lerp(a[0], b[0], f) - o[0], lerp(a[1], b[1], f), lerp(a[2], b[2], f) - o[2], ...(war ? [1, 0.45, 0.35] : Color.mix(r.civ.culture.glow, [1, 1, 1], 0.4)), 1, 1.3, 0, 0);
+      }
+    }
+    L.upload(); P.upload();
+    R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); L.draw();
+    R.blend('add'); const PP = GFX.use(R.P.points);
+    GFX.setAll(PP, { uVP: cam.vp, uScale: R.low[1] / (2 * Math.tan(this.cam.fov / 2)), uTime: T, uMin: 1, uMax: 3, uMode: 0 });
+    P.draw();
   }
   rel(s) { const o = this.cam.origin; return [s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2]]; }
   pick(x, y, rad = 24) {
@@ -4309,6 +5949,16 @@ class GalaxyView {
     let n = 0;
     if (book.size) for (const s of this.stars) if (book.has(Codes.ofStar(s)) && n++ < 20) show(s, 'lbl-book');
     if (this.hover && this.hover !== this.selected) show(this.hover, 'lbl-hover');
+    if (this.civMap) {
+      let m = 0;
+      const zoom = this.cam.cur.dist;
+      for (const w of this.civMap.owners) {
+        if (!w.home || m > (this.app.mobile ? 8 : 18) || (zoom > 500 && w.civ.stage < 4)) continue;
+        const p = this.cam.project(this.rel(w.star), R.cssW, R.cssH);
+        if (!p.visible) continue;
+        m++; L.add(p.x, p.y + 15, Civ.civName(w.civ), 'lbl-civ', Color.hex(Color.mix(w.civ.culture.pal.accent, [1, 1, 1], 0.3)));
+      }
+    }
     if (this.selected && !this.selected.pocket) { const p = show(this.selected, 'lbl-sel'); this.app.ui.markers.set('sel', p.x, p.y, p.visible, 'reticle'); }
     else this.app.ui.markers.hide('sel');
   }
@@ -4382,6 +6032,19 @@ class SystemView {
     this.comets = this.comets || new GFX.Stream(400, gl.POINTS);
     this.buildQueue = this.bodies.slice();
     this.neb = st.pocket ? null : Universe.nebulaAt(st.pos);
+    this.civT = 99; this.civRoutes = []; this.civMarks = new Map();
+  }
+  refreshCiv() {
+    const t = this.app.t, sys = this.sys;
+    this.civRoutes = []; this.civMarks = new Map();
+    let S, routes;
+    try { S = Civ.atSystem(sys.star, t); routes = Civ.systemRoutes(sys.star, t); } catch (e) { console.warn(e); return; }
+    const by = new Map(this.bodies.map((b) => [b.p.seed, b]));
+    for (const r of routes) { const a = by.get(r.a.seed), b = by.get(r.b.seed); if (a && b) this.civRoutes.push({ a, b, civ: r.civ, kind: r.kind }); }
+    for (const c of S.natives) { const b = by.get(c.home.seed); if (b && (c.alive || !this.civMarks.has(b))) this.civMarks.set(b, { civ: c, kind: c.alive ? 'home' : 'ruin' }); }
+    for (const col of S.colonies) { const b = by.get(col.body.seed); if (b && !this.civMarks.has(b)) this.civMarks.set(b, { civ: col.civ, kind: col.kind }); }
+    if (S.holding && S.holding.body) { const b = by.get(S.holding.body.seed); if (b) this.civMarks.set(b, { civ: S.holding.civ, kind: 'held' }); }
+    this.civS = S;
   }
   select(b, focus) {
     this.selected = b; this.starSel = false; this.follow = b && focus ? b : this.follow;
@@ -4392,8 +6055,9 @@ class SystemView {
     const t = this.app.t;
     if (this.buildQueue.length) {
       const b = this.buildQueue.shift();
-      if (!b.p.isGiant) b.mesh = buildGlobe(b.p, 14);
+      if (!b.p.isGiant) { let w = b.p; try { w = Civ.worldOf(b.p, t); } catch (e) { w = b.p; } b.world = w; b.mesh = buildGlobe(w, 14); }
     }
+    this.civT += dt; if (this.civT > 3) { this.civT = 0; this.refreshCiv(); }
     for (const b of this.bodies) {
       if (!b.parent) { const a = b.p.orbitAngle(t); b.pos = [Math.cos(a) * b.R, Math.sin(b.p.incl) * Math.sin(a) * b.R, Math.sin(a) * b.R]; }
     }
@@ -4474,6 +6138,21 @@ class SystemView {
     const PP = GFX.use(R.P.points);
     GFX.setAll(PP, { uVP: cam.vp, uScale: R.low[1] / (2 * Math.tan(this.cam.fov / 2)), uTime: T, uMin: 1, uMax: 6, uMode: 0 });
     this.belt.draw(); cs.draw();
+    // civilization: colony halos, supply / trade / war routes and the ships on them
+    for (const [b, m] of this.civMarks) if (m.kind !== 'ruin') drawGlow(R, cam, b.pos, b.r * (m.kind === 'home' ? 1.9 : 1.6), 2, Color.mul(m.civ.culture.pal.accent, m.kind === 'home' ? 0.45 : 0.32), null, 0.7, 1, T);
+    if (this.civRoutes.length) {
+      const L = this.civL || (this.civL = new GFX.Stream(3000, gl.LINES)), S2 = this.civP || (this.civP = new GFX.Stream(600, gl.POINTS));
+      L.reset(); S2.reset();
+      const arc = (a, b, f) => { const d = V3.dist(a, b); return [lerp(a[0], b[0], f), lerp(a[1], b[1], f) + Math.sin(f * Math.PI) * d * 0.12, lerp(a[2], b[2], f)]; };
+      for (const r of this.civRoutes) {
+        const war = r.kind === 'war', col = war ? [1, 0.3, 0.25] : r.kind === 'trade' ? [1, 0.82, 0.35] : Color.mix(r.civ.culture.pal.accent, [1, 1, 1], 0.25);
+        for (let i = 0; i < 24; i += 2) { const p0 = arc(r.a.pos, r.b.pos, i / 24), p1 = arc(r.a.pos, r.b.pos, (i + 1) / 24); L.push(...p0, ...col, war ? 0.8 : 0.55); L.push(...p1, ...col, war ? 0.8 : 0.55); }
+        const n = war ? 4 : 3;
+        for (let j = 0; j < n; j++) { let f = fract(T * 0.05 + j / n + (r.a.p.seed % 13) / 13); if (j % 2) f = 1 - f; const p = arc(r.a.pos, r.b.pos, f); S2.push(...p, ...(war ? [1, 0.5, 0.4] : Color.mix(r.civ.culture.glow, [1, 1, 1], 0.5)), 1, 0.35, 0, 0); }
+      }
+      L.upload(); S2.upload(); GFX.use(PP); S2.draw();
+      R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); L.draw(); R.blend('add');
+    }
     R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); this.lines.draw();
     R.blend('none'); gl.depthMask(true);
     R.end(cam.info());
@@ -4496,6 +6175,8 @@ class SystemView {
       const p = this.cam.project(b.pos, R.cssW, R.cssH); if (!p.visible) continue;
       const rpx = (b.r / (p.w * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5;
       L.add(p.x, p.y + rpx + 12, b.p.title, b === this.selected ? 'lbl-sel' : b.p.life.has ? 'lbl-life' : '');
+      const cm = this.civMarks && this.civMarks.get(b);
+      if (cm && (!mob || b === this.selected || this.cam.cur.dist < 120)) L.add(p.x, p.y + rpx + 25, cm.kind === 'ruin' ? `ruins of ${cm.civ.culture.adj}` : cm.kind === 'home' ? Civ.civName(cm.civ) : `${cm.kind === 'dome' ? 'domes' : cm.kind === 'held' ? 'held' : 'colony'} · ${cm.civ.culture.adj}`, 'lbl-civ', Color.hex(Color.mix(cm.civ.culture.pal.accent, [1, 1, 1], 0.35)));
       if (b === this.selected) this.app.ui.markers.set('sel', p.x, p.y, true, 'reticle', Math.max(28, rpx * 2 + 16));
     }
     if (!this.selected) this.app.ui.markers.hide('sel');
@@ -4545,6 +6226,7 @@ class PlanetView {
       const q = this.app.quality;
       this.globe = planet.isGiant ? null : buildGlobe(planet, q === 'low' ? 40 : q === 'high' ? 80 : 60);
       this.moons = (planet.isMoon ? [] : planet.moons).map((m) => ({ p: m, mesh: null }));
+      this.body = planet.original || planet; this.civT = 99; this.sites = []; this.civI = null;
       this.moonQueue = this.moons.slice();
       this.site = null;
       this.cam.goal.dist = planet.rings ? 6.2 : 4.1; this.cam.snap(); this.cam.cur.dist *= 1.8;
@@ -4569,11 +6251,23 @@ class PlanetView {
     this.site = { dir: V3.norm(dir), s: o, lat: Math.asin(clamp(dir[1], -1, 1)) * 180 / Math.PI, lon: Math.atan2(dir[0], dir[2]) * 180 / Math.PI };
   }
   update(dt) {
-    if (this.moonQueue && this.moonQueue.length) { const m = this.moonQueue.shift(); if (!m.p.isGiant) m.mesh = buildGlobe(m.p, 16); }
+    if (this.moonQueue && this.moonQueue.length) { const m = this.moonQueue.shift(); if (!m.p.isGiant) { let w = m.p; try { w = Civ.worldOf(m.p, this.app.t); } catch (e) { w = m.p; } m.mesh = buildGlobe(w, 16); } }
+    this.civT += dt; if (this.civT > 4) { this.civT = 0; this.refreshCiv(); }
     if (this.app.autopilot) this.cam.goal.yaw += dt * 0.08;
     this.cam.update(dt);
     this.lifeT = (this.lifeT || 0) + dt;
     if (this.lifeT > 20) { this.lifeT = 0; this.refreshLife(false); }
+  }
+  refreshCiv() {
+    const t = this.app.t, p = this.planet, o = {};
+    if (p.isGiant) { this.sites = []; return; }
+    try { this.sites = Civ.sitesOn(this.body, t); this.civI = Civ.atBody(this.body, t); } catch (e) { console.warn(e); this.sites = []; this.civI = null; return; }
+    for (const s of this.sites) if (s._r == null) { p.sample(s.dir[0], s.dir[1], s.dir[2], o); s._r = 1 + Math.max(0, o.e) * p.terrain.relief + 0.012; }
+    // orbital traffic around worlds with spacefaring peoples
+    const fleets = [];
+    const civs = new Set(); for (const s of this.sites) { const c = s.owner; if (c && c.alive && c.stage >= 3) civs.add(c); }
+    for (const c of civs) fleets.push(c);
+    this.fleets = fleets;
   }
   moonPos(m, t) {
     const a = m.p.orbitAngle(t), d = 1 + m.p.moonDist * (this.planet.isGiant ? 0.7 : 1.1);
@@ -4613,6 +6307,7 @@ class PlanetView {
       const e2 = { lightDir: sun, lightCol, amb: env.amb };
       if (m.mesh) { const P = R.frame(R.P.planet, cam, e2); GFX.setAll(P, { uModel: modelTRS(pos[0], pos[1], pos[2], r, 0, m.p.rotAngle(t)), uBio: 0, uSpec: 1, uOutline: 0.9, uBioCol: [0, 0, 0] }); m.mesh.draw(); }
     }
+    if (this.sites && this.sites.length) this.renderCiv(R, cam, sun, t, T);
     gl.depthMask(false); R.blend('add');
     if (p.kind !== 'rocky' || p.pressure > 0.05) {
       const Rs = 1 + (p.kind === 'rocky' ? 0.035 + 0.05 * p.atmo.density : 0.08);
@@ -4622,6 +6317,51 @@ class PlanetView {
     }
     R.blend('none'); gl.depthMask(true);
     R.end(cam.info());
+  }
+  // city lights on the night side, faint civ-coloured markers by day, ships in orbit
+  renderCiv(R, cam, sun, t, T) {
+    const gl = R.gl, p = this.planet, pts = this.civPts || (this.civPts = new GFX.Stream(800, gl.POINTS));
+    pts.reset();
+    const near = this.cam.cur.dist < 3.2;
+    for (const s of this.sites) {
+      const w = p.toWorld(s.dir, t), d = V3.dot(w, sun), night = smoothstep(0.1, -0.14, d), pos = V3.scale(w, s._r || 1.005);
+      if (s.ruined) { if (near) pts.push(...pos, 0.55, 0.5, 0.45, 0.5, 0.01, 0, 0); continue; }
+      const C = (s.owner || s.civ).culture, st = s.stage, sz = (0.02 + s.size * 0.0009) * (s.capital ? 1.4 : 1);
+      if (night > 0.02) {
+        // a sprawl of lights that grows with the civilization
+        const lc = st >= 3 ? Color.mix(C.glow, [1, 0.9, 0.7], 0.45) : [1, 0.72, 0.36], n = s.ruined ? 0 : 1 + st * 2 + (s.capital ? 4 : 0), spread = 0.004 + 0.0045 * st * (s.capital ? 1.5 : 1);
+        pts.push(...pos, ...lc, night, sz * (1 + (st - 1) * 0.3), 0, 3);
+        for (let i = 1; i < n; i++) {
+          const h1 = RNG.unit(RNG.hash(s.seed, 'light', i)), h2 = RNG.unit(RNG.hash(s.seed, 'light2', i));
+          const dd = Civ.rotateDir(s.dir, h1 * TAU, spread * Math.sqrt(h2)), ww = p.toWorld(dd, t);
+          pts.push(...V3.scale(ww, (s._r || 1.01) + 0.002), ...lc, night * (0.55 + 0.45 * h2), sz * 0.55, 0, 3);
+        }
+      }
+      if (night < 0.9 && (near || s.capital)) pts.push(...pos, ...Color.mix(C.pal.accent, [1, 1, 1], 0.2), 0.7 * (1 - night), sz * 0.8, 0, 0);
+    }
+    pts.upload();
+    gl.depthMask(false); R.blend('add');
+    const PP = GFX.use(R.P.points);
+    GFX.setAll(PP, { uVP: cam.vp, uScale: R.low[1] / (2 * Math.tan(this.cam.fov / 2)), uTime: T, uMin: 1, uMax: 4, uMode: 0 });
+    pts.draw();
+    R.blend('none'); gl.depthMask(true);
+    if (this.fleets && this.fleets.length) {
+      R.resetBatches();
+      let k = 0;
+      for (const c of this.fleets) {
+        const n = c.stage >= 4 ? 4 : 2;
+        for (let i = 0; i < n; i++, k++) {
+          const inc = 0.3 + ((c.seed >>> (i * 3)) % 9) * 0.12, rr = 1.18 + i * 0.09 + (k % 3) * 0.05, a = T * (0.12 + 0.04 * i) + i * 2.1 + (c.seed % 50);
+          const x = Math.cos(a) * rr, zz = Math.sin(a) * rr, y = zz * Math.sin(inc), z = zz * Math.cos(inc);
+          CivModels.ship(R, c.culture, x, y, z, Math.atan2(-Math.sin(a), Math.cos(a) * Math.cos(inc)) + Math.PI / 2, 0, 0.065 + (c.stage >= 4 ? 0.025 : 0));
+        }
+        if (c.stage >= 3) { // orbital station
+          const a = T * 0.03 + (c.seed % 30), rr = 1.55, x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+          CivModels.ship(R, Object.assign({}, c.culture, { hull: 'ring' }), x, 0.1, z, a, 0, 0.13);
+        }
+      }
+      R.drawBatches(cam, { lightDir: sun, lightCol: [1, 0.97, 0.9], amb: [0.2, 0.22, 0.3] });
+    }
   }
   raySite(x, y) {
     const R = this.app.R, ray = this.cam.ray(x, y, R.cssW, R.cssH);
@@ -4643,6 +6383,31 @@ class PlanetView {
       const pos = this.moonPos(m, t), p = this.cam.project(pos, R.cssW, R.cssH);
       if (p.visible && V3.dot(pos, V3.norm(this.cam.pos)) > -0.3) L.add(p.x, p.y + 14, m.p.title, 'lbl-moon');
     }
+    if (this.sites && this.sites.length) {
+      const camDir = V3.norm(this.cam.pos), near = this.cam.cur.dist < 2.6;
+      let n = 0;
+      for (const s of this.sites) {
+        if (!(s.capital || s.colony || near) || n > (this.app.mobile ? 6 : 14)) continue;
+        const w = this.planet.toWorld(s.dir, t);
+        if (V3.dot(w, camDir) < 0.25) continue;
+        const pr = this.cam.project(V3.scale(w, s._r || 1.01), R.cssW, R.cssH);
+        if (!pr.visible) continue;
+        n++; L.add(pr.x, pr.y - 12, s.name, 'lbl-city' + (s.capital ? ' cap' : '') + (s.ruined ? ' ruin' : ''), s.ruined ? '' : Color.hex(Color.mix((s.owner || s.civ).culture.pal.accent, [1, 1, 1], 0.45)));
+      }
+    }
+  }
+  pickSite(x, y) {
+    if (!this.sites || !this.sites.length) return null;
+    const R = this.app.R, t = this.app.t, camDir = V3.norm(this.cam.pos);
+    let best = null, bd = 18;
+    for (const s of this.sites) {
+      const w = this.planet.toWorld(s.dir, t);
+      if (V3.dot(w, camDir) < 0.2) continue;
+      const pr = this.cam.project(V3.scale(w, s._r || 1.01), R.cssW, R.cssH);
+      const d = Math.hypot(pr.x - x, pr.y - y);
+      if (pr.visible && d < bd) { bd = d; best = s; }
+    }
+    return best;
   }
   pickMoon(x, y) {
     const R = this.app.R, t = this.app.t;
@@ -4655,10 +6420,12 @@ class PlanetView {
   tap(x, y) {
     const m = this.pickMoon(x, y);
     if (m) { this.app.openPlanet(m.p); return; }
+    const cs = this.pickSite(x, y);
+    if (cs) { this.setSite(cs.dir); this.site.city = cs; this.app.ui.panelFor(this, true, 'civ'); UI.toast(`${cs.name} · ${Civ.civName(cs.owner || cs.civ)} — double-tap or Descend to visit`, 'civ'); return; }
     const d = this.raySite(x, y);
     if (d) { this.setSite(d); this.app.ui.panelFor(this, true, 'site'); }
   }
-  dbl(x, y) { const d = this.raySite(x, y); if (d) { this.setSite(d); this.descend(); } }
+  dbl(x, y) { const cs = this.pickSite(x, y); if (cs) { this.setSite(cs.dir); this.descend(); return; } const d = this.raySite(x, y); if (d) { this.setSite(d); this.descend(); } }
   hoverAt(x, y) { return !!this.pickMoon(x, y) || !!this.raySite(x, y); }
   descend() {
     const p = this.planet;
@@ -4705,6 +6472,9 @@ class SurfaceView {
     const planet = this.planet = p.planet.prepare();
     this.surface = new Surface(planet, p.dir);
     this.dir = p.dir;
+    try { this.cities = planet.isGiant ? [] : CityGen.plan(this.surface, planet.original || planet, this.app.t); } catch (e) { console.warn(e); this.cities = []; }
+    this.surface.cities = this.cities;
+    this.domes = this.cities.filter((c) => c.dome && !c.ruined).map((c) => ({ x: c.x, z: c.z, r2: (c.R * 1.1) ** 2 }));
     const t = this.app.t;
     this.community = planet.life.has ? Ecology.community(planet, t) : [];
     this.lifeKey = this.community.map((s) => s.code).join('|');
@@ -4715,6 +6485,11 @@ class SurfaceView {
     this.eco = new Ecosystem(this, this.community, RNG.hash(planet.seed, p.dir[0] * 1e6 | 0, p.dir[2] * 1e6 | 0), t);
     this.eco.cap = q === 'low' ? 45 : q === 'high' ? 130 : 85;
     this.eco.onEvent = (msg, kind, a) => this.app.ui.log(msg, kind, a ? () => this.inspect(a) : null);
+    this.civ = new CivLife(this); this.eco.civ = this.civ;
+    if (this.cities.length) {
+      const c = this.cities.reduce((a, b) => (Math.hypot(a.x, a.z) < Math.hypot(b.x, b.z) ? a : b));
+      if (Math.hypot(c.x, c.z) < 60) this.app.ui.toast(c.ruined ? `The ruins of ${c.name}` : `${c.name} · ${Civ.civName(c.owner || c.civ)}`, 'civ');
+    }
     this.weather = new Weather(this);
     this.selected = null; this.follow = null; this.poi = null;
     this.retarget();
@@ -4728,7 +6503,7 @@ class SurfaceView {
   exit() { this.dispose(); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); }
   dispose() {
     for (const ch of this.chunks.values()) this.freeChunk(ch);
-    this.chunks.clear(); this._lc = null; this.queue = []; this.eco = null;
+    this.chunks.clear(); this._lc = null; this.queue = []; this.eco = null; this.civ = null; this.cities = []; this.domes = [];
   }
   freeChunk(ch) { if (ch.gTerrain) ch.gTerrain.dispose(); if (ch.gWater) ch.gWater.dispose(); if (ch.gFlora) ch.gFlora.dispose(); }
   genChunk(cx, cz) {
@@ -4830,6 +6605,7 @@ class SurfaceView {
     if (sdt > 0) {
       const steps = Math.min(4, Math.ceil(sdt / 0.05)), h = sdt / steps;
       for (let i = 0; i < steps; i++) this.eco.update(h, { t, night: env.night, cx: tg[0], cz: tg[2], radius: clamp(this.viewExtent() + 10, 30, 120), follow: this.follow });
+      if (this.civ) this.civ.update(sdt, env);
     }
     this.weather.update(sdt, env);
     this.lifeT = (this.lifeT || 0) + dt;
@@ -4846,7 +6622,7 @@ class SurfaceView {
       this.seenT = 0;
       const R = this.app.R, fresh = [];
       for (const a of this.eco.agents) {
-        if (a.seen) continue;
+        if (a.seen || a.cit) continue;
         const p = this.cam.project([a.x, a.y, a.z], R.cssW, R.cssH);
         if (p.visible) { a.seen = true; if (this.app.store.discover(a.sp)) fresh.push(a.sp.common); }
       }
@@ -4885,6 +6661,7 @@ class SurfaceView {
       if (a.sp.habitat === 'land' || a.anim.fly < 0.5) Rig.shadow(R, a, this.heightAt(a.x, a.z), a.state === 'dead' ? 1 - a.dead * 0.5 : 1);
       else if (a.sp.habitat === 'air') Rig.shadow(R, a, Math.max(this.heightAt(a.x, a.z), this.waterAt(a.x, a.z)), 0.5);
     }
+    if (this.civ) this.civ.draw(R, (x, y, z, pad) => this.visible(x, y, z, pad));
     env.shadowAlpha = 0.3 * (1 - env.night * 0.5);
     R.drawBatches(cam, env);
     // water
@@ -4946,8 +6723,12 @@ class SurfaceView {
     } else this.app.ui.markers.hide('sel');
     if (this.poi) { const p = this.cam.project([this.poi.x, this.poi.y + 2, this.poi.z], R.cssW, R.cssH); this.app.ui.markers.set('poi', p.x, p.y, p.visible, 'arrow'); }
     else this.app.ui.markers.hide('poi');
+    for (const c of this.cities) {
+      const p = this.cam.project([c.x, c.h0 + (c.center ? Math.min(c.center.h, 18) : 4) + 4, c.z], R.cssW, R.cssH);
+      if (p.visible) L.add(p.x, p.y, c.name, 'lbl-city' + (c.capital ? ' cap' : '') + (c.ruined ? ' ruin' : ''), c.ruined ? '' : Color.hex(Color.mix((c.owner || c.civ).culture.pal.accent, [1, 1, 1], 0.45)));
+    }
     if (this.cam.cur.dist < 26) for (const ch of this.chunks.values()) for (const poi of ch.pois) {
-      if (poi === this.poi || poi.type === 'deposit') continue;
+      if (poi === this.poi || poi.type === 'deposit' || poi.type === 'city') continue;
       const p = this.cam.project([poi.x, poi.y + 3, poi.z], R.cssW, R.cssH);
       if (p.visible) L.add(p.x, p.y, poi.name, 'lbl-poi');
     }
@@ -4981,7 +6762,8 @@ class SurfaceView {
   status() {
     const e = this.env; if (!e) return '';
     const H = Math.floor(e.hour), M = Math.floor((e.hour - H) * 60), w = this.weather;
-    return `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')} ${e.night > 0.5 ? 'night' : e.sunElev < 0.25 ? 'twilight' : 'day'} · ${w.kind && w.intensity > 0.05 ? cap(w.kind) : 'clear'} · ${this.eco.agents.filter((a) => a.state !== 'dead').length} creatures`;
+    const alive = this.eco.agents.filter((a) => a.state !== 'dead'), cit = alive.filter((a) => a.cit).length;
+    return `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')} ${e.night > 0.5 ? 'night' : e.sunElev < 0.25 ? 'twilight' : 'day'} · ${w.kind && w.intensity > 0.05 ? cap(w.kind) : 'clear'} · ${alive.length - cit} creatures${cit ? ` · ${cit} citizens` : ''}`;
   }
   hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · twist to rotate · tap a creature' : 'Drag to pan · right-drag or Q/E to rotate · scroll to zoom · click a creature'; }
 }
@@ -5082,7 +6864,7 @@ class Weather {
 const Store = {
   KEY: 'procedurality3d:v1', d: null, _t: 0,
   defaults() {
-    return { v: 1, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false }, clockOffset: 0, lastSeen: 0, location: null, bookmarks: [], species: [], visited: {}, firstRun: true, lastUniverseT: 0 };
+    return { v: 1, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false }, clockOffset: 0, lastSeen: 0, location: null, bookmarks: [], species: [], civs: [], visited: {}, firstRun: true, lastUniverseT: 0 };
   },
   load() {
     let d = null;
@@ -5116,12 +6898,18 @@ const Store = {
     this.save(); return true;
   },
   visit(code, p) { this.d.visited[code] = { name: p.title, at: Date.now() }; this.save(); },
-  exportJSON() { return JSON.stringify({ app: 'Procedurality-3D', v: 1, universe: this.d.universe, bookmarks: this.d.bookmarks, species: this.d.species, visited: this.d.visited, settings: this.d.settings }, null, 1); },
+  isCivSaved(code) { return (this.d.civs || []).some((c) => c.code === code); },
+  toggleCiv(c) {
+    const L = this.d.civs || (this.d.civs = []), i = L.findIndex((x) => x.code === c.code);
+    if (i >= 0) L.splice(i, 1); else L.unshift({ code: c.code, name: Civ.civName(c), world: c.home.title, at: Date.now() });
+    this.save(); return i < 0;
+  },
+  exportJSON() { return JSON.stringify({ app: 'Procedurality-3D', v: 1, universe: this.d.universe, bookmarks: this.d.bookmarks, species: this.d.species, civs: this.d.civs || [], visited: this.d.visited, settings: this.d.settings }, null, 1); },
   importJSON(txt) {
     const j = JSON.parse(txt);
     if (!j || j.app !== 'Procedurality-3D') throw new Error('Not a Procedurality save file');
     const merge = (a, b, key) => { const seen = new Set(a.map((x) => x[key])); for (const x of b || []) if (!seen.has(x[key])) a.push(x); };
-    merge(this.d.bookmarks, j.bookmarks, 'code'); merge(this.d.species, j.species, 'code');
+    merge(this.d.bookmarks, j.bookmarks, 'code'); merge(this.d.species, j.species, 'code'); merge(this.d.civs || (this.d.civs = []), j.civs, 'code');
     Object.assign(this.d.visited, j.visited || {});
     this.save(true);
     return { bookmarks: (j.bookmarks || []).length, species: (j.species || []).length };
@@ -5233,11 +7021,11 @@ async function copyText(t) { try { await navigator.clipboard.writeText(t); UI.to
    ============================================================================= */
 const Portraits = {
   cache: new Map(), queue: [],
-  el(key, P, size = 64, cls = '') {
+  el(key, P, size = 64, cls = '', outfit = null) {
     const c = h('canvas', { width: size, height: size, class: 'portrait ' + cls });
     const hit = this.cache.get(key + ':' + size);
     if (hit) c.getContext('2d').drawImage(hit, 0, 0);
-    else this.queue.push({ key: key + ':' + size, P, size, c });
+    else this.queue.push({ key: key + ':' + size, P, size, c, outfit });
     return c;
   },
   process(R, budget = 6) {
@@ -5246,17 +7034,17 @@ const Portraits = {
       const q = this.queue.shift();
       if (!q.c.isConnected && this.queue.length > 8) continue;
       let src = this.cache.get(q.key);
-      if (!src) { src = this.render(R, q.P, q.size); this.cache.set(q.key, src); if (this.cache.size > 300) this.cache.delete(this.cache.keys().next().value); }
+      if (!src) { src = this.render(R, q.P, q.size, q.outfit); this.cache.set(q.key, src); if (this.cache.size > 300) this.cache.delete(this.cache.keys().next().value); }
       q.c.getContext('2d').drawImage(src, 0, 0);
     }
   },
-  render(R, P, size) {
+  render(R, P, size, outfit) {
     // pass 1: loose framing from instance bounds; pass 2: tight framing from actual sprite pixels
     R.resetBatches();
-    const a = Rig.portraitAgent(P);
+    const a = Rig.portraitAgent(P, 0.3, outfit);
     Rig.draw(R, a, true);
     let mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
-    for (const b of [R.batch.sphere, R.batch.cone, R.batch.cyl]) for (let i = 0; i < b.n; i++) {
+    for (const b of [R.batch.sphere, R.batch.cone, R.batch.cyl, R.batch.box]) for (let i = 0; i < b.n; i++) {
       const o = i * 26, d = b.data;
       const r = Math.max(Math.hypot(d[o], d[o + 1], d[o + 2]), Math.hypot(d[o + 4], d[o + 5], d[o + 6]), Math.hypot(d[o + 8], d[o + 9], d[o + 10]));
       for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], d[o + 12 + k] - r); mx[k] = Math.max(mx[k], d[o + 12 + k] + r); }
@@ -5511,14 +7299,21 @@ class PanelCtl {
 }
 
 class LabelPool {
-  constructor(el) { this.el = el; this.pool = []; this.n = 0; }
-  begin() { this.n = 0; }
-  add(x, y, text, cls = '') {
+  constructor(el) { this.el = el; this.pool = []; this.n = 0; this.rects = []; }
+  begin() { this.n = 0; this.rects.length = 0; }
+  add(x, y, text, cls = '', color = '') {
+    if (cls.startsWith('lbl-civ') || cls.startsWith('lbl-city')) {
+      // settlement and civilization names skip rather than pile up
+      const w = text.length * 3.6 + 8, hh = 7;
+      for (const r of this.rects) if (Math.abs(r[0] - x) < w + r[2] && Math.abs(r[1] - y) < hh + r[3]) return;
+      this.rects.push([x, y, w, hh]);
+    }
     let e = this.pool[this.n];
     if (!e) { e = h('div', { class: 'lbl' }); this.el.append(e); this.pool.push(e); }
     this.n++;
     if (e._t !== text) { e.textContent = text; e._t = text; }
     if (e._c !== cls) { e.className = 'lbl ' + cls; e._c = cls; }
+    if (e._col !== color) { e.style.color = color; e._col = color; }
     e.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-50%)`;
     e.style.display = '';
   }
@@ -5551,18 +7346,19 @@ const Panels = {
       key: 'sys:' + code, title: s.name + ' System', sub: `${s.typeLabel} · ${sys.planets.length} planets · ${sys.bodyCount - sys.planets.length} moons`, icon: Thumbs.star(s, 40), code,
       bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
       badges: sys.lifeCount ? [chip(`${sys.lifeCount} biospheres`, 'c-life')] : [],
-      tabs: [{ id: 'bodies', label: 'Bodies', render: () => h('div', { class: 'plist' },
+      tabs: [{ id: 'bodies', label: 'Bodies', render: () => h('div', null, civSummaryFor(s, app), h('div', { class: 'plist' },
         h('div', { class: 'prow', onclick: () => { v.starSel = true; v.selected = null; app.ui.panelFor(v); } }, Thumbs.star(s, 30), h('div', null, h('b', null, s.name), h('small', null, `${s.specClass} · ${s.typeLabel} · ${s.cls === 'BH' ? '—' : fmt.n(s.temp) + ' K'}`)), chip('star', 'c-star')),
         sys.planets.length ? sys.planets.map((p) => [
         h('div', { class: 'prow', onclick: () => v.select(v.bodies.find((q) => q.p === p), true) }, Thumbs.planet(p, 30), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)} · ${fmt.temp(p.tempC)}`)), p.life.has ? chip('life', 'c-life') : p.rings ? chip('rings') : null),
         ...p.moons.map((m) => h('div', { class: 'prow sub', onclick: () => v.select(v.bodies.find((q) => q.p === m), true) }, Thumbs.planet(m, 22), h('div', null, h('b', null, m.title), h('small', null, `${m.typeName} · ${fmt.temp(m.tempC)}`)), m.life.has ? chip('life', 'c-life') : null)),
-      ]) : h('p', { class: 'muted' }, 'An empty system. Only dust and radiation.')) }],
+      ]) : h('p', { class: 'muted' }, 'An empty system. Only dust and radiation.'))) }],
       actions: [{ label: 'Galaxy', icon: 'galaxy', fn: () => app.openGalaxy(s) }],
     };
   },
   planet(v, app) { return planetPanel(v.planet, app, { view: v }); },
   surface(v, app) {
-    if (v.selected && v.eco.agents.includes(v.selected)) return creaturePanel(v.selected, v, app);
+    if (v.selected && v.eco.agents.includes(v.selected)) return v.selected.cit ? citizenPanel(v.selected, v, app) : creaturePanel(v.selected, v, app);
+    if (v.poi && v.poi.city) return cityPanel(v.poi.city, v, app);
     if (v.poi) return poiPanel(v.poi, v, app);
     return locationPanel(v, app);
   },
@@ -5583,6 +7379,7 @@ function starPanel(s, app, o) {
         { id: 'overview', label: 'Overview', render: () => h('div', null,
           h('div', { class: 'grid' }, stat('Class', s.specClass), stat('Temperature', s.cls === 'BH' ? '—' : `${fmt.n(s.temp)} K`), stat('Luminosity', s.cls === 'BH' ? '0' : `${fmt.sig(s.lum)} L☉`), stat('Mass', `${fmt.sig(s.mass)} M☉`), stat('Radius', `${fmt.sig(s.radius)} R☉`), stat('Age', `${s.age.toFixed(1)} Gyr`), stat('Bodies', `${sys.planets.length} + ${sys.bodyCount - sys.planets.length} moons`), stat('Sector', s.pocket != null ? 'pocket space' : `${s.sx}, ${s.sz}`)),
           section('Planets', all.length ? h('div', { class: 'plist' }, sys.planets.map((p) => h('div', { class: 'prow', onclick: () => app.openSystem(s, p) }, Thumbs.planet(p, 28), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)}${p.moons.length ? ` · ${p.moons.length} moon${p.moons.length > 1 ? 's' : ''}` : ''}`)), p.life.has || p.moons.some((m) => m.life.has) ? chip('life', 'c-life') : null))) : h('p', { class: 'muted' }, 'No planets have formed around this star.')),
+          civSummaryFor(s, app),
           section('Habitable zone', h('p', { class: 'muted' }, s.lum > 0.0005 ? `${fmt.au(sys.hzIn)} – ${fmt.au(sys.hzOut)}` : 'None — this object emits almost no light.'))) },
         { id: 'gen', label: 'Seed', render: () => h('div', null, section('Seed chain', seedChain(s.pocket != null ? [['Pocket seed', s.pocket, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]] : [['Universe', Universe.name, RNG.strHash('universe:' + Universe.name)], ['Sector', `${s.sx}, ${s.sz}`, RNG.hash(Universe.seed, s.sx, s.sz, 'sector')], ['Star', `#${s.i}`, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]])), section('Share code', codeRow(code))) },
       ],
@@ -5620,6 +7417,15 @@ function planetPanel(p, app, o) {
       section('Surface features', h('div', { class: 'gases' }, Object.entries(p.features).filter(([, v]) => v).map(([k]) => chip({ ruins: 'Precursor ruins', monolith: 'Monoliths', geysers: 'Geothermal vents', fossils: 'Fossil beds', nests: 'Nesting grounds', arches: 'Rock arches' }[k]))))) },
   ];
   if (p.life.has) tabs.push({ id: 'life', label: 'Life', render: (live) => lifeTab(p, app, live) });
+  let civI = null;
+  try { civI = p.isGiant ? null : Civ.atBody(p.original || p, t); } catch (e) { civI = null; }
+  if (civI && (civI.natives.length || civI.colonies.length || civI.terraformed || civI.project)) {
+    tabs.splice(1, 0, { id: 'civ', label: 'Civilization', render: (live) => civTab(p, app, live) });
+    const al = civI.natives.filter((c) => c.alive);
+    if (al.length) badges.push(chip(`${al.length} ${al.length > 1 ? 'civilizations' : 'civilization'}`, 'c-civ'));
+    else if (civI.colonies.length) badges.push(chip(`${civI.colonies.length} ${civI.colonies.length > 1 ? 'colonies' : 'colony'}`, 'c-civ'));
+    if (civI.terraformed) badges.push(chip('terraformed', 'c-life'));
+  }
   if (view && view.site) tabs.push({ id: 'site', label: 'Site', render: () => siteTab(view, app) });
   tabs.push({ id: 'gen', label: 'Seed', render: () => h('div', null,
     section('Seed chain', seedChain(p.star.pocket != null ? [['Pocket seed', p.star.pocket, p.star.seed], ['Planet', `#${(p.isMoon ? p.parent : p).index}`, (p.isMoon ? p.parent : p).seed], ...(p.isMoon ? [['Moon', `#${p.moonIndex}`, p.seed]] : [])] : [['Universe', Universe.name, Universe.seed], ['Star', `${p.star.sx},${p.star.sz} #${p.star.i}`, p.star.seed], ['Planet', `#${(p.isMoon ? p.parent : p).index}`, (p.isMoon ? p.parent : p).seed], ...(p.isMoon ? [['Moon', `#${p.moonIndex}`, p.seed]] : [])])),
@@ -5775,14 +7581,140 @@ function speciesBody(sp, app) {
     section('Species code', codeRow(sp.code)));
 }
 
+
+/* =============================================================================
+   CIVILIZATION UI · emblems, civilization rows, panels and the civ dossier
+   ============================================================================= */
+const Emblems = {
+  cache: new Map(),
+  el(civ, size = 40) {
+    const key = civ.code + ':' + size;
+    const c = h('canvas', { width: 9, height: 9, class: 'emblem', style: { width: size + 'px', height: size + 'px' } });
+    const x = c.getContext('2d'), C = civ.culture, hex = (v) => Color.hex(v);
+    x.fillStyle = hex(C.emblemBg); x.fillRect(0, 0, 9, 9);
+    x.fillStyle = hex(Color.shade(C.emblemBg, -0.35)); x.fillRect(0, 8, 9, 1); x.fillRect(8, 0, 1, 9);
+    x.fillStyle = hex(C.pal.accent);
+    for (let j = 0; j < 7; j++) for (let i = 0; i < 7; i++) if (C.emblem[j * 7 + i]) x.fillRect(i + 1, j + 1, 1, 1);
+    if (!civ.alive) { x.fillStyle = 'rgba(10,10,20,0.55)'; x.fillRect(0, 0, 9, 9); }
+    return c;
+  },
+};
+const STAGE_SHORT = ['—', 'Tribal', 'Nation', 'Colonizing', 'Intergalactic'];
+function civStatus(c) { return c.alive ? `${STAGE_SHORT[c.stage]} · ${civPop(c)}` : c.fate; }
+function civPop(c) { const p = c.pop; return p >= 1e9 ? `${(p / 1e9).toFixed(1)} billion` : p >= 1e6 ? `${(p / 1e6).toFixed(1)} million` : `${fmt.n(Math.round(p / (p > 1e4 ? 100 : 1)) * (p > 1e4 ? 100 : 1))}`; }
+function civRow(c, app, extra) {
+  return h('div', { class: 'civrow' + (c.alive ? '' : ' fallen'), onclick: () => Modals.civ(app, c) }, Emblems.el(c, 40),
+    h('div', null, h('b', { style: { color: c.alive ? Color.hex(Color.mix(c.culture.pal.accent, [1, 1, 1], 0.35)) : '' } }, Civ.civName(c)), h('small', null, extra || civStatus(c))),
+    c.alive ? chip(STAGE_SHORT[c.stage], 'c-civ') : chip('fallen', 'c-fallen'));
+}
+const relChip = (r) => r.s === 'war' ? chip('at war', 'c-war') : r.s === 'allied' ? chip('allied', 'c-allied') : r.trade ? chip('trading', 'c-trade') : chip('neutral');
+function civCitizenOutfit(c) {
+  const C = c.culture;
+  return { cloth: C.pal.cloth, trim: C.pal.accent, pat: C.clothPat, kind: C.cloth, head: C.head === 'none' ? 'circlet' : C.head, weapon: c.stage <= 2 ? C.melee[0] : C.ranged[0], stage: c.stage || 1, metal: C.metal, glow: C.glow, accent: C.pal.accent };
+}
+function civPortrait(c, size) {
+  const sp = Civ.people(c);
+  if (!sp) return icon('info', 'big');
+  return Portraits.el(`civ:${c.code}:${c.stage}`, sp.pheno, size, '', civCitizenOutfit(c));
+}
+function civTab(p, app, live) {
+  const t = app.t, body = p.original || p, wrap = h('div');
+  let I;
+  try { I = Civ.atBody(body, t); } catch (e) { wrap.append(h('p', { class: 'muted' }, 'Civilization records unavailable.')); return wrap; }
+  const alive = I.natives.filter((c) => c.alive), fallen = I.natives.filter((c) => !c.alive);
+  if (I.terraformed) wrap.append(h('p', { class: 'desc' }, `Terraformed by ${Civ.civName(I.terraformed.civ)} ${fmt.dur(t - I.terraformed.t)} ago — once ${PTYPES[body.type].name.toLowerCase()}, now a living world.`));
+  if (I.project) wrap.append(h('p', { class: 'desc' }, `${Civ.civName(I.project.civ)} is terraforming this world · ${fmt.pct((t - I.project.start) / (I.project.end - I.project.start))} complete.`));
+  if (alive.length) wrap.append(section('Native civilizations', alive.map((c) => civRow(c, app))));
+  if (I.colonies.length) wrap.append(section('Colonies', I.colonies.map((col) => h('div', null, civRow(col.civ, app, `${col.kind === 'dome' ? 'Domed colony' : col.kind === 'station' ? 'Orbital station' : 'Colony city'} ${col.name} · founded ${fmt.dur(t - col.t)} ago`)))));
+  if (fallen.length) wrap.append(section('Fallen peoples', fallen.map((c) => civRow(c, app))));
+  // settlements you can visit
+  const sites = Civ.sitesOn(body, t);
+  if (sites.length) {
+    const list = h('div', { class: 'plist' });
+    const shown = sites.filter((s) => s.capital || s.colony || s.ruined).concat(sites.filter((s) => !s.capital && !s.colony && !s.ruined).slice(0, 10));
+    for (const s of shown) list.append(h('div', { class: 'prow', onclick: () => app.openSurface(p, s.dir) }, icon(s.ruined ? 'target' : s.capital ? 'star' : 'planet', 'mid'),
+      h('div', null, h('b', null, s.name), h('small', null, `${s.ruined ? 'Ruins' : s.kind === 'dome' ? 'Domed city' : s.capital ? 'Capital' : s.colony ? 'Colony' : 'Settlement'} · ${Civ.civName(s.owner || s.civ)}`)), btn('Visit', null, { icon: 'down' })));
+    wrap.append(section(`Settlements (${sites.length})`, list, h('p', { class: 'muted small' }, 'Land at a settlement to watch its citizens, traffic and defenders.')));
+  }
+  if (!wrap.children.length) wrap.append(h('p', { class: 'muted' }, 'No civilization has arisen here in this age.'));
+  return wrap;
+}
+function civSummaryFor(star, app) {
+  let S;
+  try { S = Civ.atSystem(star, app.t); } catch (e) { return null; }
+  const list = [...new Set([...S.natives, ...S.present])];
+  if (!list.length) return null;
+  return section('Civilizations', list.map((c) => civRow(c, app, c.rec.star.id === star.id ? `${civStatus(c)} · native to ${c.home.title}` : `${STAGE_SHORT[c.stage]} · colonists from ${c.rec.star.name}`)));
+}
+function civDossier(c, app) {
+  const t = app.t, C = c.culture, R = c.region, sp = Civ.people(c);
+  const stageBox = h('div', { class: 'stages' }, [1, 2, 3, 4].map((s) => h('div', { class: s < c.stage ? 'done' : s === c.stage && c.alive ? 'now' : '' }, STAGE_SHORT[s], h('small', null, c.stageT[s] ? `${fmt.dur(t - c.stageT[s])} ago` : '—'))));
+  const rels = Civ.relations(c);
+  const holdings = [];
+  for (const col of c.colonies) holdings.push(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(col.body); } }, Thumbs.planet(col.body, 26), h('div', null, h('b', null, col.name), h('small', null, `${col.kind === 'dome' ? 'Domed colony' : 'Colony city'} on ${col.body.title}`)), chip(col.kind)));
+  for (const hd of c.holdings) holdings.push(h('div', { class: 'prow', onclick: () => { UI.closeModal(); if (hd.body) app.openPlanet(hd.body); else app.openSystem(hd.star); } }, Thumbs.star(hd.star, 26), h('div', null, h('b', null, hd.name), h('small', null, `${hd.star.name} system${hd.body ? ' · ' + hd.body.title : ' · orbital station'}`)), chip('interstellar', 'c-civ')));
+  const W = (s) => Culture.weapon(C, s, false) + ' · ' + Culture.weapon(C, s, true);
+  const veh = c.stage >= 4 ? C.veh4 : c.stage >= 3 ? C.veh3 : C.veh2;
+  const hist = c.hist.slice(-60).reverse();
+  return h('div', null,
+    h('div', { class: 'civhead' }, Emblems.el(c, 84), civPortrait(c, 96),
+      h('div', null, h('h3', null, Civ.civName(c)), h('div', { class: 'muted small' }, sp ? `The ${C.adj} people — sapient ${sp.family.name.toLowerCase()}s descended from the ${sp.ancestorSp.common}` : `The ${C.adj} people`),
+        h('div', { class: 'srow-tags' }, c.alive ? chip(Civ.stageName(c.stage), 'c-civ') : chip(c.fate, 'c-fallen'), ...Culture.values(C).map((v) => chip(v))))),
+    stageBox,
+    h('div', { class: 'grid' }, stat('Population', civPop(c)), stat('Homeworld', c.home.title), stat('Settlements', String(Math.max(0, c.settle))), stat('Colonies', String(c.colonies.length)), stat('Star systems', String(1 + c.holdings.length)), stat('Wars fought', String(c.wars))),
+    section('Culture', h('div', { class: 'grid wrapv' },
+      stat('Architecture', `${Culture.ARCH[C.arch].name} — ${Culture.ARCH[C.arch].desc}`), stat('City layout', Culture.LAYOUT[C.layout]),
+      stat('Clothing', `${Culture.CLOTH[C.cloth]}, ${Culture.HEAD[C.head]}`), stat('Weapons', W(Math.max(1, c.stage))),
+      stat('Vehicles', c.stage >= 2 ? Culture.VEH[veh] : 'on foot'), stat('Spacecraft', c.stage >= 3 ? Culture.HULL[C.hull] : 'none yet'),
+      stat('Technology', C.techName), stat('Building material', C.material)),
+      h('div', { class: 'swatches' }, [C.pal.primary, C.pal.secondary, C.pal.accent, C.pal.cloth, C.pal.cloth2, C.metal, C.glow, C.pal.dark].map((col) => h('i', { style: { background: Color.hex(col) } })))),
+    rels.length ? section('Diplomacy', rels.map((r) => h('div', { class: 'civrow' + (r.civ.alive ? '' : ' fallen'), onclick: () => Modals.civ(app, r.civ) }, Emblems.el(r.civ, 32), h('div', null, h('b', null, Civ.civName(r.civ)), h('small', null, r.civ.alive ? `${STAGE_SHORT[r.civ.stage]} · ${r.civ.home.title}` : r.civ.fate)), r.civ.alive ? relChip(r) : chip('gone', 'c-fallen')))) : section('Diplomacy', h('p', { class: 'muted small' }, 'No contact with other peoples yet.')),
+    holdings.length ? section('Colonies & holdings', h('div', { class: 'plist' }, holdings)) : null,
+    section('Chronicle', h('div', { class: 'chron' }, hist.map((e) => h('div', { class: 'k-' + e.kind }, h('time', null, `${fmt.dur(t - e.t)} ago`), h('span', null, e.text))))),
+    h('p', { class: 'muted small' }, `Age ${R.age} of region ${R.key} · this age ends in ${fmt.dur(R.T1 - t)}. Progress is driven by a hidden measure of achievement (growth, discovery, trade, conflict and exploration).`),
+    section('Civilization code', codeRow(c.code)),
+    h('div', { class: 'row' },
+      btn('Visit homeworld', () => { UI.closeModal(); app.openPlanet(c.home); }, { icon: 'planet', cls: 'primary' }),
+      btn('Visit capital', () => { UI.closeModal(); app.openSurface(c.home, Civ.homeSites(c, 1)[0].dir); }, { icon: 'down' }),
+      btn(Store.isCivSaved(c.code) ? 'Saved' : 'Save', (e) => { const on = Store.toggleCiv(c); UI.toast(on ? `Saved ${Civ.civName(c)}` : 'Removed', on ? 'ok' : ''); e.currentTarget.querySelector('span').textContent = on ? 'Saved' : 'Save'; }, { icon: 'star' })));
+}
+function cityPanel(city, v, app) {
+  const civ = city.owner || city.civ, t = app.t, C = city.civ.culture;
+  const n = v.eco.agents.filter((a) => a.cit && a.cit.city === city && a.state !== 'dead').length;
+  return {
+    key: 'city:' + city.name, title: city.name, sub: city.ruined ? `Ruins · ${Civ.civName(city.civ)}` : `${city.dome ? 'Domed city' : city.capital ? 'Capital' : city.colony ? 'Colony' : 'Settlement'} of ${Civ.civName(civ)}`, icon: Emblems.el(civ, 40),
+    badges: [city.ruined ? chip('ruins', 'c-fallen') : chip(Civ.stageName(city.stage), 'c-civ'), city.occupied ? chip('occupied', 'c-war') : null],
+    tabs: [{ id: 'city', label: 'City', render: () => h('div', null,
+      h('p', { class: 'desc' }, city.ruined ? `Broken walls and empty streets. ${city.civ.fate || 'Its people are gone'}.` : `${Culture.ARCH[C.arch].name} ${city.stage >= 3 ? 'towers' : 'buildings'} laid out as ${Culture.LAYOUT[C.layout]}${city.dome ? ', sealed beneath a pressure dome' : ''}.`),
+      h('div', { class: 'grid' }, stat('Buildings', String(city.builds.length + 1)), stat('Citizens in view', String(n)), stat('Walls', city.wall ? 'yes' : 'none'), stat('Landing pads', String(city.pads.length))),
+      section('Civilization', civRow(civ, app)), city.occupied ? section('Builders', civRow(city.civ, app)) : null) }],
+    onClose: () => { v.poi = null; },
+  };
+}
+function citizenPanel(a, v, app) {
+  const civ = a.cit.civ, sp = a.sp, city = a.cit.city;
+  const ROLE = { guard: 'Warrior', raider: 'Raider', worker: 'Worker', civilian: 'Citizen' };
+  const base = creaturePanel(a, v, app);
+  base.title = `${a.name} of ${city.name || Civ.civName(civ)}`;
+  base.sub = `${ROLE[a.cit.role]} · ${Civ.civName(civ)}`;
+  base.badges = [chip(ROLE[a.cit.role], a.cit.role === 'guard' || a.cit.role === 'raider' ? 'c-war' : 'c-civ'), chip(Civ.stageName(civ.stage))];
+  base.icon = Portraits.el('ind:' + a.uid, a.P, 48, '', a.outfit);
+  base.tabs = [
+    { id: 'overview', label: 'Status', render: (live) => { const box = h('div'); const fill = () => { box.innerHTML = ''; box.append(h('div', { class: 'grid' }, stat('Activity', a.state === 'graze' ? 'Working' : a.state === 'fight' ? 'Fighting!' : STATE_LABEL[a.state] || a.state, a.state === 'fight' ? 'hot' : ''), stat('Role', ROLE[a.cit.role]), stat('Weapon', a.outfit.weapon && a.outfit.weapon !== 'tool' ? Culture.weapon(civ.culture, civ.stage, !civ.culture.melee.includes(a.outfit.weapon)) : 'none'), stat('Attire', `${Culture.CLOTH[a.outfit.kind] || 'environment suit'}`), stat('People', civ.culture.adj), stat('Sex', a.sex === 'F' ? '♀ Female' : '♂ Male'))); }; fill(); live(fill); return h('div', null, box, section('Civilization', civRow(civ, app))); } },
+    { id: 'genome', label: 'Genome', render: () => genomeView(a.g, sp, app) },
+  ];
+  return base;
+}
+
 /* =============================================================================
    MODALS
    ============================================================================= */
 const Modals = {
   species(app, sp) { app.store.discover(sp); UI.modal(sp.common, speciesBody(sp, app), { icon: 'dna' }); },
+  civ(app, c) { UI.modal(Civ.civName(c), civDossier(c, app), { icon: 'star', wide: true }); },
   search(app) {
     const TYPES = Object.keys(PTYPES);
-    const f = { type: 'any', life: true, minSp: 0, rings: false, moons: 0, star: 'any', radius: 10 };
+    const f = { type: 'any', life: true, minSp: 0, rings: false, moons: 0, star: 'any', radius: 10, civ: 'any' };
     const results = h('div', { class: 'results' });
     const status = h('div', { class: 'muted small' }, 'Scans outward from the current galactic sector.');
     const sel = (opts, key, onch) => h('select', { onchange: (e) => { f[key] = e.target.value; if (onch) onch(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(f[key]) === String(v) }, l)));
@@ -5791,6 +7723,7 @@ const Modals = {
       h('label', null, 'Star class', sel([['any', 'Any'], ...Object.keys(STAR_TYPES).map((k) => [k, `${STAR_TYPES[k].cls} · ${STAR_TYPES[k].label}`])], 'star')),
       h('label', null, 'Min. species', sel([[0, 'Any'], [3, '3+'], [6, '6+'], [9, '9+']], 'minSp')),
       h('label', null, 'Moons', sel([[0, 'Any'], [1, '1+'], [3, '3+']], 'moons')),
+      h('label', null, 'Civilization', sel([['any', 'Any'], ['civ', 'Any civilization'], ['1', 'Tribal'], ['2', 'Nation'], ['3', 'System colonization'], ['4', 'Intergalactic'], ['colony', 'Colonies & domes'], ['ruins', 'Fallen peoples']], 'civ')),
       h('label', null, 'Scan radius', sel([[5, '5 sectors'], [10, '10 sectors'], [18, '18 sectors'], [30, '30 sectors']], 'radius')),
       h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.life, onchange: (e) => { f.life = e.target.checked; } }), 'Must host life'),
       h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.rings, onchange: (e) => { f.rings = e.target.checked; } }), 'Has rings'));
@@ -5819,9 +7752,20 @@ const Modals = {
               if (+f.minSp && p.life.count < +f.minSp) continue;
               if (f.rings && !p.rings) continue;
               if (+f.moons && (p.isMoon || p.moons.length < +f.moons)) continue;
+              let civTag = null;
+              if (f.civ !== 'any') {
+                if (p.isGiant) continue;
+                const I = Civ.atBody(p, app.t), al = I.natives.filter((c) => c.alive);
+                if (f.civ === 'civ' && !al.length) continue;
+                if (f.civ === 'colony' && !I.colonies.length) continue;
+                if (f.civ === 'ruins' && !I.natives.some((c) => !c.alive)) continue;
+                if (+f.civ && !al.some((c) => c.stage === +f.civ)) continue;
+                const top = al.sort((a, b) => b.stage - a.stage)[0] || (I.colonies[0] && I.colonies[0].civ);
+                if (top) civTag = chip(STAGE_SHORT[top.stage], 'c-civ');
+              }
               job.found++;
               const d = Math.hypot(s.pos[0] - t0[0], s.pos[2] - t0[2]);
-              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(d)} ly`)), p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null));
+              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(d)} ly`)), civTag || (p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null)));
                           }
           }
         }
@@ -5838,11 +7782,18 @@ const Modals = {
     const body = h('div');
     const draw = () => {
       body.innerHTML = '';
-      const tabs = h('nav', { class: 'p-tabs' }, [['places', `Places (${Store.d.bookmarks.length})`], ['species', `Species (${Store.d.species.length})`], ['data', 'Import / export']].map(([id, l]) => h('button', { class: 'tab' + (tab === id ? ' on' : ''), onclick: () => { tab = id; draw(); } }, l)));
+      const tabs = h('nav', { class: 'p-tabs' }, [['places', `Places (${Store.d.bookmarks.length})`], ['species', `Species (${Store.d.species.length})`], ['civs', `Civilizations (${(Store.d.civs || []).length})`], ['data', 'Import / export']].map(([id, l]) => h('button', { class: 'tab' + (tab === id ? ' on' : ''), onclick: () => { tab = id; draw(); } }, l)));
       body.append(tabs);
       if (tab === 'places') {
         if (!Store.d.bookmarks.length) body.append(h('p', { class: 'muted' }, 'Nothing saved yet. Use the ★ button on any star, planet or surface site.'));
         for (const b of Store.d.bookmarks) body.append(h('div', { class: 'prow' }, icon(b.kind === 'system' ? 'star' : 'planet', 'mid'), h('div', { onclick: () => { UI.closeModal(); app.openCode(b.code); } }, h('b', null, b.name), h('small', null, `${b.type || ''}${b.sub ? ' · ' + b.sub : ''}`), h('code', { class: 'tiny' }, b.code)), h('button', { class: 'ib', title: 'Delete', onclick: () => { Store.toggleBookmark(b); draw(); } }, icon('close'))));
+      } else if (tab === 'civs') {
+        const L = Store.d.civs || [];
+        if (!L.length) body.append(h('p', { class: 'muted' }, 'Save civilizations from their dossier to follow their history across ages.'));
+        for (const e of L) {
+          let c = null; try { c = Civ.byCode(e.code, app.t); } catch (er) { c = null; }
+          body.append(h('div', { class: 'prow' }, c ? Emblems.el(c, 32) : icon('star', 'mid'), h('div', { onclick: () => { if (c) Modals.civ(app, c); else UI.toast('That civilization belongs to a future age', 'err'); } }, h('b', null, c ? Civ.civName(c) : e.name), h('small', null, c ? `${c.home.title} · ${civStatus(c)}` : e.world), h('code', { class: 'tiny' }, e.code)), h('button', { class: 'ib', title: 'Delete', onclick: () => { L.splice(L.indexOf(e), 1); Store.save(); draw(); } }, icon('close'))));
+        }
       } else if (tab === 'species') {
         if (!Store.d.species.length) body.append(h('p', { class: 'muted' }, 'Species you observe on planet surfaces are catalogued here automatically.'));
         const grid = h('div', { class: 'catalog' });
@@ -5894,7 +7845,8 @@ const Modals = {
         h('li', null, h('b', null, 'Surface · '), 'drag to pan, twist / right-drag / Q·E to rotate, tap a creature to study its genome and offspring.'))),
       section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['H', 'hide interface']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
       section('Life', h('p', null, 'Creatures belong to nine body-plan families (quadrupeds, bipeds, hexapods, octopods, serpents, avians, swimmers, gastropods, aerostats). A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation.')),
-      section('Seeds', h('p', null, 'Codes like ', h('code', null, 'ORIGIN:3,-2:1:2'), ' mean universe : sector : star : planet : moon. Share them, bookmark them, or type any words to create a pocket system.'))), { icon: 'help', wide: true });
+      section('Civilizations', h('p', null, 'On some living worlds a species becomes sapient and founds tribes. Each people has its own procedurally generated culture — values, palette, architecture, city layout, clothing, weapons, vehicles, spacecraft, emblem and language. Hidden progress (growth, discoveries, trade, war, exploration) carries them from ', h('b', null, 'tribes'), ' to ', h('b', null, 'nations'), ' with international trade, to ', h('b', null, 'colonizing their star system'), ' (domed cities on hostile worlds), and finally to ', h('b', null, 'intergalactic'), ' powers that terraform worlds, settle neighbouring stars, trade, ally, conquer or exterminate. History runs per galactic region in ages; look for the Civilization tab on planets, city lights on night sides, trade routes in systems and territories on the galaxy map, then land on a settlement to watch its citizens.')),
+      section('Seeds', h('p', null, 'Codes like ', h('code', null, 'ORIGIN:3,-2:1:2'), ' mean universe : sector : star : planet : moon. Share them, bookmark them, or type any words to create a pocket system. Civilization codes add ', h('code', null, '$age.index'), '.'))), { icon: 'help', wide: true });
   },
   details(app, p) {
     p.prepare();
@@ -6133,6 +8085,7 @@ const App = {
     Thumbs.process(this.mobile ? 5 : 8);
     this.crumbT += dt; if (this.crumbT > 1.2) { this.crumbT = 0; UI.crumbs(this.view.crumbs()); }
     this.saveT += dt; if (this.saveT > 4) { this.saveT = 0; this.persist(false); }
+    this.feedT = (this.feedT || 0) + dt; if (this.feedT > 1) { this.feedT = 0; try { this.civFeed(); } catch (e) { console.warn(e); } }
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { const f = document.getElementById('fps'); if (f && f.style.display !== 'none') f.textContent = `${Math.round(this.fpsN / this.fpsAcc)} fps · ${this.R.low[0]}×${this.R.low[1]}`; this.fpsAcc = 0; this.fpsN = 0; }
   },
@@ -6169,8 +8122,10 @@ const App = {
     if (this.view === sv && sv.sys === sys && !this.trans) { const b = planet && sv.bodies.find((q) => q.p === planet); if (b) sv.select(b, true); return; }
     this.go('system', { system: sys, planet });
   },
-  openPlanet(planet, site) { this.go('planet', { planet, system: planet.system, site }); },
-  openSurface(planet, dir) { this.go('surface', { planet, dir, system: planet.system }); },
+  // terraformed worlds are shown as they are now
+  living(planet) { try { return Civ.worldOf(planet, this.t) || planet; } catch (e) { console.warn(e); return planet; } },
+  openPlanet(planet, site) { planet = this.living(planet); this.go('planet', { planet, system: planet.system, site }); },
+  openSurface(planet, dir) { planet = this.living(planet); this.go('surface', { planet, dir, system: planet.system }); },
   back() {
     const v = this.view;
     if (!v) return;
@@ -6229,6 +8184,18 @@ const App = {
   openCode(str, instant) {
     str = String(str || '').trim().replace(/^#/, '');
     try { str = decodeURIComponent(str); } catch (e) { /* keep */ }
+    if (/\$\d+\.\d+$/.test(str)) {
+      const base = Codes.parse(str.replace(/\$.*$/, ''));
+      if (!base) return false;
+      Codes.resolve(base);
+      const c = Civ.byCode(str, this.t);
+      if (!c) { UI.toast('That civilization has not arisen yet', 'err'); return false; }
+      if (c.home.star.pos && !c.home.star.pocket) { this.views.galaxy.cam.goal.target = c.home.star.pos.slice(); this.views.galaxy.cam.snap(); }
+      const home = this.living(c.home);
+      this.go('planet', { planet: home, system: home.system }, instant);
+      setTimeout(() => Modals.civ(this, c), instant ? 900 : 500);
+      return true;
+    }
     const g = str.match(/^U:([A-Za-z0-9_\-]+)@(-?[\d.]+),(-?[\d.]+)$/);
     if (g) {
       Universe.setSeed(g[1]); Store.d.universe = Universe.name;
@@ -6247,7 +8214,7 @@ const App = {
     if (!res) return false;
     Store.d.universe = Universe.name;
     if (res.star.pos && !res.star.pocket) { this.views.galaxy.cam.goal.target = res.star.pos.slice(); this.views.galaxy.cam.snap(); }
-    if (res.planet) { if (site) this.go('surface', { planet: res.planet, dir: site, system: res.system }, instant); else this.go('planet', { planet: res.planet, system: res.system }, instant); }
+    if (res.planet) { const pl = this.living(res.planet); if (site) this.go('surface', { planet: pl, dir: site, system: res.system }, instant); else this.go('planet', { planet: pl, system: res.system }, instant); }
     else this.go('system', { system: res.system }, instant);
     return true;
   },
@@ -6261,6 +8228,28 @@ const App = {
       case 'surface': { const t = v.cam.cur.target, ll = v.surface.latLon(t[0], t[2]); return `${Codes.ofPlanet(v.planet)}@${ll[0].toFixed(3)},${ll[1].toFixed(3)}`; }
     }
     return '';
+  },
+  // live chronicle: new events of the civilizations around the current location
+  civFeed() {
+    const v = this.view;
+    if (!v || this.splashOn) return;
+    const star = v.name === 'system' ? v.sys.star : v.name === 'planet' || v.name === 'surface' ? v.planet.star : null;
+    if (!star) { this._feedR = null; return; }
+    const R = Civ.region(star, this.t);
+    if (this._feedR !== R) { this._feedR = R; this._feedT = this.t; return; }
+    const since = this._feedT; this._feedT = this.t;
+    if (this.t <= since) return;
+    const rec = R.byStar.get(star.id);
+    let toasts = 0;
+    for (let i = R.events.length - 1; i >= 0 && R.events[i].t > since; i--) {
+      const e = R.events[i], cs = e.civs.map((k) => R.civs[k]);
+      const local = cs.some((c) => c.rec === rec || c.holdings.some((q) => q.star.id === star.id) || c.colonies.some((q) => q.star.id === star.id));
+      const big = ['stage', 'war', 'extermination', 'conquest', 'expansion'].includes(e.kind);
+      if (!local && !big) continue;
+      const cls = ['war', 'battle', 'conquest', 'extermination', 'disaster'].includes(e.kind) ? 'civwar' : ['stage', 'terraform', 'colony', 'expansion', 'discovery'].includes(e.kind) ? 'civup' : 'civ';
+      UI.log(e.text, cls, () => Modals.civ(this, cs[0]));
+      if (local && toasts < 2 && (big || e.kind === 'dawn' || e.kind === 'terraform' || e.kind === 'colony')) { toasts++; UI.toast(e.text, cls === 'civwar' ? 'civwar' : 'civ'); }
+    }
   },
   awaySummary() {
     const last = Store.d.lastSeen;
