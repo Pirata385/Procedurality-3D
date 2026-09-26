@@ -187,6 +187,13 @@ code, kbd { font-family: var(--mono); }
 .offspring .portrait { width: 88px; height: 88px; background: radial-gradient(#2c3a8a, #0b1032 70%); }
 .kids { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .kid { display: flex; flex-direction: column; align-items: center; padding: 6px; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; }
+.lineage { display: flex; align-items: stretch; gap: 4px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.lin { flex: none; width: 92px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; text-align: center; }
+.lin .portrait { width: 56px; height: 56px; }
+.lin b { font: 700 10px var(--mono); line-height: 1.2; } .lin small { font: 600 9px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.lin.now { box-shadow: inset 0 0 0 2px var(--teal); } .lin.next { box-shadow: inset 0 0 0 1px #7a5a1a; opacity: 0.85; } .lin.past { opacity: 0.8; }
+.lin.extinct { justify-content: center; color: #ff9b9b; } .lin-x { font: 800 26px var(--mono); color: #ff6b6b; }
+.lin-arrow { align-self: center; color: #4b5aa8; font: 800 16px var(--mono); }
 .kid small { font: 700 10px var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 
 /* ---------- hud / quick / log / toasts ---------- */
@@ -1679,15 +1686,14 @@ const Ecology = (() => {
     for (let i = 0; i < n; i++) { const tt = t - span + (span * i) / (n - 1); out.push(tt < sp.eraStart ? 0 : population(sp, tt)); }
     return out;
   }
-  function lineage(sp) { // ancestry chain names (deterministic re-derivation)
-    const out = [];
-    for (let e = sp.anchor; e < sp.era; e++) {
-      const p = sp.planet;
-      const s0 = base(p, sp.slot, sp.anchor);
-      let s = s0; for (let k = sp.anchor + 1; k <= e; k++) s = evolve(s, k);
-      out.push({ era: e, name: s.name, common: s.common });
-    }
-    return out;
+  // full lineage: ancestors (re-derived deterministically), the species itself, and its future descendant
+  function lineage(sp) {
+    const past = [];
+    let s = base(sp.planet, sp.slot, sp.anchor);
+    for (let e = sp.anchor; e < sp.era; e++) { past.push(s); s = evolve(s, e + 1); }
+    const nextEra = sp.era + 1;
+    const next = nextEra - sp.anchor < LINEAGE - 1 ? evolve(sp, nextEra) : null;
+    return { past, next, extinctNext: !next };
   }
   // an individual's genome: species genome + individual variation
   function individual(sp, idx) {
@@ -4100,7 +4106,7 @@ class SystemView {
   enter(p) {
     const sys = p.system;
     if (this.sys !== sys) { this.dispose(); this.build(sys); this.cam.goal.target = [0, 0, 0]; this.cam.goal.dist = clamp(this.maxR * 1.25, 30, 700); this.cam.snap(); this.cam.cur.dist *= 1.6; }
-    this.selected = null; this.follow = null;
+    this.selected = null; this.follow = null; this.starSel = false;
     if (p.planet) { const b = this.bodies.find((q) => q.p === p.planet); if (b) this.select(b, true); }
     else this.app.ui.panelFor(this);
   }
@@ -4139,7 +4145,7 @@ class SystemView {
     this.neb = st.pocket ? null : Universe.nebulaAt(st.pos);
   }
   select(b, focus) {
-    this.selected = b; this.follow = b && focus ? b : this.follow;
+    this.selected = b; this.starSel = false; this.follow = b && focus ? b : this.follow;
     if (b && focus) { this.cam.goal.dist = clamp(b.r * 9, 8, 120); }
     this.app.ui.panelFor(this);
   }
@@ -4264,9 +4270,19 @@ class SystemView {
   }
   rotate(dx, dy) { this.cam.goal.yaw -= dx * 0.006; this.cam.goal.pitch = clamp(this.cam.goal.pitch + dy * 0.005, 0.05, 1.5); }
   zoom(f) { this.cam.goal.dist = clamp(this.cam.goal.dist * f, 4, 1400); }
-  tap(x, y) { const b = this.pick(x, y); if (b) this.select(b, true); else { this.selected = null; this.app.ui.panelFor(this); } }
+  pickStar(x, y) {
+    const R = this.app.R, p = this.cam.project([0, 0, 0], R.cssW, R.cssH);
+    if (!p.visible) return false;
+    const rpx = (this.sr / (p.w * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5;
+    return Math.hypot(p.x - x, p.y - y) < Math.max(22, rpx * 1.3);
+  }
+  tap(x, y) {
+    const b = this.pick(x, y);
+    if (b) this.select(b, true);
+    else { this.selected = null; this.starSel = this.pickStar(x, y); if (this.starSel) { this.follow = null; this.cam.goal.target = [0, 0, 0]; } this.app.ui.panelFor(this); }
+  }
   dbl(x, y) { const b = this.pick(x, y); if (b) this.app.openPlanet(b.p); }
-  hoverAt(x, y) { return !!this.pick(x, y); }
+  hoverAt(x, y) { return !!this.pick(x, y) || this.pickStar(x, y); }
   crumbs() { return [{ label: this.sys.star.pocket ? 'Pocket space' : Universe.name, icon: 'galaxy', go: () => this.app.openGalaxy(this.sys.star) }, { label: this.sys.star.name, icon: 'star' }]; }
   status() { const s = this.sys.star; return `${s.specClass} ${s.typeLabel} · ${this.sys.planets.length} planets · live orbits`; }
   hint() { return this.app.mobile ? 'Tap a planet to inspect · double-tap to observe' : 'Click a planet to inspect · double-click to observe · right-drag to orbit'; }
@@ -5280,40 +5296,19 @@ class MarkerSet {
    PANEL CONTENT
    ============================================================================= */
 const Panels = {
-  galaxy(v, app) {
-    const s = v.selected;
-    if (!s) return null;
-    const sys = SystemGen.generate(s), code = Codes.ofStar(s);
-    const lifeP = [], all = [];
-    for (const p of sys.planets) { all.push(p); for (const m of p.moons) all.push(m); }
-    for (const p of all) if (p.life.has) lifeP.push(p);
-    const badges = [chip(s.typeLabel, 'c-star')];
-    if (lifeP.length) badges.push(chip(`${lifeP.length} with life`, 'c-life'));
-    if (sys.planets.some((p) => p.rings)) badges.push(chip('Ringed giant', ''));
-    return {
-      key: 'star:' + code, title: s.name, sub: `${s.specClass} · ${s.typeLabel}`, icon: Thumbs.star(s, 40), badges, code,
-      bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
-      tabs: [
-        { id: 'overview', label: 'Overview', render: () => h('div', null,
-          h('div', { class: 'grid' }, stat('Class', s.specClass), stat('Temperature', s.cls === 'BH' ? '—' : `${fmt.n(s.temp)} K`), stat('Luminosity', s.cls === 'BH' ? '0' : `${fmt.sig(s.lum)} L☉`), stat('Mass', `${fmt.sig(s.mass)} M☉`), stat('Radius', `${fmt.sig(s.radius)} R☉`), stat('Age', `${s.age.toFixed(1)} Gyr`), stat('Bodies', `${sys.planets.length} + ${sys.bodyCount - sys.planets.length} moons`), stat('Sector', `${s.sx}, ${s.sz}`)),
-          section('Planets', all.length ? h('div', { class: 'plist' }, sys.planets.map((p) => h('div', { class: 'prow', onclick: () => app.openSystem(s, p) }, Thumbs.planet(p, 28), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)}${p.moons.length ? ` · ${p.moons.length} moon${p.moons.length > 1 ? 's' : ''}` : ''}`)), p.life.has || p.moons.some((m) => m.life.has) ? chip('life', 'c-life') : null))) : h('p', { class: 'muted' }, 'No planets have formed around this star.')),
-          section('Habitable zone', h('p', { class: 'muted' }, s.lum > 0.0005 ? `${fmt.au(sys.hzIn)} – ${fmt.au(sys.hzOut)}` : 'None — this object emits almost no light.'))) },
-        { id: 'gen', label: 'Seed', render: () => h('div', null, section('Seed chain', seedChain([['Universe', Universe.name, RNG.strHash('universe:' + Universe.name)], ['Sector', `${s.sx}, ${s.sz}`, RNG.hash(Universe.seed, s.sx, s.sz, 'sector')], ['Star', `#${s.i}`, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]])), section('Share code', codeRow(code))) },
-      ],
-      actions: [{ label: 'Enter system', icon: 'play', primary: true, fn: () => app.openSystem(s) }],
-      quick: [{ label: 'Enter system', icon: 'play', primary: true, fn: () => app.openSystem(s) }],
-      onClose: () => { v.selected = null; },
-    };
-  },
+  galaxy(v, app) { return v.selected ? starPanel(v.selected, app, { onClose: () => { v.selected = null; } }) : null; },
   system(v, app) {
     const sys = v.sys, s = sys.star, b = v.selected;
+    if (v.starSel) return starPanel(s, app, { inSystem: true, onClose: () => { v.starSel = false; } });
     if (b) return planetPanel(b.p, app, { inSystem: true });
     const code = Codes.ofStar(s);
     return {
       key: 'sys:' + code, title: s.name + ' System', sub: `${s.typeLabel} · ${sys.planets.length} planets · ${sys.bodyCount - sys.planets.length} moons`, icon: Thumbs.star(s, 40), code,
       bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
       badges: sys.lifeCount ? [chip(`${sys.lifeCount} biospheres`, 'c-life')] : [],
-      tabs: [{ id: 'bodies', label: 'Bodies', render: () => h('div', { class: 'plist' }, sys.planets.length ? sys.planets.map((p) => [
+      tabs: [{ id: 'bodies', label: 'Bodies', render: () => h('div', { class: 'plist' },
+        h('div', { class: 'prow', onclick: () => { v.starSel = true; v.selected = null; app.ui.panelFor(v); } }, Thumbs.star(s, 30), h('div', null, h('b', null, s.name), h('small', null, `${s.specClass} · ${s.typeLabel} · ${s.cls === 'BH' ? '—' : fmt.n(s.temp) + ' K'}`)), chip('star', 'c-star')),
+        sys.planets.length ? sys.planets.map((p) => [
         h('div', { class: 'prow', onclick: () => v.select(v.bodies.find((q) => q.p === p), true) }, Thumbs.planet(p, 30), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)} · ${fmt.temp(p.tempC)}`)), p.life.has ? chip('life', 'c-life') : p.rings ? chip('rings') : null),
         ...p.moons.map((m) => h('div', { class: 'prow sub', onclick: () => v.select(v.bodies.find((q) => q.p === m), true) }, Thumbs.planet(m, 22), h('div', null, h('b', null, m.title), h('small', null, `${m.typeName} · ${fmt.temp(m.tempC)}`)), m.life.has ? chip('life', 'c-life') : null)),
       ]) : h('p', { class: 'muted' }, 'An empty system. Only dust and radiation.')) }],
@@ -5327,6 +5322,30 @@ const Panels = {
     return locationPanel(v, app);
   },
 };
+
+function starPanel(s, app, o) {
+    const sys = SystemGen.generate(s), code = Codes.ofStar(s);
+    const lifeP = [], all = [];
+    for (const p of sys.planets) { all.push(p); for (const m of p.moons) all.push(m); }
+    for (const p of all) if (p.life.has) lifeP.push(p);
+    const badges = [chip(s.typeLabel, 'c-star')];
+    if (lifeP.length) badges.push(chip(`${lifeP.length} with life`, 'c-life'));
+    if (sys.planets.some((p) => p.rings)) badges.push(chip('Ringed giant', ''));
+    return {
+      key: 'star:' + code, title: s.name, sub: `${s.specClass} · ${s.typeLabel}`, icon: Thumbs.star(s, 40), badges, code,
+      bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
+      tabs: [
+        { id: 'overview', label: 'Overview', render: () => h('div', null,
+          h('div', { class: 'grid' }, stat('Class', s.specClass), stat('Temperature', s.cls === 'BH' ? '—' : `${fmt.n(s.temp)} K`), stat('Luminosity', s.cls === 'BH' ? '0' : `${fmt.sig(s.lum)} L☉`), stat('Mass', `${fmt.sig(s.mass)} M☉`), stat('Radius', `${fmt.sig(s.radius)} R☉`), stat('Age', `${s.age.toFixed(1)} Gyr`), stat('Bodies', `${sys.planets.length} + ${sys.bodyCount - sys.planets.length} moons`), stat('Sector', s.pocket != null ? 'pocket space' : `${s.sx}, ${s.sz}`)),
+          section('Planets', all.length ? h('div', { class: 'plist' }, sys.planets.map((p) => h('div', { class: 'prow', onclick: () => app.openSystem(s, p) }, Thumbs.planet(p, 28), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)}${p.moons.length ? ` · ${p.moons.length} moon${p.moons.length > 1 ? 's' : ''}` : ''}`)), p.life.has || p.moons.some((m) => m.life.has) ? chip('life', 'c-life') : null))) : h('p', { class: 'muted' }, 'No planets have formed around this star.')),
+          section('Habitable zone', h('p', { class: 'muted' }, s.lum > 0.0005 ? `${fmt.au(sys.hzIn)} – ${fmt.au(sys.hzOut)}` : 'None — this object emits almost no light.'))) },
+        { id: 'gen', label: 'Seed', render: () => h('div', null, section('Seed chain', seedChain(s.pocket != null ? [['Pocket seed', s.pocket, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]] : [['Universe', Universe.name, RNG.strHash('universe:' + Universe.name)], ['Sector', `${s.sx}, ${s.sz}`, RNG.hash(Universe.seed, s.sx, s.sz, 'sector')], ['Star', `#${s.i}`, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]])), section('Share code', codeRow(code))) },
+      ],
+      actions: o.inSystem ? [{ label: 'Galaxy', icon: 'galaxy', fn: () => app.openGalaxy(s) }] : [{ label: 'Enter system', icon: 'play', primary: true, fn: () => app.openSystem(s) }],
+      quick: o.inSystem ? [] : [{ label: 'Enter system', icon: 'play', primary: true, fn: () => app.openSystem(s) }],
+      onClose: o.onClose,
+    };
+}
 
 function codeRow(code) { return h('div', { class: 'coderow' }, h('code', null, code), btn('', () => copyText(code), { icon: 'copy', title: 'Copy' }), btn('', () => copyText(location.href.split('#')[0] + '#' + encodeURIComponent(code)), { icon: 'link', title: 'Copy share link' })); }
 function seedChain(items) { return h('div', { class: 'chain' }, items.map(([k, v, hsh], i) => h('div', { class: 'chain-i' }, h('span', { class: 'chain-k' }, k), h('span', { class: 'chain-v' }, v), h('code', null, RNG.hex(hsh)), i < items.length - 1 ? h('span', { class: 'chain-arrow' }, '↓') : null))); }
@@ -5458,6 +5477,17 @@ function creaturePanel(a, v, app) {
     onClose: () => { v.selected = null; v.follow = null; },
   };
 }
+function lineageStrip(sp, t) {
+  const L = Ecology.lineage(sp);
+  const cell = (s, label, cls) => h('div', { class: 'lin ' + (cls || '') }, Portraits.el(s.code, s.pheno, 56), h('b', null, s.common), h('small', null, label));
+  const row = h('div', { class: 'lineage' });
+  L.past.forEach((s) => { row.append(cell(s, `era ${s.era}${s.founder ? ' · founder' : ''}`, 'past'), h('span', { class: 'lin-arrow' }, '›')); });
+  row.append(cell(sp, 'now', 'now'));
+  row.append(h('span', { class: 'lin-arrow' }, '›'));
+  if (L.next) row.append(cell(L.next, `in ${fmt.dur(sp.eraEnd - t)}`, 'next'));
+  else row.append(h('div', { class: 'lin extinct' }, h('div', { class: 'lin-x' }, '✕'), h('b', null, 'Extinction'), h('small', null, `in ${fmt.dur(sp.eraEnd - t)}`)));
+  return h('div', null, row, h('p', { class: 'muted small' }, 'Each era the genome mutates into a new species. Evolution is a pure function of universal time, so the next form can be forecast.'));
+}
 function genomeView(g, sp, app) {
   const groups = {};
   GENES.forEach(([key, label, grp], i) => { (groups[grp] = groups[grp] || []).push([label, g[i], i]); });
@@ -5495,6 +5525,7 @@ function speciesBody(sp, app) {
     section(`Population · last ${fmt.dur(span)}`, sparkline(hist, sp.diet === 'carnivore' ? '#ff7e6b' : '#5cf2c6')),
     section('Adaptations', h('ul', { class: 'adapt' }, sp.adaptations.map(([a, why]) => h('li', null, h('b', null, a), h('small', null, why))))),
     section('Food web', h('div', null, sp.prey.length ? h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.prey.map((x) => x.common).join(', ')) : h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.fam === 'floater' ? 'airborne plankton & light' : sp.habitat === 'water' ? 'algae & plankton' : 'vegetation'), sp.predators.length ? h('p', { class: 'small' }, h('b', null, 'Hunted by: '), sp.predators.map((x) => x.common).join(', ')) : h('p', { class: 'small muted' }, 'No natural predators.'))),
+    section('Evolutionary lineage', lineageStrip(sp, t)),
     section('Evolution', h('p', { class: 'small' }, `Lineage era ${E.gen + 1} of ${Ecology.LINEAGE - 1}. This form arose ${fmt.dur(t - E.eraStart)} ago and will persist for roughly ${fmt.dur(E.eraEnd - t)} more.`), E.ancestor ? h('p', { class: 'small' }, h('b', null, 'Descended from: '), `${E.ancestor.common} (${E.ancestor.name})`) : h('p', { class: 'small muted' }, 'Founder of a new lineage.')),
     section('Species code', codeRow(sp.code)));
 }
@@ -5888,7 +5919,11 @@ const App = {
     this.trans = { t: 0, phase: 'out', fn: doSwitch };
   },
   openGalaxy(star) { this.go('galaxy', { star: star && !star.pocket ? star : null }); },
-  openSystem(star, planet) { this.go('system', { system: SystemGen.generate(star), planet }); },
+  openSystem(star, planet) {
+    const sv = this.views.system, sys = SystemGen.generate(star);
+    if (this.view === sv && sv.sys === sys && !this.trans) { const b = planet && sv.bodies.find((q) => q.p === planet); if (b) sv.select(b, true); return; }
+    this.go('system', { system: sys, planet });
+  },
   openPlanet(planet, site) { this.go('planet', { planet, system: planet.system, site }); },
   openSurface(planet, dir) { this.go('surface', { planet, dir, system: planet.system }); },
   back() {
