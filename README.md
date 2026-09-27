@@ -2,7 +2,7 @@
 
 An open-universe observatory that runs entirely in the browser. You don't pilot a ship or play a character. You drift through an infinite, seeded universe and watch it: stars, planets, moons, climates, rivers, alien ecosystems — and the civilizations that rise, trade, war and spread between the stars. The universe keeps running whether you're watching or not. Now in 3D.
 
-**Play:** open `index.html` in any modern browser. That's it — one self-contained file, no build step, no server, no dependencies, no network access. Works from `file://`, on desktop and on phones/tablets.
+**Play:** open `index.html` in any modern browser. The whole game is one file — no build step, no server, no dependencies. Music and sound effects are streamed from the `audio/` folder next to it (keep the two together); without that folder the game still runs, just silently. Works from `file://` and on the web, on desktop and on phones/tablets.
 
 ---
 
@@ -42,6 +42,13 @@ Where to see it:
 
 History is simulated per **galactic region** (4×4 sectors) in 10-minute steps from the start of the region's current **age** (20–48 hours of universal time). It is a pure function of the universe seed and the clock, so it advances while you are away and every observer sees the same chronicle.
 
+### Sound
+* **Music** — *space themes* play in the galaxy and system views, *planet themes* while you orbit a world or explore its surface. Tracks don't loop back to back: after each piece there is a quiet break (short, normal or long — your choice), the same track never plays twice in a row, and moving between space and a planet fades the current piece out before the matching theme begins.
+* **Rain ambience** — a seamless cross-faded loop that follows the local rain intensity on the surface, a little softer when zoomed out, and fades away when the rain stops or time is frozen.
+* **Creature calls** — each body plan has its own voice: quadrupeds by niche (herbivore, megaherbivore, forager, predator, apex predator), bipeds, hexapods, octopods, serpents, avians, gastropods and aerostats (a species always keeps the same variant; aquatic swimmers are silent). Creatures call when they **attack** (charging prey, striking, fighting), when they **try to escape** a predator (a higher-pitched alarm), and when you **click** them. Bigger bodies sound deeper, juveniles higher, and every individual has its own pitch. Calls are panned by screen position, fade with distance and zoom, and are rate-limited so herds and fast time stay pleasant. Sapient citizens use their species' voice.
+* Interface clicks, a master/music/creature/ambience mixer, music frequency and mute live in **Settings**; `M` toggles sound. Every file was loudness-measured so all sounds sit at balanced levels, with leading silence trimmed.
+* Over `http(s)` (e.g. GitHub Pages) audio runs through Web Audio (stereo panning, gain, a limiter, iOS-safe unlocking on the first tap); from `file://` it falls back to plain media elements.
+
 ### The autonomous clock
 Universal time is derived from the real-world clock plus a persisted offset. Orbits, planetary rotation (day/night), weather, population cycles and evolution are all functions of that clock — close the tab, come back tomorrow, and planets have moved and saved worlds have evolved. You can speed time up (×10, ×100, ×1000) or freeze observation.
 
@@ -56,7 +63,7 @@ Universal time is derived from the real-world clock plus a persisted offset. Orb
 | Enter / descend / follow | double-click · Enter | double-tap |
 | Back | Esc · ← button | ← button |
 | Time | Space (freeze) · 1–4 speeds | clock buttons |
-| Tools | `/` scanner · `B` saved · `G` seeds · `P` autopilot · `H` hide UI · `?` help | ☰ menu |
+| Tools | `/` scanner · `B` saved · `G` seeds · `P` autopilot · `M` sound · `H` hide UI · `?` help | ☰ menu |
 
 In the planet view, drag spins the globe and a tap drops a landing pin that rotates with the planet.
 
@@ -99,6 +106,7 @@ Everything lives in `index.html`, split into modules (one `<script>` each):
 | **Cities** | settlement layouts, terrain levelling and street painting, buildings baked per chunk by architecture and stage, domes, pads, walls, monuments; citizens, raids, traffic and spacecraft models |
 | **Views** | galaxy, system, planet and surface views, weather & particles |
 | **UI** | persistence (localStorage), universal clock, panels / bottom sheet, modals, portraits (offscreen sprite renders), planet thumbnails, unified pointer/touch/keyboard input |
+| **Audio** | music scheduler with breaks and theme switching, cross-faded rain loop, creature voices (mapping, pitch, panning, distance, rate limits), UI clicks, mixer settings, Web Audio with media-element fallback |
 | **App** | navigation, dissolve transitions, URL hash, main loop, splash |
 
 ### Rendering style

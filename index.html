@@ -290,6 +290,9 @@ kbd { background: #1b2362; box-shadow: inset 0 -2px 0 #0d1238, inset 0 0 0 1px #
 .stages div.now { color: #fff; box-shadow: inset 0 0 0 2px var(--gold); background: #2a2a5c; }
 .stages small { display: block; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; margin-top: 2px; }
 .grid.wrapv .stat .v { white-space: normal; overflow: visible; text-overflow: clip; font-size: 12px; line-height: 1.3; }
+input.range { width: 150px; padding: 0; border: 0; background: transparent; accent-color: var(--teal); height: 22px; }
+.log-e.music span:last-child { color: #c7b8ff; }
+#btn-sound.on { color: #ff9b9b; }
 .swatches { display: flex; margin-top: 8px; gap: 3px; flex-wrap: wrap; }
 .swatches i { width: 22px; height: 22px; box-shadow: inset 0 0 0 1px #0006; }
 .chron { display: flex; flex-direction: column; gap: 2px; }
@@ -4490,7 +4493,7 @@ class Ecosystem {
   constructor(world, community, seed, t) {
     this.world = world; this.community = community; this.seed = seed;
     this.agents = []; this.nextId = 1; this.t = 0; this.spawnT = 0; this.cap = 90; this.target = 60;
-    this.onEvent = null; this.stats = { births: 0, deaths: 0, kills: 0 };
+    this.onEvent = null; this.onSound = null; this.stats = { births: 0, deaths: 0, kills: 0 };
     const land = community.filter((s) => s.habitat === 'land'), water = community.filter((s) => s.habitat === 'water'), air = community.filter((s) => s.habitat === 'air');
     this.groups = { land, water, air };
     this.universeT = t;
@@ -4562,6 +4565,8 @@ class Ecosystem {
     return Math.max(gy + a.P.bodyH * 0.8, wl - 0.5 - Math.min(2.2, (wl - gy) * 0.35));
   }
   emit(msg, kind, a) { if (this.onEvent) this.onEvent(msg, kind, a); }
+  // creature calls: 'attack' when charging or striking, 'flee' when escaping
+  sound(a, kind) { if (this.onSound) this.onSound(a, kind); }
   label(a) { return `${a.sp.common}`; }
   kill(a, cause, by) {
     if (a.state === 'dead') return;
@@ -4598,7 +4603,7 @@ class Ecosystem {
     }
     const sleepy = (P.noct ? env.night < 0.4 : env.night > 0.6) && sp.habitat !== 'water';
     const hungry = a.energy < 0.45 || (a.state === 'graze' && a.energy < 0.95) || (a.state === 'hunt' && a.energy < 0.8);
-    const set = (s, t) => { if (a.state !== s) { a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
+    const set = (s, t) => { if (a.state !== s) { if (s === 'flee') this.sound(a, 'flee'); else if (s === 'hunt') this.sound(a, 'attack'); a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
     if (threat && td < P.percep * (a.state === 'sleep' ? 0.35 : 0.8)) { set('flee', threat); return; }
     if (sleepy && a.state !== 'hunt' && sp.fam !== 'floater') { set('sleep', null); return; }
     if (a.nav.lockT > 0 && a.state === 'wander') return;
@@ -4731,7 +4736,7 @@ class Ecosystem {
         if (!tgt || tgt.state === 'dead' || a.stateT > 14) { a.state = 'wander'; a.huntCD = 12; break; }
         tx = tgt.x; tz = tgt.z; spd = P.speed * 1.12; run = 1; attack = 0.5; jaw = 0.5;
         if (Math.hypot(tgt.x - a.x, tgt.z - a.z) < (P.bodyL * a.grow + tgt.P.bodyL * tgt.grow) * 0.5 + 0.5) {
-          this.kill(tgt, 'predation', a); a.state = 'eat'; a.target = tgt; a.stateT = 0; a.energy = Math.min(1, a.energy + 0.15);
+          this.sound(a, 'attack'); this.kill(tgt, 'predation', a); a.state = 'eat'; a.target = tgt; a.stateT = 0; a.energy = Math.min(1, a.energy + 0.15);
         }
         break;
       case 'eat':
@@ -4766,7 +4771,7 @@ class Ecosystem {
         tx = tgt.x; tz = tgt.z;
         const reach = (P.bodyL + tgt.P.bodyL) * 0.5 + 0.7;
         if (Math.hypot(tgt.x - a.x, tgt.z - a.z) > reach) { spd = P.speed * 0.8; run = 1; attack = 0.3; }
-        else { attack = 0.5 + 0.5 * Math.sin(anim.t * 9 + a.id); jaw = 0.4; a.heading += clamp(angleDelta(a.heading, Math.atan2(tgt.x - a.x, tgt.z - a.z)), -dt * 4, dt * 4); if (Math.random() < dt * 0.12) this.kill(tgt, 'battle', a); }
+        else { attack = 0.5 + 0.5 * Math.sin(anim.t * 9 + a.id); jaw = 0.4; a.heading += clamp(angleDelta(a.heading, Math.atan2(tgt.x - a.x, tgt.z - a.z)), -dt * 4, dt * 4); if (Math.random() < dt * 0.5) this.sound(a, 'attack'); if (Math.random() < dt * 0.12) this.kill(tgt, 'battle', a); }
         break;
       }
       case 'follow': if (tgt) { tx = tgt.x; tz = tgt.z; spd = Math.hypot(tx - a.x, tz - a.z) > 2.5 ? tgt.v + 0.8 : 0; } break;
@@ -5660,7 +5665,7 @@ class CivLife {
   }
   think(a, env) {
     const eco = this.view.eco, c = a.cit.city, role = a.cit.role, W = this.view;
-    const set = (s, t) => { if (a.state !== s) { a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
+    const set = (s, t) => { if (a.state !== s) { if (s === 'fight') eco.sound(a, 'attack'); a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
     if (a.state === 'fight' && a.target && a.target.state !== 'dead' && a.stateT < 14) return;
     if (role === 'guard' || role === 'raider') {
       let foe = null, fd = role === 'raider' ? 40 : 22;
@@ -6485,6 +6490,7 @@ class SurfaceView {
     this.eco = new Ecosystem(this, this.community, RNG.hash(planet.seed, p.dir[0] * 1e6 | 0, p.dir[2] * 1e6 | 0), t);
     this.eco.cap = q === 'low' ? 45 : q === 'high' ? 130 : 85;
     this.eco.onEvent = (msg, kind, a) => this.app.ui.log(msg, kind, a ? () => this.inspect(a) : null);
+    this.eco.onSound = (a, kind) => Sound.creature(a, kind, this);
     this.civ = new CivLife(this); this.eco.civ = this.civ;
     if (this.cities.length) {
       const c = this.cities.reduce((a, b) => (Math.hypot(a.x, a.z) < Math.hypot(b.x, b.z) ? a : b));
@@ -6703,7 +6709,7 @@ class SurfaceView {
   }
   tap(x, y) {
     const a = this.pickAgent(x, y);
-    if (a) { this.inspect(a); return; }
+    if (a) { Sound.creature(a, 'click', this); this.inspect(a); return; }
     const g = this.groundRay(x, y);
     this.selected = null;
     if (g) {
@@ -6855,6 +6861,310 @@ class Weather {
 }
 </script>
 
+<!-- ===== Audio · music with breaks, rain ambience, creature calls ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   AUDIO · background music with breaks between tracks (space / planet themes),
+   rain ambience, creature calls (attack, escape, inspect) and UI clicks.
+   Files live in ./audio next to index.html and are streamed on demand; without
+   them the game simply stays silent. Levels were measured per file so every
+   sound plays at a balanced loudness (g) with its leading silence trimmed (off).
+   ============================================================================= */
+const Sound = (() => {
+  const BASE = 'audio/';
+  const MUSIC = {
+    space: [
+      { f: 'music/space_theme1.mp3', name: 'Space Theme I', g: 0.83 },
+      { f: 'music/space_theme3.mp3', name: 'Space Theme III', g: 0.96 },
+    ],
+    planet: [
+      { f: 'music/in_planet_theme1.mp3', name: 'Planet Theme I', g: 1.0 },
+      { f: 'music/in_planet_theme2.mp3', name: 'Planet Theme II', g: 0.7 },
+      { f: 'music/in_planet_theme3.mp3', name: 'Planet Theme III', g: 1.0 },
+    ],
+  };
+  const RAIN = { f: 'environment-sfx/rain_weather_background.mp3', g: 3.6 };
+  const SP = 'species-sfx/';
+  const SFX = {
+    click: { f: 'misc-sfx/sfx_click.mp3', g: 0.55, off: 0 },
+    quadruped: { f: SP + 'sfx_quadruped.mp3', g: 1.55, off: 0.11 },
+    quadruped_herbivore: { f: SP + 'sfx_quadruped_herbivore.mp3', g: 0.9, off: 0.02 },
+    quadruped_megaherbivore: { f: SP + 'sfx_quadruped_megaherbivore.mp3', g: 1.05, off: 0.03 },
+    quadruped_predator: { f: SP + 'sfx_quadruped_predator.mp3', g: 0.95, off: 0.04 },
+    quadruped_apex_predator: { f: SP + 'sfx_quadruped_apex_predator.mp3', g: 1.55, off: 0.09 },
+    bipedal: { f: SP + 'sfx_bipedal.mp3', g: 1.6, off: 0.06 },
+    bipedal2: { f: SP + 'sfx_bipedal2.mp3', g: 0.85, off: 0.02 },
+    hexapods: { f: SP + 'sfx_hexapods.mp3', g: 1.45, off: 0 },
+    hexapods2: { f: SP + 'sfx_hexapods2.mp3', g: 1.75, off: 0 },
+    octopods: { f: SP + 'sfx_octopods.mp3', g: 1.45, off: 0 },
+    serpent: { f: SP + 'sfx_serpent.mp3', g: 2.4, off: 0.44 },
+    avian1: { f: SP + 'sfx_avian1.mp3', g: 0.58, off: 0.36 },
+    avian2: { f: SP + 'sfx_avian2.mp3', g: 1.7, off: 0.03 },
+    avian3: { f: SP + 'sfx_avian3.mp3', g: 0.5, off: 0 },
+    aerostats: { f: SP + 'sfx_aerostats.mp3', g: 0.82, off: 0.08 },
+    aerostats2: { f: SP + 'sfx_aerostats2.mp3', g: 0.63, off: 0 },
+    gastropods: { f: SP + 'sfx_gastropods.mp3', g: 0.9, off: 0 },
+  };
+  const BREAKS = { short: [15, 45], normal: [45, 120], long: [120, 300] };
+  const DEF = { master: 0.8, music: 0.55, sfx: 0.8, amb: 0.7, muted: false, breaks: 'normal' };
+
+  let ctx = null, web = false, unlocked = false, hidden = false, comp = null;
+  const bus = {};
+  const buf = {}, pool = {};
+  let lastCreature = 0, activeCreatures = 0, tokens = 3, refillAt = 0;
+  const now = () => performance.now() / 1000;
+  const cfg = () => { const s = Store.d.settings; if (!s.audio || typeof s.audio !== 'object') s.audio = {}; return Object.assign({}, DEF, s.audio); };
+  const vol = (b) => { const c = cfg(); return c.muted ? 0 : c.master * (b === 'music' ? c.music : b === 'amb' ? c.amb : c.sfx); };
+
+  // a tiny silent WAV used to activate media elements inside the first user gesture (iOS)
+  function silence() {
+    const n = 400, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  }
+  // a media element with its own gain (Web Audio when served over http(s), element volume otherwise)
+  function channel(busName) {
+    const el = document.createElement('audio');
+    el.preload = 'none';
+    const ch = { el, gain: 1, busName, node: null };
+    if (web) { try { const src = ctx.createMediaElementSource(el); ch.node = ctx.createGain(); ch.node.gain.value = 0; src.connect(ch.node).connect(bus[busName]); } catch (e) { ch.node = null; } }
+    return ch;
+  }
+  function setGain(ch, g) {
+    ch.gain = g;
+    if (ch.node) ch.node.gain.setTargetAtTime(g, ctx.currentTime, 0.05);
+    else ch.el.volume = clamp(g * vol(ch.busName), 0, 1);
+  }
+
+  // ------------------------------------------------------------------ setup
+  function init() {
+    const go = () => unlock();
+    for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, go, { capture: true, passive: true });
+    document.addEventListener('visibilitychange', () => {
+      hidden = document.hidden;
+      if (!unlocked) return;
+      if (hidden) { if (ctx) ctx.suspend(); music.el && !music.el.el.paused && music.el.el.pause(); for (const r of rain.ch) r.el.pause(); }
+      else { if (ctx) ctx.resume(); if (music.state === 'play' || music.state === 'fade') music.el.el.play().catch(() => {}); }
+    });
+    // soft click on interface controls
+    document.addEventListener('click', (e) => { const t = e.target; if (t && t.closest && t.closest('button, .prow, .srow, .civrow, .cat, .crumb, .lin')) play('click', { vol: 0.5 }); }, true);
+  }
+  function unlock() {
+    if (unlocked) { if (ctx && ctx.state === 'suspended' && !hidden) ctx.resume(); return; }
+    unlocked = true;
+    web = /^https?:$/.test(location.protocol) && !!(window.AudioContext || window.webkitAudioContext);
+    if (web) {
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        comp = ctx.createDynamicsCompressor(); comp.threshold.value = -6; comp.knee.value = 8; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.25;
+        bus.master = ctx.createGain(); bus.master.connect(comp).connect(ctx.destination);
+        for (const b of ['music', 'sfx', 'amb']) { bus[b] = ctx.createGain(); bus[b].connect(bus.master); }
+        applyVolumes();
+        ctx.resume();
+      } catch (e) { console.warn('Web Audio unavailable', e); ctx = null; web = false; }
+    }
+    const blank = silence();
+    music.el = channel('music');
+    rain.ch = [channel('amb'), channel('amb')];
+    for (const ch of [music.el, ...rain.ch]) { ch.el.src = blank; const p = ch.el.play(); if (p) p.then(() => ch.el.pause()).catch(() => {}); }
+    music.el.el.addEventListener('ended', () => music.ended());
+    music.el.el.addEventListener('error', () => { if (music.state !== 'idle' && music.el.el.src.indexOf(BASE) >= 0) music.failed(); });
+    music.state = 'wait'; music.nextAt = now() + 4 + Math.random() * 6;
+    loadSfx();
+  }
+  function applyVolumes() {
+    if (!web || !ctx) return;
+    const c = cfg(), t = ctx.currentTime;
+    bus.master.gain.setTargetAtTime(c.muted ? 0 : c.master, t, 0.05);
+    bus.music.gain.setTargetAtTime(c.music, t, 0.05);
+    bus.sfx.gain.setTargetAtTime(c.sfx, t, 0.05);
+    bus.amb.gain.setTargetAtTime(c.amb, t, 0.05);
+  }
+  function loadSfx() {
+    for (const k in SFX) {
+      const url = BASE + SFX[k].f;
+      if (web) fetch(url).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then((ab) => ctx.decodeAudioData(ab)).then((b) => { buf[k] = b; }).catch(() => { buf[k] = null; });
+      else { const el = new window.Audio(url); el.preload = 'auto'; pool[k] = [el]; }
+    }
+  }
+
+  // ------------------------------------------------------------------ one-shots
+  function play(name, o = {}) {
+    const d = SFX[name];
+    if (!d || !unlocked || hidden || cfg().muted) return false;
+    const v = (o.vol == null ? 1 : o.vol) * d.g, rate = o.rate || 1;
+    if (web && ctx) {
+      const b = buf[name];
+      if (!b || ctx.state !== 'running') return false;
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = b; src.playbackRate.value = rate; g.gain.value = v;
+      let out = g;
+      if (ctx.createStereoPanner && o.pan) { const p = ctx.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); g.connect(p); out = p; }
+      src.connect(g); out.connect(bus.sfx);
+      src.start(0, Math.min(d.off, b.duration * 0.5));
+      if (o.creature) { activeCreatures++; src.onended = () => { activeCreatures--; }; }
+      return true;
+    }
+    // file:// fallback: plain media elements (no panning, volume capped at 1)
+    const list = pool[name];
+    if (!list) return false;
+    let el = list.find((e) => e.paused || e.ended);
+    if (!el) { if (list.length >= 4) return false; el = list[0].cloneNode(); list.push(el); }
+    el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false;
+    el.playbackRate = rate; el.volume = clamp(v * vol('sfx'), 0, 1);
+    try { el.currentTime = d.off; } catch (e) { /* not yet seekable */ }
+    const p = el.play(); if (p) p.catch(() => {});
+    if (o.creature) { activeCreatures++; el.onended = () => { activeCreatures--; el.onended = null; }; }
+    return true;
+  }
+  // which call a species makes
+  function voiceOf(sp) {
+    if (!sp) return null;
+    const h = (sp.seed >>> 0) % 997;
+    switch (sp.fam) {
+      case 'quadruped':
+        if (sp.diet === 'carnivore') return sp.role === 'Apex predator' ? 'quadruped_apex_predator' : 'quadruped_predator';
+        if (sp.role === 'Megaherbivore') return 'quadruped_megaherbivore';
+        return sp.diet === 'herbivore' ? 'quadruped_herbivore' : 'quadruped';
+      case 'biped': return h % 2 ? 'bipedal2' : 'bipedal';
+      case 'hexapod': return h % 2 ? 'hexapods2' : 'hexapods';
+      case 'octopod': return 'octopods';
+      case 'serpent': return 'serpent';
+      case 'avian': return ['avian1', 'avian2', 'avian3'][h % 3];
+      case 'floater': return h % 2 ? 'aerostats2' : 'aerostats';
+      case 'blob': return 'gastropods';
+      default: return null; // aquatic swimmers have no call
+    }
+  }
+  // a creature calls: 'attack' (charging / striking), 'flee' (alarm while escaping) or 'click' (inspected by the observer)
+  function creature(a, kind, view) {
+    if (!unlocked || !a || a.state === 'dead' && kind !== 'click') return;
+    const name = voiceOf(a.sp);
+    if (!name) return;
+    const t = now();
+    let v = 1, pan = 0;
+    const R = view.app.R, p = view.cam.project([a.x, a.y, a.z], R.cssW, R.cssH);
+    if (p.visible) pan = clamp((p.x / Math.max(1, R.cssW)) * 2 - 1, -1, 1) * 0.75;
+    if (kind !== 'click') {
+      // at most ~1 call per second overall (short bursts allowed), so herds and fast time stay pleasant
+      tokens = Math.min(3, tokens + (t - refillAt) * 1.1); refillAt = t;
+      if (tokens < 1 || (a.sndT || -1e9) > t - (kind === 'flee' ? 6 : 4) || t - lastCreature < 0.2 || activeCreatures >= 4) return;
+      if (!view.visible(a.x, a.y, a.z, 2)) return;
+      const tg = view.cam.cur.target, ext = view.viewExtent(), d = Math.hypot(a.x - tg[0], a.z - tg[2]);
+      v = (1 - smoothstep(ext * 0.3, ext * 1.1, d)) * clamp(22 / view.cam.cur.dist, 0.35, 1) * (kind === 'attack' ? 0.9 : 0.75);
+      if (v < 0.04) return;
+    }
+    a.sndT = t; lastCreature = t;
+    if (kind !== 'click') tokens -= 1;
+    // bigger bodies sound deeper; each individual has its own slight pitch
+    const S = Math.max(0.3, a.P.S * (a.grow || 1));
+    let rate = clamp(Math.pow(1.3 / S, 0.35), 0.72, 1.45) * (0.94 + ((a.id * 37) % 13) / 100);
+    if (kind === 'flee') rate *= 1.08;
+    return play(name, { vol: v, pan, rate, creature: true }) ? name : false;
+  }
+
+  // ------------------------------------------------------------------ music
+  const music = {
+    state: 'idle', el: null, track: null, theme: null, nextAt: 0, fade: 1, fadeTo: 1, last: null, bad: new Set(),
+    pick(theme) {
+      const list = MUSIC[theme].filter((q) => !this.bad.has(q.f));
+      if (!list.length) return null;
+      const opts = list.length > 1 ? list.filter((q) => q !== this.last) : list;
+      return opts[Math.floor(Math.random() * opts.length)];
+    },
+    start(theme) {
+      const tr = this.pick(theme);
+      if (!tr) { this.state = 'wait'; this.nextAt = now() + 600; return; }
+      this.track = tr; this.theme = theme; this.last = tr;
+      const ch = this.el;
+      ch.el.src = BASE + tr.f; ch.el.preload = 'auto';
+      this.fade = 0; this.fadeTo = 1; this.state = 'play';
+      setGain(ch, 0);
+      const p = ch.el.play();
+      if (p) p.catch(() => { this.state = 'wait'; this.nextAt = now() + 8; });
+      if (typeof UI !== 'undefined' && UI.log) UI.log(`♪ ${tr.name}`, 'music');
+    },
+    ended() { if (this.state === 'idle') return; this.state = 'wait'; this.track = null; const c = cfg(), r = BREAKS[c.breaks] || BREAKS.normal; this.nextAt = now() + r[0] + Math.random() * (r[1] - r[0]); },
+    failed() { if (this.track) this.bad.add(this.track.f); this.state = 'wait'; this.track = null; this.nextAt = now() + 3; },
+    update(dt, theme) {
+      if (this.state === 'idle' || hidden) return;
+      const mv = vol('music');
+      if (this.state === 'wait') {
+        if (now() >= this.nextAt && mv > 0) this.start(theme);
+        return;
+      }
+      // leaving for the other theme (or muted): fade out, then a short pause before the next piece
+      if (this.state === 'play' && (this.theme !== theme || mv <= 0)) { this.state = 'fade'; this.fadeTo = 0; }
+      const rateF = this.state === 'fade' ? dt / 3.5 : dt / 2.5;
+      this.fade += clamp(this.fadeTo - this.fade, -rateF, rateF);
+      setGain(this.el, this.fade * this.track.g);
+      if (this.state === 'fade' && this.fade <= 0.001) {
+        this.el.el.pause(); this.state = 'wait'; this.track = null;
+        this.nextAt = now() + (mv > 0 ? 5 + Math.random() * 7 : 2);
+      }
+    },
+  };
+
+  // ------------------------------------------------------------------ rain ambience (two players cross-fading for a seamless loop)
+  const rain = {
+    ch: [], level: 0, active: 0, started: false, XF: 2.5, idleT: 0,
+    update(dt, target) {
+      if (!this.ch.length || hidden) return;
+      this.level += (target - this.level) * damp(0.9, dt);
+      if (this.level < 0.004 && target <= 0) {
+        this.idleT += dt;
+        if (this.started && this.idleT > 2) { for (const c of this.ch) c.el.pause(); this.started = false; }
+        for (const c of this.ch) setGain(c, 0);
+        return;
+      }
+      this.idleT = 0;
+      const A = this.ch[this.active], B = this.ch[1 - this.active];
+      if (!this.started) {
+        for (const c of this.ch) if (c.el.src.indexOf(RAIN.f) < 0) { c.el.src = BASE + RAIN.f; c.el.preload = 'auto'; c.el.loop = false; }
+        A.el.play().catch(() => {}); this.started = true;
+      }
+      const dur = A.el.duration;
+      let xa = 1, xb = 0;
+      if (isFinite(dur) && dur > this.XF * 3) {
+        const left = dur - A.el.currentTime;
+        if (left < this.XF) {
+          if (B.el.paused) { try { B.el.currentTime = 0; } catch (e) { /* ignore */ } B.el.play().catch(() => {}); }
+          xb = 1 - left / this.XF; xa = 1 - xb;
+        }
+        if (A.el.ended || left <= 0.05) { A.el.pause(); this.active = 1 - this.active; xa = 0; xb = 1; }
+      } else if (A.el.ended) { try { A.el.currentTime = 0; } catch (e) { /* ignore */ } A.el.play().catch(() => {}); }
+      setGain(A, this.level * RAIN.g * Math.sqrt(Math.max(0, xa)));
+      setGain(B, this.level * RAIN.g * Math.sqrt(Math.max(0, xb)));
+    },
+  };
+
+  // ------------------------------------------------------------------ per frame
+  function update(dt, app) {
+    if (!unlocked || !app.view) return;
+    const v = app.view, theme = v.name === 'planet' || v.name === 'surface' ? 'planet' : 'space';
+    music.update(dt, theme);
+    let r = 0;
+    if (v.name === 'surface' && v.weather && v.weather.kind === 'rain' && !Clock.paused) r = clamp(v.weather.intensity * 1.2, 0, 1) * clamp(1.25 - v.cam.cur.dist / 60, 0.55, 1);
+    rain.update(dt, r);
+  }
+  function settingsChanged() {
+    applyVolumes();
+    if (!web) { if (music.el) setGain(music.el, music.el.gain); for (const c of rain.ch) setGain(c, c.gain); }
+    if (music.state === 'wait' && vol('music') > 0 && music.nextAt - now() > 20 && !cfg().muted) music.nextAt = now() + 3;
+  }
+  function setMuted(m) { const s = Store.d.settings; s.audio = Object.assign({}, DEF, s.audio || {}, { muted: m }); Store.save(); settingsChanged(); }
+  return {
+    init, update, play, creature, voiceOf, settingsChanged, setMuted, cfg, DEF, BREAKS,
+    get muted() { return cfg().muted; }, get unlocked() { return unlocked; },
+    get nowPlaying() { return music.state === 'play' && music.track ? music.track.name : null; },
+    _int: { music, rain, stats: () => ({ activeCreatures, lastCreature }) },
+    _debug: () => ({ web, t: music.el ? +music.el.el.currentTime.toFixed(1) : null, paused: music.el ? music.el.el.paused : null, state: music.state, theme: music.theme, track: music.track && music.track.f, nextIn: +(music.nextAt - now()).toFixed(1), fade: +music.fade.toFixed(2), rain: +rain.level.toFixed(3), rainStarted: rain.started, sfxLoaded: Object.keys(buf).filter((k) => buf[k]).length, ctx: ctx && ctx.state }),
+  };
+})();
+</script>
+
 <!-- ===== UI · storage, clock, panels, modals, input ===== -->
 <script>
 'use strict';
@@ -6864,7 +7174,7 @@ class Weather {
 const Store = {
   KEY: 'procedurality3d:v1', d: null, _t: 0,
   defaults() {
-    return { v: 1, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false }, clockOffset: 0, lastSeen: 0, location: null, bookmarks: [], species: [], civs: [], visited: {}, firstRun: true, lastUniverseT: 0 };
+    return { v: 1, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false, audio: { master: 0.8, music: 0.55, sfx: 0.8, amb: 0.7, muted: false, breaks: 'normal' } }, clockOffset: 0, lastSeen: 0, location: null, bookmarks: [], species: [], civs: [], visited: {}, firstRun: true, lastUniverseT: 0 };
   },
   load() {
     let d = null;
@@ -6966,6 +7276,8 @@ const ICONS = {
   auto: ['..####..', '.#....#.', '#..#...#', '#...#..#', '#....#.#', '#......#', '.#....#.', '..####..'],
   menu: ['........', '########', '........', '########', '........', '########', '........', '........'],
   info: ['..####..', '.#....#.', '#..##..#', '#......#', '#..##..#', '#..##..#', '.#....#.', '..####..'],
+  sound: ['....#...', '...##..#', '####.#..', '####..#.', '####..#.', '####.#..', '...##..#', '....#...'],
+  mute: ['....#...', '...##...', '####.#.#', '####..#.', '####.#.#', '####....', '...##...', '....#...'],
 };
 function icon(name, cls = '') {
   const rows = ICONS[name] || ICONS.info;
@@ -7153,6 +7465,7 @@ const UI = {
     tool('star', 'Saved places & discoveries (B)', () => this.openSaved());
     tool('seed', 'Seeds & codes (G)', () => this.openSeeds());
     this.autoBtn = tool('auto', 'Autopilot observer (P)', () => app.setAutopilot(!app.autopilot), 'btn-auto');
+    this.soundBtn = tool(Sound.muted ? 'mute' : 'sound', 'Sound on / off (M)', () => this.toggleSound(), 'btn-sound');
     tool('gear', 'Settings', () => this.openSettings());
     tool('help', 'Help (?)', () => this.openHelp());
     const sp = $('speeds');
@@ -7233,6 +7546,11 @@ const UI = {
   closeModal() { this.modalEl.classList.add('hidden'); this.modalEl.innerHTML = ''; this.modalOpen = false; if (this._scan) this._scan.stop = true; },
   prompt(title, text) { this.modal(title, h('div', null, h('textarea', { class: 'codebox', rows: 3, readonly: true, onfocus: (e) => e.target.select() }, text))); },
 
+  toggleSound() {
+    Sound.setMuted(!Sound.muted);
+    const b = this.soundBtn; if (b) { b.firstChild.replaceWith(icon(Sound.muted ? 'mute' : 'sound')); b.classList.toggle('on', Sound.muted); }
+    this.toast(Sound.muted ? 'Sound muted' : 'Sound on');
+  },
   openSearch() { Modals.search(this.app); },
   openSaved() { Modals.saved(this.app); },
   openSeeds() { Modals.seeds(this.app); },
@@ -7833,6 +8151,16 @@ const Modals = {
       row('Pixel size', sel('pixel', [['auto', 'Auto'], ['1', '1× (sharp)'], ['2', '2×'], ['3', '3×'], ['4', '4×'], ['5', '5×'], ['6', '6× (chunky)']])),
       row('Quality', sel('quality', [['low', 'Low (mobile)'], ['medium', 'Medium'], ['high', 'High']])),
       row('Pixel outlines', chk('outline')), row('Retro color quantization', chk('posterize')), row('Vignette', chk('vignette')), row('Show FPS', chk('fps')),
+      section('Sound', ...(() => {
+        const a = Sound.cfg(), set = (k, v) => { s.audio = Object.assign({}, Sound.cfg(), { [k]: v }); Store.save(); Sound.settingsChanged(); };
+        const slider = (label, k) => row(label, h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(a[k] * 100), class: 'range', oninput: (e) => set(k, e.target.value / 100) }));
+        return [
+          row('Sound', h('input', { type: 'checkbox', checked: !a.muted, onchange: (e) => { set('muted', !e.target.checked); const b = UI.soundBtn; if (b) { b.firstChild.replaceWith(icon(e.target.checked ? 'sound' : 'mute')); b.classList.toggle('on', !e.target.checked); } } })),
+          slider('Master volume', 'master'), slider('Music', 'music'), slider('Creatures & interface', 'sfx'), slider('Ambience (rain)', 'amb'),
+          row('Music frequency', h('select', { onchange: (e) => set('breaks', e.target.value) }, [['short', 'Often — short breaks'], ['normal', 'Normal breaks'], ['long', 'Rarely — long breaks']].map(([v, l]) => h('option', { value: v, selected: a.breaks === v }, l)))),
+          h('p', { class: 'muted small' }, 'Space themes play among the stars, planet themes while you orbit or walk a world, with quiet breaks between pieces. Creatures call when they attack, flee or are inspected.'),
+        ];
+      })()),
       section('Data', h('div', { class: 'row' }, btn('Reset universe clock', () => { Clock.offset = 0; Store.d.clockOffset = 0; Store.save(); UI.toast('Clock synced to real time'); }), btn('Erase all saved data', () => { if (confirm('Erase bookmarks, discoveries and settings?')) { localStorage.removeItem(Store.KEY); location.reload(); } }, { cls: 'danger' })))), { icon: 'gear' });
   },
   help(app) {
@@ -7843,7 +8171,7 @@ const Modals = {
         h('li', null, h('b', null, 'System · '), 'planets move along real orbits. Tap to inspect, double-tap to observe.'),
         h('li', null, h('b', null, 'Planet · '), 'drag to spin the globe, tap to pick a landing site, double-tap to descend.'),
         h('li', null, h('b', null, 'Surface · '), 'drag to pan, twist / right-drag / Q·E to rotate, tap a creature to study its genome and offspring.'))),
-      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['H', 'hide interface']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
+      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
       section('Life', h('p', null, 'Creatures belong to nine body-plan families (quadrupeds, bipeds, hexapods, octopods, serpents, avians, swimmers, gastropods, aerostats). A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation.')),
       section('Civilizations', h('p', null, 'On some living worlds a species becomes sapient and founds tribes. Each people has its own procedurally generated culture — values, palette, architecture, city layout, clothing, weapons, vehicles, spacecraft, emblem and language. Hidden progress (growth, discoveries, trade, war, exploration) carries them from ', h('b', null, 'tribes'), ' to ', h('b', null, 'nations'), ' with international trade, to ', h('b', null, 'colonizing their star system'), ' (domed cities on hostile worlds), and finally to ', h('b', null, 'intergalactic'), ' powers that terraform worlds, settle neighbouring stars, trade, ally, conquer or exterminate. History runs per galactic region in ages; look for the Civilization tab on planets, city lights on night sides, trade routes in systems and territories on the galaxy map, then land on a settlement to watch its citizens.')),
       section('Seeds', h('p', null, 'Codes like ', h('code', null, 'ORIGIN:3,-2:1:2'), ' mean universe : sector : star : planet : moon. Share them, bookmark them, or type any words to create a pocket system. Civilization codes add ', h('code', null, '$age.index'), '.'))), { icon: 'help', wide: true });
@@ -7987,6 +8315,7 @@ const Input = {
       case 'b': UI.openSaved(); break;
       case 'g': UI.openSeeds(); break;
       case 'p': app.setAutopilot(!app.autopilot); break;
+      case 'm': UI.toggleSound(); break;
       case 'h': document.body.classList.toggle('noui'); break;
       case '?': UI.openHelp(); break;
       case 'enter': app.primary(); break;
@@ -8030,6 +8359,7 @@ const App = {
     Universe.setSeed(Store.d.universe || 'ORIGIN');
     this.views = { galaxy: new GalaxyView(this), system: new SystemView(this), planet: new PlanetView(this), surface: new SurfaceView(this) };
     UI.init(this);
+    Sound.init();
     Input.init(canvas, this);
     UI.setSpeedUI(1, false);
     window.addEventListener('resize', () => { this.R.resize(); this.mobile = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 560; document.body.classList.toggle('mobile', this.mobile); });
@@ -8081,6 +8411,7 @@ const App = {
       this.view.render(this.R);
     } catch (e) { console.error(e); if (!this._errShown) { this._errShown = true; UI.toast('Render error: ' + e.message, 'err'); } }
     UI.frame(dt);
+    try { Sound.update(dt, this); } catch (e) { console.warn(e); }
     Portraits.process(this.R, this.mobile ? 4 : 7);
     Thumbs.process(this.mobile ? 5 : 8);
     this.crumbT += dt; if (this.crumbT > 1.2) { this.crumbT = 0; UI.crumbs(this.view.crumbs()); }
