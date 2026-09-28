@@ -81,6 +81,19 @@ code, kbd { font-family: var(--mono); }
 .lbl-life { color: #9dffcf; }
 .lbl-moon { color: #aab4e8; font-size: 10px; opacity: 0.85; }
 .lbl-poi { color: #ffd9a8; font-size: 10px; opacity: 0.9; }
+.wxnow { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; padding: 8px 10px; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; }
+.wxnow .ico.big { color: #ffd98a; flex: none; }
+.wxnow b { display: block; font: 800 15px var(--mono); color: #fff; }
+.wxnow small { display: block; color: var(--muted); font-size: 12px; }
+.fc { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 6px; }
+.fc-i { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; min-width: 0; text-align: center; }
+.fc-i .ico { color: #bcd0ff; }
+.fc-i b { font: 700 11px var(--mono); }
+.fc-i small { font: 600 9px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+body.compact .fc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 420px) { .fc { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.lbl-storm { color: #bfe6ff; font-size: 10px; letter-spacing: 0.05em; }
+.lbl-storm::before { content: '@ '; color: #7fd0ff; }
 .mk { position: absolute; left: 0; top: 0; width: 0; height: 0; }
 .mk-reticle { --s: 34px; }
 .mk-reticle i { position: absolute; width: 10px; height: 10px; border: 3px solid var(--gold); animation: pulse 1.6s steps(4) infinite; }
@@ -224,7 +237,7 @@ body.panel-open #quick { display: none; }
 #fps { position: fixed; right: 8px; bottom: calc(6px + var(--sb)); font: 600 10px var(--mono); color: #7f8bc4; z-index: 30; pointer-events: none; }
 
 /* ---------- modal ---------- */
-#modal, #fatal { position: fixed; inset: 0; background: #02030bcc; display: grid; place-items: center; z-index: 50; padding: 16px; }
+#modal, #fatal { position: fixed; inset: 0; background: #02030bcc; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; z-index: 50; padding: 16px; }
 .modal-card { width: min(560px, 100%); max-height: min(86vh, 900px); display: flex; flex-direction: column; background: var(--panel); border: 2px solid #04061a; box-shadow: inset 0 0 0 2px var(--line), inset 0 0 0 4px #0a0f33, 0 20px 60px #000a; clip-path: var(--notch); animation: tin 0.2s steps(3); }
 .modal-card.wide { width: min(820px, 100%); }
 .modal-card header { display: flex; align-items: center; gap: 10px; padding: 12px 12px 10px 16px; border-bottom: 2px solid var(--line2); color: var(--gold); }
@@ -316,13 +329,13 @@ p.k-battle { color: #ffab9a; }
 .toast.civ { box-shadow: inset 0 0 0 2px #9a6ae0; color: #eadcff; }
 .toast.civwar { box-shadow: inset 0 0 0 2px #d04a4a; color: #ffd6d6; }
 
-/* ---------- favourite creature & families ---------- */
+/* ---------- favourite creatures & families ---------- */
 .lbl-fav { color: #ff9fc6; }
 .mk-fav i:nth-child(1) { position: absolute; left: -10px; top: -16px; width: 20px; height: 15px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 6' shape-rendering='crispEdges' fill='%23ff5e9a'%3E%3Crect x='1' y='0' width='2' height='1'/%3E%3Crect x='5' y='0' width='2' height='1'/%3E%3Crect x='0' y='1' width='8' height='2'/%3E%3Crect x='1' y='3' width='6' height='1'/%3E%3Crect x='2' y='4' width='4' height='1'/%3E%3Crect x='3' y='5' width='2' height='1'/%3E%3C/svg%3E") center / contain no-repeat; image-rendering: pixelated; filter: drop-shadow(1px 0 0 #1a0f2b) drop-shadow(-1px 0 0 #1a0f2b) drop-shadow(0 1px 0 #1a0f2b) drop-shadow(0 -1px 0 #1a0f2b); animation: bob 1s steps(2) infinite; }
 .mk-fav i:nth-child(n+2) { display: none; }
-#fav-edge { position: fixed; left: 0; top: 0; z-index: 14; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #2a0f25ee; border: 2px solid #ff5e9a; box-shadow: 0 0 0 2px #060819; color: #ff5e9a; font: 800 18px/1 var(--mono); cursor: pointer; }
-#fav-edge[hidden] { display: none; }
-#fav-edge:hover { background: #3d1435; }
+.fav-edge { position: fixed; left: 0; top: 0; z-index: 14; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: #2a0f25ee; border: 2px solid #ff5e9a; box-shadow: 0 0 0 2px #060819; color: #ff5e9a; font: 800 18px/1 var(--mono); cursor: pointer; }
+.fav-edge[hidden] { display: none; }
+.fav-edge:hover { background: #3d1435; }
 .fe-t { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); font: 700 10px var(--mono); color: #ffd6e6; text-shadow: 1px 0 #05060f, -1px 0 #05060f, 0 1px #05060f, 0 -1px #05060f; white-space: nowrap; pointer-events: none; }
 .fe-arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
 .fe-arrow i { position: absolute; left: 25px; top: -6px; width: 0; height: 0; border-left: 9px solid #ff5e9a; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
@@ -332,9 +345,19 @@ p.k-battle { color: #ffab9a; }
 .kinlink { color: var(--teal); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .srow.kin .portrait { width: 52px; height: 52px; background: radial-gradient(#1e2a70, #0b1032 70%); }
 .srow.kin > .ico { color: var(--muted); margin-right: 4px; }
-.favrow { box-shadow: inset 0 0 0 2px #ff5e9a; margin-bottom: 10px; }
-.favrow .portrait { width: 48px; height: 48px; }
-body.noui #fav-edge { display: none !important; }
+.favrow { box-shadow: inset 0 0 0 2px #ff5e9a; }
+.favrow .portrait { width: 48px; height: 48px; flex: none; background: radial-gradient(#3a1640, #140a24 70%); }
+.favrow.gone .portrait { filter: grayscale(0.85) brightness(0.8); }
+.favrow.gone { box-shadow: inset 0 0 0 2px #6a3a55; }
+.favlist { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.favlist > p { margin: 0 0 4px; }
+.favlist .row { margin-top: 6px; }
+.favrow > .fav-act { flex: none; display: flex; align-items: center; gap: 6px; }
+.favrow .srow-tags { margin-top: 3px; }
+.chip.c-dead { background: #2a1a24; color: #c9a3b6; box-shadow: inset 0 0 0 1px #5a3348; }
+.p-tabs .tab.tab-fav { color: #ff9fc6; }
+.p-tabs .tab.tab-fav.on { color: #ffd6e6; }
+body.noui .fav-edge { display: none !important; }
 
 body.noui #top, body.noui #panel, body.noui #hud, body.noui #logbox, body.noui #labels, body.noui #markers, body.noui #toasts { display: none !important; }
 
@@ -427,7 +450,9 @@ body.compact .splash-card { gap: 8px; margin: auto 0; }
 body.compact .logo { max-height: 20vh; width: auto; }
 body.compact .intro { font-size: 12px; max-width: 620px; }
 body.compact .btn.big { min-height: 42px; padding: 6px 16px; }
-body.compact #fav-edge { width: 40px; height: 40px; }
+body.compact .fav-edge { width: 40px; height: 40px; }
+body.compact .favrow > .fav-act .btn > span:not(.ico) { display: none; }
+@media (max-width: 520px) { .favrow > .fav-act .btn > span:not(.ico) { display: none; } .favrow { gap: 8px; } }
 .splash-go { justify-content: center; }
 #splash { overflow-y: auto; }
 .modal-card, .modal-card.wide { max-height: min(86dvh, 900px); }
@@ -1496,6 +1521,541 @@ const Codes = {
     return { star, system, planet };
   },
 };
+</script>
+
+<!-- ===== Climate & weather · planetary climate, drifting weather systems, cyclones, eruptions, tides ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   CLIMATE & WEATHER · the long-term climate of each world, derived from its
+   physics, and the short-term weather that plays out over it.
+   Climate (Climate.of) is fixed for a world: the energy its star delivers at
+   its orbit, the length of its day and year, its axial tilt and how far its
+   seas and air delay the seasons, the tides raised by its moons, the density
+   and make-up of its atmosphere, its seas and deserts, and its volcanic and
+   tidal heat. Weather (Meteo.at) is a pure function of the world, a place on
+   it and universal time: air masses and pressure systems drift with the
+   planet's own circulation (easterly trades, mid-latitude westerlies and polar
+   easterlies on fast rotators, one sluggish cell on slow ones, a fixed
+   day-to-night flow on tidally locked worlds), and each phenomenon has
+   physical prerequisites. Discrete systems (tropical cyclones, volcanic
+   eruptions) follow deterministic tracks and schedules, so every observer sees
+   the same sky and the forecast can be read ahead.
+   ============================================================================= */
+const Climate = (() => {
+  const cache = new WeakMap();
+  // how much loose material a biome offers to the wind
+  const DRY = { [B.DESERT]: 1, [B.SALT]: 0.75, [B.BARREN]: 0.85, [B.VOLCANIC]: 0.9, [B.SAVANNA]: 0.3, [B.TUNDRA]: 0.18, [B.MOUNTAIN]: 0.22, [B.CRYSTAL]: 0.35, [B.BEACH]: 0.35, [B.GRASS]: 0.08 };
+  // stellar activity (flares, winds, radiation) by class: drives auroras
+  const ACTIVITY = { O: 1, B: 0.8, A: 0.35, F: 0.3, G: 0.3, K: 0.4, M: 0.9, D: 0.2, RG: 0.5, NS: 1.3, BH: 0.05 };
+  const gas = (p, name) => { const g = ((p.atmo && p.atmo.gases) || []).find((q) => q[0] === name); return g ? g[1] : 0; };
+
+  function of(p) {
+    let C = cache.get(p);
+    if (C) return C;
+    p.prepare();
+    const host = p.isMoon ? p.parent : p, star = p.star, L = Math.max(0, star.lum), a = Math.max(0.02, host.a);
+    const rocky = p.kind === 'rocky', P = rocky ? p.pressure : 1000, lp = clamp((Math.log10(Math.max(P, 0.001)) + 2) / 3, 0, 1);
+    C = { p, seed: RNG.hash(p.seed, 'climate'), rocky, P, locked: !!p.tidalLock, tilt: p.tilt, day: p.dayLength, year: host.period };
+    C.noise = new Noise.Simplex(RNG.hash(p.seed, 'weather'));
+    C.hasAir = !rocky || P > 0.005;
+    C.air = rocky ? clamp(P / 0.35, 0, 1) : 1;
+    // --- energy from the star (Earth = 1) and the equilibrium it sets
+    C.flux = L / (a * a);
+    C.teq = L > 0 ? 278 * Math.pow(L, 0.25) / Math.sqrt(a) * Math.pow(0.7, 0.25) - 273 : -240;
+    C.greenhouse = rocky ? p.tempC - C.teq : 0;
+    const bs = p.biomeStats || [], frac = (b) => { const s = bs.find((q) => q.b === b); return s ? s.f : 0; };
+    C.ocean = p.liquid && p.liquid !== 'lava' ? p.coverage : 0;
+    C.land = rocky ? 1 - (p.liquid ? p.coverage : 0) : 0;
+    C.tMean = p.tempC; C.tTrop = p.tempC + p.latRange * 0.38; C.tPole = p.tempC + p.latRange * (0.38 - 1);
+    // --- the solar day (sunrise to sunrise): the rotation combined with the orbit, which differ a lot when
+    // the year is short (a world whose year is shorter than its rotation sees the sun race across its sky)
+    C.solarDay = C.locked ? Infinity : solarDay(p);
+    // --- thermal inertia: seas and dense air store heat, bare land and thin air answer at once
+    const tauS = lerp(60, 450, C.ocean) * (0.6 + 0.6 * lp), tauD = lerp(45, 400, C.ocean) * (0.5 + 1.2 * lp);
+    const wy = TAU / Math.max(60, C.year), wd = TAU / Math.max(20, isFinite(C.solarDay) ? C.solarDay : C.day);
+    C.seasonResp = 1 / Math.sqrt(1 + (wy * tauS) ** 2); C.seasonLag = Math.atan(wy * tauS) / wy;
+    C.dayResp = 1 / Math.sqrt(1 + (wd * tauD) ** 2); C.dayLag = Math.atan(wd * tauD) / wd;
+    C.seasonFull = rocky ? p.latRange * 0.6 * Math.sin(C.tilt) / Math.sin(0.41) : 0;
+    C.seasonAmp = C.locked ? 0 : C.seasonFull * C.seasonResp;
+    C.diurnalAmp = rocky ? lerp(30, 4, lp) * C.dayResp * (C.locked ? 0 : 1) : 0;
+    C.lockAmp = C.locked ? lerp(55, 9, lp) : 0;
+    // --- circulation: the pole-to-equator contrast drives it, rotation organizes it
+    C.threeCell = !C.locked && C.day < 700;
+    C.windK = C.hasAir ? clamp(p.latRange / 40, 0.25, 1.6) * clamp(Math.sqrt(420 / Math.max(80, C.day)), 0.45, 1.7) * (P > 20 ? 0.55 : 1) : 0;
+    C.windBase = C.hasAir ? (0.45 + 0.4 * C.windK) * (P < 0.1 ? 1.35 : 1) : 0;
+    C.coriolis = C.locked ? 0.1 : clamp(420 / Math.max(80, C.day), 0.25, 2);
+    // --- the volatile that condenses into cloud and falls as rain or snow
+    C.medium = !C.hasAir ? null : p.liquid === 'water' ? 'water' : p.liquid === 'methane' ? 'methane' : p.liquid === 'acid' ? 'acid'
+      : p.liquid === 'lava' ? null : (p.type === 'ice' || p.type === 'tundra' || p.type === 'desert' || p.type === 'arid') && P > 0.02 ? 'water' : null;
+    const evap = C.medium === 'methane' ? 1 : clamp(Math.exp((C.tTrop - 15) / 16), 0.08, 2.2);
+    // (thin air holds little vapour: a near-vacuum over a sea gives wisps of cloud, not rainstorms)
+    C.humidK = C.medium ? clamp(((0.08 + 0.92 * C.ocean) * Math.sqrt(evap) + (p.moistBias || 0) * 0.5 + (p.type === 'fungal' ? 0.15 : 0)) * (0.2 + 0.8 * C.air), 0.02, 1.25) : 0;
+    C.precipK = C.medium ? clamp(C.humidK * (0.35 + 0.65 * C.air), 0, 1.2) : 0;
+    C.cloudBias = p.clouds ? p.clouds.cover - 0.45 : -0.4;
+    // --- convection: strong heating of moist air makes it unstable
+    const heat = clamp(Math.pow(Math.max(C.flux, 0.01), 0.25), 0.4, 1.5);
+    C.instBase = C.medium ? clamp(smoothstep(-4, 32, C.tTrop) * (0.3 + 0.7 * Math.min(1, C.humidK)) * heat * 0.5, 0, 0.62) * (P > 6 ? 0.6 : 1) * (C.medium === 'methane' ? 0.35 : 1) : 0;
+    C.stormK = C.medium && C.air > 0.25 ? (C.medium === 'methane' ? 0.3 : C.medium === 'acid' ? 0.8 : 1) * smoothstep(-10, 4, C.tTrop) : 0;
+    C.hailK = C.stormK * smoothstep(4, 18, C.tTrop) * (1 - 0.7 * smoothstep(33, 44, C.tTrop)) * (C.medium === 'water' ? 1 : 0.2);
+    C.fogK = C.medium ? clamp(0.35 + 0.65 * C.humidK, 0, 1) * (C.ocean > 0.05 ? 1 : 0.6) : 0;
+    C.haze = p.type === 'methane' ? 0.55 : p.type === 'toxic' ? 0.45 : p.type === 'fungal' ? 0.3 : p.type === 'lava' ? 0.4 : 0;
+    // --- loose dry ground for the wind to lift
+    let dust = 0; for (const b in DRY) dust += frac(+b) * DRY[b];
+    C.dustK = C.hasAir && rocky ? clamp(dust * 1.6, 0, 1) * (1 - 0.6 * Math.min(1, C.humidK)) * (P < 0.02 ? 0.3 : 1) : 0;
+    C.devilK = C.dustK * (C.tTrop > 18 || P < 0.12 ? 1 : 0.35);
+    // tornado country: warm moist air meeting cold dry air over open land (mid-latitude contrasts, not steamy tropics)
+    C.tornK = clamp(C.stormK * clamp(C.land * 1.6, 0, 1) * smoothstep(4, 16, C.tMean + 8) * (1 - 0.7 * smoothstep(28, 40, C.tMean)) * clamp(p.latRange / 32, 0, 1.2) * Math.min(1, C.humidK * 1.5) * (C.medium === 'water' ? 1 : 0.3), 0, 1);
+    C.cycK = C.medium === 'water' && !C.locked ? smoothstep(24, 30, C.tTrop) * smoothstep(0.1, 0.35, C.ocean) * clamp(C.coriolis, 0.2, 1.3) * (P > 0.4 && P < 8 ? 1 : 0.35) : 0;
+    // --- tides: the moons (and the star) raise the seas
+    C.moonTides = [];
+    if (!p.isMoon) for (const m of p.moons) {
+      const k = clamp((m.mass / Math.max(0.01, p.mass)) / 0.0123 * Math.pow(3 / m.moonDist, 3) * 0.28, 0, 0.8);
+      if (k > 0.005) C.moonTides.push({ m, k });
+    }
+    C.sunTide = clamp(star.mass / (a * a * a) * 0.012, 0, 0.3);
+    C.tideAmp = C.ocean > 0.03 ? Math.min(0.9, C.moonTides.reduce((s, q) => s + q.k, 0) + C.sunTide) : 0;
+    // a moon squeezed by its planet is heated from within
+    C.tidalHeat = p.isMoon ? clamp((p.parent.mass / Math.max(0.01, p.mass)) * 0.00012 * Math.pow(2.3 / p.moonDist, 3) * (p.parent.isGiant ? 1 : 0.3), 0, 1) : clamp(C.moonTides.reduce((s, q) => s + q.k, 0) * 0.12, 0, 0.3);
+    // --- volcanism: molten worlds, volcanic plains, geysers, tidal heating, a young system
+    C.volc = rocky ? clamp(({ lava: 1, toxic: 0.5 }[p.type] || 0) + (frac(B.VOLCANIC) + frac(B.LAVAFIELD)) * 1.5 + (p.features && p.features.geysers ? 0.12 : 0) + C.tidalHeat * 0.7 + (star.age < 1 ? 0.12 : 0), 0, 1) : 0;
+    C.hotspots = [];
+    const nh = Math.round(C.volc * 7 + (C.volc > 0.05 ? 1 : 0)), hr = new RNG.Rand(RNG.hash(p.seed, 'hotspots')), o = {};
+    for (let i = 0; i < nh; i++) {
+      let best = null, bs2 = -1;
+      for (let k = 0; k < 6; k++) {
+        const z = hr.range(-0.95, 0.95), th = hr.range(0, TAU), rr = Math.sqrt(1 - z * z), d = [rr * Math.sin(th), z, rr * Math.cos(th)];
+        p.sample(d[0], d[1], d[2], o);
+        const sc = (o.b === B.VOLCANIC || o.b === B.LAVAFIELD ? 2 : o.b === B.MOUNTAIN ? 1.2 : 0.4) + o.e * 0.5 + hr.next() * 0.3;
+        if (sc > bs2) { bs2 = sc; best = d; }
+      }
+      C.hotspots.push({ i, dir: best, r: hr.range(0.05, 0.13), act: hr.range(0.35, 1), name: Names.word(hr, 2, 3) });
+    }
+    // --- auroras: an active star, a magnetic field (a molten core spun fast) and air to glow
+    const field = rocky ? (p.radius > 0.45 && C.day < 800 ? 1 : 0.35) : 1.2;
+    C.aurora = C.hasAir ? clamp(0.6 * (ACTIVITY[star.cls] || 0.3) * (star.age < 1 ? 1.3 : 1) / Math.sqrt(a) * field * Math.pow(C.air, 0.3), 0, 1.2) : 0;
+    C.auroraLat = lerp(1.25, 0.95, clamp(C.aurora / 1.2, 0, 1));
+    C.snowK = C.medium === 'water' ? smoothstep(4, -8, C.tPole - C.seasonAmp) : C.medium === 'methane' ? 0.3 : 0;
+    C.label = describe(C, p);
+    C.phenomena = phenomena(C, p);
+    cache.set(p, C);
+    return C;
+  }
+
+  // the mean rate at which the sun's longitude moves over the ground, measured on the world's own clock
+  function solarDay(p) {
+    const lonOf = (t) => { const s = p.toLocal(p.sunDirWorld(t), t); return Math.atan2(s[0], s[2]); };
+    const host = p.isMoon ? p.parent : p, dt = Math.min(p.dayLength, host.period) / 64, span = Math.max(p.dayLength, host.period);
+    let sum = 0;
+    for (let i = 0; i < 16; i++) { const t = (i / 16) * span; sum += angleDelta(lonOf(t), lonOf(t + dt)) / dt; }
+    const rate = Math.abs(sum / 16);
+    return rate > 1e-7 ? TAU / rate : Infinity;
+  }
+  // the sun's latitude (declination) as the world moves along its orbit
+  function declination(C, t) { const host = C.p.isMoon ? C.p.parent : C.p; return Math.asin(clamp(Math.sin(C.tilt) * Math.cos(host.orbitAngle(t)), -1, 1)); }
+  // the season felt at a latitude (thermal lag included)
+  function season(C, t, lat) {
+    if (C.locked) return { name: 'eternal', warm: 0 };
+    if (C.tilt < 0.05 || C.seasonAmp < 0.8) return { name: 'no seasons', warm: 0 };
+    const host = C.p.isMoon ? C.p.parent : C.p, ang = mod(host.orbitAngle(t - C.seasonLag), TAU), north = lat >= 0;
+    const k = mod(ang + Math.PI / 4, TAU) / (Math.PI / 2) | 0;
+    const N = ['summer', 'autumn', 'winter', 'spring'][k], S = ['winter', 'spring', 'summer', 'autumn'][k];
+    return { name: north ? N : S, warm: Math.cos(ang) * (north ? 1 : -1) };
+  }
+
+  function describe(C, p) {
+    if (!C.rocky) return 'Deep banded atmosphere: jet streams, storms wider than worlds';
+    if (!C.hasAir) return 'Airless: no weather, only the swing between sunlight and shadow';
+    const t = C.tMean, parts = [];
+    parts.push(t < -120 ? 'Cryogenic' : t < -40 ? 'Frigid' : t < -8 ? 'Polar' : t < 6 ? 'Cold' : t < 20 ? 'Temperate' : t < 32 ? 'Warm' : 'Hot');
+    parts.push(!C.medium ? (C.dustK > 0.3 ? 'dusty' : 'dry') : C.humidK < 0.18 ? 'arid' : C.humidK < 0.45 ? 'dry' : C.humidK < 0.8 ? (C.ocean > 0.6 ? 'maritime' : 'moderate') : 'humid');
+    if (C.locked) parts.push('tidally locked (a storm under the star, a frozen night side)');
+    if (C.medium === 'methane') parts.push('methane rain cycle');
+    if (C.medium === 'acid') parts.push('acid rain');
+    if (C.volc > 0.45) parts.push('volcanic');
+    if (C.seasonAmp > 7) parts.push('strong seasons');
+    if (C.cycK > 0.35) parts.push('cyclone-prone');
+    if (C.stormK * C.instBase > 0.3) parts.push('stormy');
+    if (C.tideAmp > 0.3) parts.push('strong tides');
+    return parts.join(' · ');
+  }
+  // what can happen here, how likely, and why
+  function phenomena(C, p) {
+    const out = [], add = (name, k, why) => { if (k > 0.02) out.push({ name, k: clamp(k, 0, 1), why }); };
+    if (!C.rocky) return out;
+    const med = C.medium === 'methane' ? 'methane' : C.medium === 'acid' ? 'acid' : 'rain';
+    add(med === 'rain' ? 'Rain' : med === 'methane' ? 'Methane rain' : 'Acid rain', C.precipK * (C.tTrop > -2 || med !== 'rain' ? 1 : 0.3), med === 'rain' ? `${Math.round(C.ocean * 100)}% of the surface is water` : med === 'methane' ? 'liquid methane seas evaporate and rain back' : 'sulfur in the air turns rain to acid');
+    add('Snow & blizzards', C.snowK * C.precipK, `polar air reaches ${Math.round(C.tPole - C.seasonAmp)}°C`);
+    add('Thunderstorms', C.stormK * (C.instBase * 1.6), 'warm, moist air rises fast under strong heating');
+    add('Hail', C.hailK * C.instBase * 1.5, 'strong updrafts carry raindrops high enough to freeze');
+    add('Tornadoes', C.tornK * 0.9, 'warm moist air meets cold dry air over open land');
+    add(`Tropical cyclones`, C.cycK, `tropical seas near ${Math.round(C.tTrop)}°C on a spinning world`);
+    add('Fog', C.fogK * 0.7, 'humid air cooling at night and over cold water');
+    add('Dust storms', C.dustK * clamp(C.windBase, 0, 1.2), 'loose dry ground and strong winds');
+    add('Dust devils', C.devilK * 0.8, 'hot, dry, sunlit plains');
+    add('Windstorms', C.windK * 0.45, `a ${Math.round(p.latRange)}°C pole-to-equator contrast`);
+    add('Volcanic ash & lightning', C.volc, `${C.hotspots.length} active volcanic region${C.hotspots.length === 1 ? '' : 's'}`);
+    add('Auroras', C.aurora * 0.8, `${p.star.typeLabel.toLowerCase()} activity lighting the upper air`);
+    if (C.haze > 0) add(p.type === 'fungal' ? 'Spore haze' : p.type === 'methane' ? 'Methane haze' : 'Sulfur haze', C.haze, 'aerosols in the air');
+    if (C.tideAmp > 0.03) add('Tides', C.tideAmp / 0.6, C.moonTides.length ? `raised by ${C.moonTides.length} moon${C.moonTides.length > 1 ? 's' : ''} and the star` : 'raised by the star');
+    return out.sort((x, y) => y.k - x.k);
+  }
+  return { of, declination, season, solarDay, DRY };
+})();
+
+const Meteo = (() => {
+  const T_R = 2700;          // circulation epoch (s): drifting fields cross-fade between two epochs
+  const OMEGA = 3.6e-4;      // rad/s of zonal drift at the core of a wind band (windK = 1)
+  const TAG_P = 11, TAG_H = 23, TAG_T = 37;
+  // per-epoch random offsets of the noise domain (the field reshapes itself epoch to epoch)
+  function epoch(C, tag, e, L) {
+    const ep = C._ep || (C._ep = new Map()), key = (e * 64 + tag) * 2 + L;
+    let o = ep.get(key);
+    if (!o) {
+      const r = new RNG.Rand(RNG.hash(C.seed, tag, e, L));
+      const z = r.range(-1, 1), th = r.range(0, TAU), rr = Math.sqrt(1 - z * z);
+      o = [r.range(-60, 60), r.range(-60, 60), r.range(-60, 60), rr * Math.cos(th), z, rr * Math.sin(th)];
+      if (ep.size > 200) ep.delete(ep.keys().next().value);
+      ep.set(key, o);
+    }
+    return o;
+  }
+  // zonal drift (rad/s): trades, westerlies and polar easterlies on fast rotators; one sluggish cell on slow ones
+  function zonal(C, lat) {
+    if (C.locked) return 0;
+    return OMEGA * C.windK * (C.threeCell ? -Math.cos(3 * lat) : -0.6 * Math.cos(1.5 * lat));
+  }
+  // a drifting noise field on the sphere: two epochs, each carried by the circulation, cross-faded
+  function field(C, lat, lon, t, freq, oct, tag) {
+    const w = zonal(C, lat), cl = Math.cos(lat), sl = Math.sin(lat), n = C.noise;
+    let s = 0, w2 = 0;
+    for (let L = 0; L < 2; L++) {
+      const tt = t + L * T_R * 0.5, e = Math.floor(tt / T_R), ph = tt / T_R - e, wt = 1 - Math.abs(2 * ph - 1);
+      if (wt < 1e-4) continue;
+      const O = epoch(C, tag, e, L), lo = lon - w * ph * T_R, ev = ph * 0.9;
+      s += wt * n.fbm3(cl * Math.sin(lo) * freq + O[0] + O[3] * ev, sl * freq + O[1] + O[4] * ev, cl * Math.cos(lo) * freq + O[2] + O[5] * ev, oct);
+      w2 += wt * wt;
+    }
+    return s / Math.sqrt(Math.max(w2, 1e-6));
+  }
+  const dirOf = (lat, lon) => [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+  const angle = (a, b) => Math.acos(clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1));
+
+  // what a place is like (static): elevation, mean temperature, moisture, biome
+  function siteOf(p, d) {
+    const o = {};
+    p.sample(d[0], d[1], d[2], o);
+    return { d, lat: Math.asin(clamp(d[1], -1, 1)), lon: Math.atan2(d[0], d[2]), e: o.e, t: o.t, m: o.m, b: o.b, sea: !!BIOMES[o.b].water, ice: o.b === B.ICESHEET, dry: Climate.DRY[o.b] || 0, veg: BIOMES[o.b].prod };
+  }
+
+  // ---------------------------------------------------------------- tropical cyclones
+  const CYC_SLOT = 2400, CYC_LIFE = 4 * 3600;
+  const genesis = new Map();
+  function birth(p, C, h) {
+    let g = genesis.get(h);
+    if (g !== undefined) return g;
+    const r = new RNG.Rand(h);
+    g = null;
+    if (r.next() < C.cycK * 0.5) {
+      const k = Math.floor(h / 7) , t0r = r.next(), lifeF = r.range(0.45, 1), hemiR = r.next(), o = {};
+      g = { t0r, life: CYC_LIFE * lifeF, dW: r.range(0.35, 0.85), dE: r.range(0.15, 0.55), dN: r.range(0.25, 0.5), power: r.range(0.55, 1), sizeF: r.range(0.8, 1.25), hemiR, cands: [] };
+      for (let i = 0; i < 4; i++) {
+        const lat = r.range(0.13, 0.33), lon = r.range(-Math.PI, Math.PI);
+        g.cands.push([lat, lon]);
+      }
+      g.name = Names.word(new RNG.Rand(RNG.mix(h ^ 0x5bd1e995)), 2, 3);
+      g.k = k;
+    }
+    if (genesis.size > 4000) genesis.delete(genesis.keys().next().value);
+    genesis.set(h, g);
+    return g;
+  }
+  const seaTemp = (p, C, d, t) => { const o = {}; p.sample(d[0], d[1], d[2], o); return { sea: !!BIOMES[o.b].water && o.b !== B.ICESHEET, t: o.t + seasonalAnom(C, t, Math.asin(clamp(d[1], -1, 1)), true) }; };
+  function cyclones(p, t) {
+    const C = Climate.of(p);
+    if (C.cycK < 0.03 || !C.hasAir) return [];
+    const key = Math.floor(t / 10);
+    if (C._cycKey === key && C._cyc) return C._cyc;
+    const out = [];
+    const k1 = Math.floor(t / CYC_SLOT), k0 = Math.floor((t - CYC_LIFE) / CYC_SLOT);
+    for (let k = k0; k <= k1; k++) for (let j = 0; j < 3; j++) {
+      const h = RNG.hash(C.seed, 7001, k, j), g = birth(p, C, h);
+      if (!g) continue;
+      const t0 = (k + g.t0r) * CYC_SLOT;
+      if (t < t0 || t > t0 + g.life) continue;
+      // genesis over a warm tropical sea, in the summer hemisphere when the world has seasons
+      if (g.hemi === undefined) {
+        const dec = Climate.declination(C, t0);
+        g.hemi = C.tilt > 0.05 ? (dec >= 0 ? 1 : -1) * (g.hemiR < 0.8 ? 1 : -1) : (g.hemiR < 0.5 ? 1 : -1);
+        g.lat0 = null;
+        for (const [la, lo] of g.cands) { const s = seaTemp(p, C, dirOf(g.hemi * la, lo), t0); if (s.sea && s.t >= 25.5) { g.lat0 = g.hemi * la; g.lon0 = lo; break; } }
+      }
+      if (g.lat0 == null) continue;
+      const age = (t - t0) / g.life, a1 = Math.min(age, 0.6) / 0.6, a2 = Math.max(0, age - 0.5) / 0.5;
+      // westward with the trades, then recurving poleward and east
+      const lat = g.lat0 + g.hemi * g.dN * (0.2 * a1 + 0.8 * a2 * a2), lon = g.lon0 - g.dW * a1 + g.dE * a2 * a2, dir = dirOf(lat, lon);
+      // fuel: warm sea strengthens it, land and cool water starve it
+      const fuel = (d) => { const s = seaTemp(p, C, d, t); return s.sea ? clamp((s.t - 21) / 6, 0.25, 1.15) : 0.3; };
+      const back = Math.max(0, age - 0.05), dirB = dirOf(g.lat0 + g.hemi * g.dN * (0.2 * Math.min(back, 0.6) / 0.6 + 0.8 * (Math.max(0, back - 0.5) / 0.5) ** 2), g.lon0 - g.dW * Math.min(back, 0.6) / 0.6 + g.dE * (Math.max(0, back - 0.5) / 0.5) ** 2);
+      const ramp = smoothstep(0, 0.2, age) * (1 - smoothstep(0.8, 1, age));
+      const int = clamp(ramp * 0.5 * (fuel(dir) + fuel(dirB)) * g.power * Math.min(1.2, C.cycK * 1.3), 0, 1);
+      if (int < 0.1) continue;
+      const cat = int > 0.36 ? clamp(1 + Math.floor((int - 0.36) / 0.64 * 5), 1, 5) : 0;
+      const kind = g.hemi < 0 ? 'Cyclone' : lon < 0 ? 'Hurricane' : 'Typhoon';
+      out.push({ id: h, name: g.name, kind, cat, lat, lon, dir, R: (0.07 + 0.085 * int) * g.sizeF, int, hemi: g.hemi, age, title: cat ? `${kind} ${g.name}` : `Tropical storm ${g.name}`, catLabel: cat ? `category ${cat}` : 'tropical storm' });
+    }
+    // two storms cannot share one patch of sea: the weaker is absorbed into the stronger
+    out.sort((a, b) => b.int - a.int);
+    const kept = [];
+    for (const c of out) if (!kept.some((k) => angle(k.dir, c.dir) < (k.R + c.R) * 0.9)) kept.push(c);
+    C._cyc = kept; C._cycKey = key;
+    return kept;
+  }
+  // a cyclone's grip on a place: eye, eyewall, spiral rain bands, outer cloud shield
+  function cycloneAt(c, d, t) {
+    const dist = angle(c.dir, d), x = dist / c.R;
+    if (x > 1.6) return null;
+    // position within the spiral: bearing from the centre and log-radius
+    const e = [Math.cos(c.lon), 0, -Math.sin(c.lon)], nth = [-Math.sin(c.lat) * Math.sin(c.lon), Math.cos(c.lat), -Math.sin(c.lat) * Math.cos(c.lon)];
+    const dv = [d[0] - c.dir[0], d[1] - c.dir[1], d[2] - c.dir[2]], th = Math.atan2(dv[0] * nth[0] + dv[1] * nth[1] + dv[2] * nth[2], dv[0] * e[0] + dv[1] * e[1] + dv[2] * e[2]);
+    const eye = x < 0.1, wall = Math.exp(-(((x - 0.19) / 0.075) ** 2));
+    const band = Math.pow(0.5 + 0.5 * Math.cos(c.hemi * th * 2 + Math.log(Math.max(x, 0.05)) * 5.5 - t * 0.004), 3) * smoothstep(1.25, 0.25, x);
+    const k = c.int;
+    return { c, x, eye, wall, band, wind: k * (eye ? 0.6 : 4.6 * wall + 2.2 * smoothstep(1.4, 0.25, x) * (0.6 + 0.4 * band)), rain: eye ? 0 : k * Math.max(wall, 0.85 * band), cloud: (eye ? 0.35 : 1) * k * smoothstep(1.6, 0.3, x) + 0.2 * smoothstep(1.6, 0.8, x), storm: eye ? 0 : k * (0.9 * wall + 0.35 * band), bearing: th };
+  }
+
+  // ---------------------------------------------------------------- volcanic eruptions (episodes of ~15 min)
+  function eruption(C, hs, t) {
+    const slot = Math.floor(t / 900), u = RNG.unit(RNG.hash(C.seed, 7100, hs.i, slot));
+    if (u > hs.act * C.volc * 0.6) return 0;
+    const ph = t / 900 - slot;
+    return smoothstep(0, 0.12, ph) * (1 - smoothstep(0.7, 1, ph)) * (0.5 + 0.5 * RNG.unit(RNG.hash(C.seed, 7101, hs.i, slot)));
+  }
+  function volcanoAt(C, d, t, lat) {
+    let ash = 0, heat = 0, near = null, nd = 9, erupting = 0;
+    const w = zonal(C, lat) >= 0 ? 1 : -1;
+    for (const hs of C.hotspots) {
+      const dist = angle(hs.dir, d);
+      if (dist > 0.6) continue;
+      const lv = eruption(C, hs, t);
+      heat = Math.max(heat, smoothstep(hs.r * 1.4, hs.r * 0.2, dist) * (0.4 + 0.6 * lv));
+      // the plume is carried downwind (east with westerlies, west with the trades)
+      const lon = Math.atan2(d[0], d[2]), lonH = Math.atan2(hs.dir[0], hs.dir[2]), dl = angleDelta(lonH, lon) * w;
+      const along = dl > 0 ? smoothstep(0.55, 0, dl) : smoothstep(hs.r * 1.5, 0, -dl);
+      const across = smoothstep(hs.r * 2.6, hs.r * 0.3, Math.abs(Math.asin(clamp(d[1], -1, 1)) - Math.asin(clamp(hs.dir[1], -1, 1))));
+      ash = Math.max(ash, lv * along * across);
+      if (dist < nd) { nd = dist; near = hs; erupting = lv; }
+    }
+    return { ash, heat, near, nearD: nd, erupting };
+  }
+
+  // ---------------------------------------------------------------- tides
+  function tideAt(C, d, t) {
+    if (!C.tideAmp) return 0;
+    const p = C.p, host = p;
+    let h = 0;
+    for (const q of C.moonTides) {
+      const a = q.m.orbitAngle(t), m = p.toLocal([Math.cos(a), 0, Math.sin(a)], t), c = d[0] * m[0] + d[1] * m[1] + d[2] * m[2];
+      h += q.k * (1.5 * c * c - 0.5);
+    }
+    const s = p.toLocal(host.sunDirWorld(t), t), cs = d[0] * s[0] + d[1] * s[1] + d[2] * s[2];
+    h += C.sunTide * (1.5 * cs * cs - 0.5);
+    return h;
+  }
+
+  function seasonalAnom(C, t, lat, sea) {
+    if (!C.seasonAmp) return 0;
+    const dec = Climate.declination(C, t - C.seasonLag);
+    return C.seasonAmp * (Math.sin(dec) / Math.max(Math.sin(C.tilt), 1e-3)) * clamp(Math.sin(lat) * 1.6, -1, 1) * (sea ? 0.45 : 1);
+  }
+
+  // ---------------------------------------------------------------- the weather at a place and time
+  function at(p, d, t, site) {
+    const C = Climate.of(p);
+    site = site || siteOf(p, d);
+    const lat = site.lat, lon = site.lon, sea = site.sea;
+    const W = { t, lat, lon, site, air: C.hasAir, climate: C, temp: site.t, tempBase: site.t, hum: 0, cloud: 0, precip: 0, pType: null, snowFrac: 0, storm: 0, hail: 0, fog: 0, haze: C.haze, dust: 0, devil: 0, tornado: 0, windstorm: 0, ash: 0, aurora: 0, heatWave: 0, wind: 0, we: 0, wn: 0, vis: 1, inst: 0, front: 0, pressure: 0, cyclone: null, volcano: null, lightning: 0, tide: 0, events: [], label: '', icon: 'sun' };
+    // sunlight here now (a little late: warming and cooling take time)
+    const sunNow = p.solar(d, t).elev, sunLag = p.solar(d, t - C.dayLag).elev;
+    W.sun = sunNow;
+    W.season = Climate.season(C, t, lat);
+    W.tide = tideAt(C, d, t);
+    // the climatological temperature here and now: the place, the season, the hour (and the star overhead on a locked world)
+    let tClim = site.t + seasonalAnom(C, t, lat, sea) + C.diurnalAmp * (sea ? 0.35 : 1) * (Math.max(sunLag, -0.35) - 0.12);
+    if (C.locked) { const sub = p.toLocal(p.sunDirWorld(t), t), c = d[0] * sub[0] + d[1] * sub[1] + d[2] * sub[2]; tClim += C.lockAmp * (c - 0.15); W.substellar = c; }
+    if (!C.hasAir) { W.temp = W.tempClim = tClim; W.label = 'No atmosphere'; W.icon = 'none'; return W; }
+    if (!C.rocky) {
+      // a giant: banded jets and deep convection
+      const jet = Math.cos(lat * (p.gas ? p.gas.bands : 8));
+      W.wind = 1.2 + 1.3 * Math.abs(jet); W.we = W.wind * Math.sign(jet); W.cloud = 1; W.label = 'Open atmosphere'; W.icon = 'cloud'; W.tempClim = tClim;
+      return W;
+    }
+    // drifting air masses: pressure systems, moisture, warm and cold sectors
+    const Pn = clamp(field(C, lat, lon, t, 1.35, 3, TAG_P) * 1.5, -1.2, 1.2);
+    const Hn = field(C, lat, lon, t, 2.2, 2, TAG_H) * 1.4;
+    const Tn = field(C, lat, lon, t, 1.7, 2, TAG_T) * 1.4;
+    // pressure gradient (fronts and the geostrophic wind); always computed, so the surface, the globe map
+    // and the forecast all describe the same weather
+    const dd = 0.045, cl = Math.max(0.2, Math.cos(lat));
+    const gE = (field(C, lat, lon + dd / cl, t, 1.35, 3, TAG_P) * 1.5 - Pn) / dd;
+    const gN = (field(C, Math.min(1.55, lat + dd), lon, t, 1.35, 3, TAG_P) * 1.5 - Pn) / dd;
+    const grad = Math.hypot(gE, gN), front = smoothstep(4.5, 9, grad);
+    W.front = front; W.pressure = Math.round(1013 * Math.min(C.P, 90) + Pn * 22 * Math.sqrt(Math.min(C.P, 20)));
+    // moisture: seas, wet ground, the air mass, and rising air in lows
+    const hb = C.humidK * (sea ? 0.92 : 0.22 + 0.62 * site.m);
+    let hum = clamp(hb + 0.3 * Hn - 0.15 * Math.max(Pn, 0) + 0.1 * Math.max(-Pn, 0), 0, 1);
+    // air cooling at night climbs toward saturation
+    const rh = clamp(hum + 0.16 * clamp(-(sunLag - 0.1), 0, 1) - 0.1 * clamp(sunLag - 0.3, 0, 1), 0, 1);
+    const sub = W.substellar != null ? smoothstep(0.55, 0.95, W.substellar) : 0, night = W.substellar != null ? smoothstep(0, -0.4, W.substellar) : 0;
+    // instability: heated land by day, fronts, warm moist air; high pressure caps it
+    const dayHeat = Math.max(0, sunLag) * (sea ? 0.35 : 1);
+    let inst = clamp(C.instBase * (0.6 + 0.8 * dayHeat) + 0.3 * front + 0.25 * smoothstep(16, 34, tClim) * hum * C.instBase * 2 - 0.3 * Math.max(Pn, 0) + 0.55 * sub, 0, 1);
+    // lifting makes cloud and rain: low pressure, fronts, convection (and the rising column under a locked world's star)
+    const lift = Math.max(0, -Pn) + 0.45 * front + 0.6 * Math.max(0, inst - 0.42) * (0.3 + dayHeat) + 0.55 * sub - 0.25 * night;
+    let cloud = C.medium ? smoothstep(-0.05, 0.62, lift * 0.9 + (hum - 0.4) * 0.8 + C.cloudBias * 0.35) : 0;
+    let precip = C.precipK > 0 ? smoothstep(0.3, 0.8, lift * (0.35 + 0.75 * hum) + (hum - 0.55) * 0.35) * Math.min(1, C.precipK * 1.15) : 0;
+    let storm = precip * smoothstep(0.45, 0.8, inst) * C.stormK * (tClim > 0 ? 1 : 0.25);
+    // cyclones override everything within their reach
+    let cyc = null;
+    for (const c of cyclones(p, t)) { const a = cycloneAt(c, d, t); if (a && (!cyc || a.wind > cyc.wind)) cyc = a; }
+    // the wind: the band's flow, the geostrophic flow along the isobars, fronts, storms
+    const zon = zonal(C, lat) / (OMEGA * Math.max(C.windK, 0.1));
+    const geo = Math.sign(lat || 1) * clamp(Math.abs(Math.sin(lat)) * 3, 0.25, 1) * Math.min(C.coriolis, 1.2) * 0.1;
+    let we = C.windBase * (0.45 * zon + 0.1) - geo * gN, wn = geo * gE;
+    if (C.locked) { const sd = p.toLocal(p.sunDirWorld(t), t), east = [Math.cos(lon), 0, -Math.sin(lon)], north = [-Math.sin(lat) * Math.sin(lon), Math.cos(lat), -Math.sin(lat) * Math.cos(lon)], k = C.windBase * 1.2 * (1 - Math.abs(W.substellar)); we += (sd[0] * east[0] + sd[2] * east[2]) * k; wn += (sd[0] * north[0] + sd[1] * north[1] + sd[2] * north[2]) * k; }
+    let wind = Math.hypot(we, wn) * (1 + 0.8 * front) + storm * 1.1;
+    if (cyc) {
+      const c = cyc.c, tang = cyc.bearing + c.hemi * Math.PI / 2 + c.hemi * 0.35;
+      we = we * 0.3 + Math.cos(tang) * cyc.wind; wn = wn * 0.3 + Math.sin(tang) * cyc.wind;
+      wind = Math.max(wind, Math.hypot(we, wn));
+      cloud = Math.max(cloud, cyc.cloud); precip = Math.max(precip, cyc.rain * (C.medium ? 1 : 0)); storm = Math.max(storm, cyc.storm); hum = Math.max(hum, 0.85 * cyc.cloud);
+      W.cyclone = { name: c.name, title: c.title, kind: c.kind, cat: c.cat, catLabel: c.catLabel, int: c.int, eye: cyc.eye, wall: cyc.wall, x: cyc.x, id: c.id };
+    } else { const sw = Math.hypot(we, wn) || 1; we *= wind / sw; wn *= wind / sw; }
+    // volcanoes: heat near vents, ash downwind of eruptions, lightning in the plume
+    if (C.volc > 0) {
+      const V = volcanoAt(C, d, t, lat);
+      tClim += 22 * V.heat * C.volc; W.ash = clamp(V.ash + (p.type === 'lava' ? 0.18 : 0), 0, 1);
+      if (V.near && V.nearD < 0.5) W.volcano = { name: V.near.name, dist: V.nearD, erupting: V.erupting };
+      if (V.ash > 0.3) storm = Math.max(storm, V.ash * 0.4);
+    }
+    // the passing weather's own warmth or chill: air masses, cooling rain and cloud, sunny highs
+    const tWx = 3.2 * Tn - 2.4 * precip - 1.4 * cloud * Math.max(0, sunNow) + 2.2 * Math.max(Pn, 0) * Math.max(0, sunNow);
+    const temp = tClim + tWx;
+    // what falls: rain, sleet, snow, hail, or another world's liquids
+    let pType = null, snowFrac = 0;
+    if (precip > 0.02) {
+      if (C.medium === 'water') { snowFrac = smoothstep(1.8, -1.2, temp); pType = snowFrac > 0.8 ? 'snow' : snowFrac > 0.25 ? 'sleet' : 'rain'; }
+      else if (C.medium === 'methane') { snowFrac = smoothstep(-178, -186, temp); pType = snowFrac > 0.5 ? 'methane snow' : 'methane'; }
+      else if (C.medium === 'acid') pType = 'acid';
+    }
+    const hail = storm * smoothstep(0.62, 0.92, inst) * C.hailK * smoothstep(1, 6, temp) * (1 - smoothstep(30, 38, temp));
+    if (hail > 0.3 && pType === 'rain') pType = 'hail';
+    // fog: saturated, calm air (at night and dawn, over cold water, in low ground)
+    const calm = 1 - smoothstep(0.45, 1.2, wind);
+    let fog = C.medium ? smoothstep(0.8, 0.97, rh) * calm * (1 - precip * 0.5) * C.fogK * (0.45 + 0.55 * clamp(0.3 - sunNow, 0, 1) / 0.3) * (1 - Math.max(0, site.e) * 0.6) : 0;
+    fog = Math.max(fog, C.haze * 0.55 * calm);
+    // dust: strong wind over loose dry ground (and dust devils on hot, sunny, fairly calm days)
+    const dryHere = site.dry * (1 - clamp(hum * 1.2, 0, 1)) * (1 - precip);
+    const dust = C.dustK > 0 ? smoothstep(1.35, 2.4, wind) * clamp(dryHere * 1.4, 0, 1) * (C.P < 0.02 ? 0.5 : 1) : 0;
+    const devil = C.devilK * dryHere * smoothstep(0.3, 0.75, sunNow) * (C.P < 0.12 ? 1 : smoothstep(22, 38, temp)) * (1 - smoothstep(0.9, 1.5, wind)) * (1 - cloud * 0.8);
+    // tornadoes: supercells with shear over open land (waterspouts over the sea, rarely)
+    const tornado = storm * C.tornK * smoothstep(0.2, 0.65, front) * smoothstep(0.6, 0.9, inst) * (sea ? 0.25 : 1) * (1 - site.veg * 0.2);
+    const windstorm = smoothstep(1.9, 2.9, wind);
+    // auroras at night, toward the poles, flaring with the star's activity
+    const act = 0.5 + 0.5 * C.noise.n2(t / 1700, 91.3);
+    W.aurora = C.aurora > 0 ? clamp(C.aurora * act * smoothstep(C.auroraLat - 0.2, C.auroraLat + 0.05, Math.abs(lat)) * smoothstep(0.02, -0.15, sunNow) * (1 - cloud * 0.85), 0, 1) : 0;
+    W.heatWave = smoothstep(4.5, 7.5, tWx) * smoothstep(28, 38, temp);
+    W.coldSnap = smoothstep(-4.5, -7.5, tWx) * smoothstep(2, -6, temp);
+    Object.assign(W, { temp, tempClim: tClim, tempWx: tWx, hum: rh, cloud, precip, pType, snowFrac, storm, hail, fog, dust, devil, tornado, windstorm, wind, we, wn, inst });
+    W.lightning = clamp(storm * (0.6 + inst * 0.6) + W.ash * 0.3, 0, 1);
+    W.vis = clamp(1 - 0.78 * fog - 0.3 * precip - 0.35 * snowFrac * precip - 0.72 * dust - 0.45 * W.ash - (cyc ? 0.35 * cyc.wall * cyc.c.int : 0) - C.haze * 0.25, 0.06, 1);
+    label(W, C, p);
+    return W;
+  }
+
+  function label(W, C, p) {
+    const ev = W.events, add = (s) => ev.push(s);
+    let L = '', icon = 'sun';
+    const night = W.sun < -0.05;
+    if (W.cyclone && W.cyclone.int > 0.3 && W.cyclone.x < 1.1) { L = W.cyclone.eye ? `Eye of ${W.cyclone.title}` : W.cyclone.cat ? `${W.cyclone.kind} (cat. ${W.cyclone.cat})` : 'Tropical storm'; icon = 'cyclone'; }
+    else if (W.storm > 0.42 && W.hail > 0.35) { L = 'Hailstorm'; icon = 'hail'; }
+    else if (W.storm > 0.42) { L = W.pType === 'snow' ? 'Thundersnow' : 'Thunderstorm'; icon = 'storm'; }
+    else if (W.dust > 0.42) { L = p.type === 'desert' || p.type === 'arid' ? 'Sandstorm' : 'Dust storm'; icon = 'dust'; }
+    else if (W.ash > 0.4) { L = 'Volcanic ash fall'; icon = 'dust'; }
+    else if (W.precip > 0.08 && W.pType) {
+      const k = W.precip, ty = W.pType;
+      if (ty === 'snow') L = W.wind > 1.9 && k > 0.45 ? 'Blizzard' : k > 0.7 ? 'Heavy snow' : 'Snow';
+      else if (ty === 'sleet') L = 'Sleet';
+      else if (ty === 'hail') L = 'Hail';
+      else if (ty === 'methane') L = k > 0.6 ? 'Heavy methane rain' : 'Methane drizzle';
+      else if (ty === 'methane snow') L = 'Methane snow';
+      else if (ty === 'acid') L = k > 0.6 ? 'Heavy acid rain' : 'Acid rain';
+      else L = k > 0.72 ? 'Heavy rain' : k > 0.3 ? 'Rain' : 'Drizzle';
+      icon = ty === 'snow' || ty === 'methane snow' || ty === 'sleet' ? 'snow' : 'rain';
+    } else if (W.windstorm > 0.5) { L = W.wind > 3 ? 'Violent windstorm' : 'Gale'; icon = 'wind'; }
+    else if (W.fog > 0.5) { L = C.haze > 0.3 && W.fog < C.haze * 0.6 ? (p.type === 'fungal' ? 'Spore haze' : p.type === 'methane' ? 'Methane haze' : 'Sulfur haze') : W.temp < -15 ? 'Ice fog' : 'Fog'; icon = 'fog'; }
+    else if (W.cloud > 0.82) { L = 'Overcast'; icon = 'cloud'; }
+    else if (W.cloud > 0.48) { L = 'Cloudy'; icon = 'cloud'; }
+    else if (W.cloud > 0.2) { L = night ? 'Partly cloudy night' : 'Partly cloudy'; icon = night ? 'moon' : 'cloud'; }
+    else { L = night ? 'Clear night' : W.heatWave > 0.5 ? 'Scorching' : 'Clear'; icon = night ? 'moon' : 'sun'; }
+    if (W.aurora > 0.35) add('aurora');
+    if (W.devil > 0.35 && !W.dust) add('dust devils');
+    if (W.tornado > 0.25 && W.storm > 0.4) add('tornado risk');
+    if (W.coldSnap > 0.5) add('cold snap');
+    if (W.heatWave > 0.5) add('heat wave');
+    if (W.windstorm > 0.4 && icon !== 'wind') add('gales');
+    if (W.fog > 0.35 && icon !== 'fog') add('mist');
+    if (W.volcano && W.volcano.erupting > 0.1) add(`${W.volcano.name} erupting`);
+    if (W.lightning > 0.4 && icon !== 'storm') add('lightning');
+    W.label = L; W.icon = icon;
+  }
+
+  // a forecast: the weather is deterministic, so the hours ahead can be read
+  function forecast(p, d, t, site, n = 6, step = 600) {
+    site = site || siteOf(p, d);
+    const out = [];
+    for (let i = 1; i <= n; i++) { const w = at(p, d, t + i * step, site); out.push({ t: t + i * step, label: w.label, icon: w.icon, temp: w.temp, precip: w.precip }); }
+    return out;
+  }
+
+  // ---------------------------------------------------------------- a whole-world weather map (planet view)
+  class WxMap {
+    constructor(p, W = 96, H = 48) {
+      this.p = p; this.C = Climate.of(p); this.W = W; this.H = H;
+      this.sites = new Array(W * H); this.ready = 0; this.data = new Uint8Array(W * H * 4); this.row = 0; this.t = null; this.dirty = false; this.stats = null;
+    }
+    // static per-cell climate, built a few rows at a time
+    build(ms) {
+      const t0 = performance.now();
+      while (this.ready < this.H && performance.now() - t0 < ms) {
+        const j = this.ready, lat = (0.5 - (j + 0.5) / this.H) * Math.PI;
+        for (let i = 0; i < this.W; i++) { const lon = ((i + 0.5) / this.W) * TAU - Math.PI; this.sites[j * this.W + i] = siteOf(this.p, dirOf(lat, lon)); }
+        this.ready++;
+      }
+      return this.ready >= this.H;
+    }
+    // refresh the dynamic fields, time-sliced; returns true when a full pass has completed
+    refresh(t, ms) {
+      if (!this.build(ms)) return false;
+      if (this.row === 0) { this.t0 = t; this.cyc = cyclones(this.p, t); this.acc = { rain: 0, storm: 0, snow: 0, dust: 0, clear: 0, n: 0 }; }
+      const t0 = performance.now(), C = this.C, D = this.data;
+      while (this.row < this.H && performance.now() - t0 < ms) {
+        const j = this.row;
+        for (let i = 0; i < this.W; i++) {
+          const s = this.sites[j * this.W + i], w = at(this.p, s.d, this.t0, s), k = (j * this.W + i) * 4;
+          D[k] = clamp(w.cloud, 0, 1) * 255; D[k + 1] = clamp(w.precip, 0, 1) * 255; D[k + 2] = clamp(Math.max(w.storm, w.cyclone ? w.cyclone.int * 0.6 : 0), 0, 1) * 255; D[k + 3] = clamp(Math.max(w.dust, w.ash * 0.8), 0, 1) * 255;
+          const a = this.acc, cw = Math.cos(s.lat);
+          a.n += cw; if (w.precip > 0.25) a.rain += cw; if (w.storm > 0.4) a.storm += cw; if (w.precip > 0.25 && w.snowFrac > 0.5) a.snow += cw; if (w.dust > 0.4) a.dust += cw; if (w.cloud < 0.2) a.clear += cw;
+        }
+        this.row++;
+      }
+      if (this.row >= this.H) { this.row = 0; this.t = this.t0; this.dirty = true; const a = this.acc; this.stats = { rain: a.rain / a.n, storm: a.storm / a.n, snow: a.snow / a.n, dust: a.dust / a.n, clear: a.clear / a.n, cyclones: this.cyc }; return true; }
+      return false;
+    }
+  }
+
+  return { at, siteOf, forecast, cyclones, cycloneAt, tideAt, zonal, field, dirOf, WxMap, eruption };
+})();
 </script>
 
 <!-- ===== Genetics · genomes, families, phenotypes, lineages ===== -->
@@ -3796,13 +4356,22 @@ void main(){
 }`, H + OUT + COMMON + `
 in vec3 vW; in vec3 vN; in vec3 vC; in vec2 vE;
 uniform float uOutline; uniform float uTex; uniform float uNight;
+uniform float uSnow; uniform float uWet; uniform float uAsh; uniform float uCloud; uniform vec2 uCloudOff; uniform vec3 uTint; uniform float uTintK;
 void main(){
   // screen-door glass (dome cities): dithered see-through, no outline
   if (vE.y > 0.004 && bayer4(gl_FragCoord.xy) < vE.y) discard;
   vec3 n = normalize(vN);
   vec3 base = vC;
+  if (uTintK > 0.0) base = mix(base, base * uTint, uTintK);
   if (uTex > 0.0) { float h = hash12(floor(vW.xz * 2.0) + floor(vW.y * 2.0) * 7.0); base *= 1.0 + (h - 0.5) * 0.13 * uTex; }
+  // weather on the ground: snow settles on flat ground and canopy tops first, rain darkens, ash greys
+  float up = smoothstep(0.5, 0.85, n.y) * step(0.0, vW.y);   // (not on the sea floor: the sea surface is y = 0)
+  if (uSnow > 0.0 && vE.x < 0.2 && hash12(floor(vW.xz * 1.7) + 3.1) < uSnow * 1.15 * up) base = mix(base, vec3(0.93, 0.95, 1.0), 0.85 + 0.15 * up);
+  if (uAsh > 0.0 && hash12(floor(vW.xz * 2.1) + 7.7) < uAsh * up) base = mix(base, vec3(0.3, 0.29, 0.3), 0.8);
+  base *= 1.0 - 0.22 * uWet * up;
   vec3 c = toon(base, n);
+  // the shadows of passing clouds
+  if (uCloud > 0.0) { float cs = vnoise(vW.xz * 0.03 + uCloudOff) * 0.65 + vnoise(vW.xz * 0.07 - uCloudOff * 1.3) * 0.35; if (cs < uCloud * 0.75) c *= 0.74; }
   c += base * vE.x * (0.5 + uNight * 1.6);
   oC = vec4(fog(c, vW), 1.0);
   oI = vec4(encN(normalize(mat3(uView) * n)), vE.y > 0.004 ? 0.0 : uOutline, 1.0);
@@ -3846,15 +4415,16 @@ void main(){
 
   src.water = [H + `
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=3) in vec4 aExt;
-uniform mat4 uVP; uniform float uTime;
+uniform mat4 uVP; uniform float uTime; uniform float uTide; uniform float uRough;
 out vec3 vW; out vec3 vN; out vec4 vE;
 void main(){
   vec3 p = aPos;
-  if (aExt.y < 0.5) p.y += sin(uTime * 1.3 + p.x * 0.4 + p.z * 0.3) * 0.04;
+  // wind raises the waves; the open sea (at level 0) rises and falls with the tide
+  if (aExt.y < 0.5) { p.y += sin(uTime * 1.3 + p.x * 0.4 + p.z * 0.3) * 0.04 * (1.0 + uRough * 3.5); if (abs(aPos.y) < 0.05) p.y += uTide; }
   vW = p; vN = aNrm; vE = aExt; gl_Position = uVP * vec4(p, 1.0);
 }`, H + OUT + COMMON + `
 in vec3 vW; in vec3 vN; in vec4 vE;
-uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform float uLiquid; uniform float uTime;
+uniform vec3 uShallow; uniform vec3 uDeep; uniform vec3 uFoam; uniform float uLiquid; uniform float uTime; uniform float uRough; uniform float uRain;
 void main(){
   float depth = vE.x; float frozen = vE.y;
   vec3 n = normalize(vN);
@@ -3876,7 +4446,9 @@ void main(){
   } else {
     c = mix(uShallow, uDeep, smoothstep(0.0, 4.0, depth));
     float w = sin(vW.x * 0.9 + uTime * 1.3 + sin(vW.z * 0.45 + uTime)) * sin(vW.z * 0.8 - uTime * 1.1 + vW.x * 0.2);
-    if (w > 0.78 && bayer4(gl_FragCoord.xy) > 0.35) c = mix(c, uFoam, 0.4);
+    if (w > 0.78 - 0.4 * uRough && bayer4(gl_FragCoord.xy) > 0.35 - 0.2 * uRough) c = mix(c, uFoam, 0.4 + 0.2 * uRough);
+    // raindrops pock the surface
+    if (uRain > 0.02 && hash12(floor(vW.xz * 1.4) + floor(uTime * 4.0) * 1.7) < uRain * 0.14) c = mix(c, uFoam, 0.55);
     float foam = 1.0 - smoothstep(0.0, 0.3 + 0.12 * sin(uTime * 1.7 + vW.x * 0.7 + vW.z * 0.5), depth);
     if (foam > 0.5) c = mix(c, uFoam, 0.85);
     if (n.y < 0.82) { float s = step(0.5, fract(vW.y * 1.1 + uTime * 2.4 + hash12(floor(vW.xz * 3.0)) * 0.7)); c = mix(c, uFoam, 0.35 + 0.45 * s); }
@@ -3934,13 +4506,38 @@ void main(){ vec4 w = uModel * vec4(aPos, 1.0); vW = w.xyz; vN = mat3(uModel) * 
   H + OUT + COMMON + NOISE + `
 in vec3 vW; in vec3 vN; in vec3 vL;
 uniform float uCover; uniform float uRot; uniform float uSeed; uniform vec3 uCloudCol; uniform float uTime;
+uniform sampler2D uWx; uniform float uWxOn; uniform vec4 uCyc[4]; uniform float uCycN;
 void main(){
-  vec3 p = normalize(vL);
+  vec3 p0 = normalize(vL), p = p0;
   float ca = cos(uRot), sa = sin(uRot); p.xz = mat2(ca, -sa, sa, ca) * p.xz;
   float n = fbm3(p * 2.4 + uSeed) + 0.3 * snoise(p * 7.0 + uSeed + uTime * 0.01);
-  float v = n + 0.14 * sin(p.y * 9.0 + uSeed) + (uCover - 0.5) * 1.1;
+  // the weather map: cloud cover, rain, storm cells, dust and ash, drifting with the planet's circulation
+  vec4 wx = vec4(uCover, 0.0, 0.0, 0.0);
+  if (uWxOn > 0.5) wx = texture(uWx, vec2(atan(p0.x, p0.z) / 6.2831853 + 0.5, 0.5 - asin(clamp(p0.y, -1.0, 1.0)) / 3.1415927));
+  float cover = wx.r, spiral = 0.0, eye = 0.0, infl = 0.0;
+  // tropical cyclones: spiral bands wound around a clear eye
+  for (int i = 0; i < 4; i++) {
+    if (float(i) >= uCycN) break;
+    vec4 cy = uCyc[i];
+    vec3 cc = vec3(cos(cy.x) * sin(cy.y), sin(cy.x), cos(cy.x) * cos(cy.y));
+    float d = acos(clamp(dot(p0, cc), -1.0, 1.0)) / cy.z;
+    if (d > 1.4) continue;
+    vec3 e = normalize(cross(vec3(0.0, 1.0, 0.0), cc)), nn = cross(cc, e), dv = p0 - cc;
+    float th = atan(dot(dv, nn), dot(dv, e)), k = abs(cy.w), hs = sign(cy.w);
+    float arm = pow(0.5 + 0.5 * cos(hs * th * 2.0 + log(max(d, 0.04)) * 4.5 - uTime * 0.3), 1.3);
+    float core = smoothstep(0.5, 0.18, d);
+    spiral = max(spiral, smoothstep(1.4, 0.2, d) * max(core, 0.28 + 0.72 * arm) * (0.6 + 0.4 * k));
+    infl = max(infl, smoothstep(1.5, 0.95, d) * min(1.0, k * 1.6));
+    eye = max(eye, k * smoothstep(0.1, 0.045, d));
+  }
+  cover = mix(cover, spiral, infl);
+  float v = (uWxOn > 0.5 ? n * 0.55 + (cover - 0.47) * 1.45 : n + 0.14 * sin(p.y * 9.0 + uSeed) + (uCover - 0.5) * 1.1) - eye * 1.5;
   if (v + (bayer4(gl_FragCoord.xy) - 0.5) * 0.16 < 0.08) discard;
-  vec3 c = toon(uCloudCol * (v > 0.32 ? 1.0 : 0.84), normalize(vN));
+  vec3 col = uCloudCol * (v > 0.32 ? 1.0 : 0.84);
+  col *= 1.0 - 0.3 * wx.g;                                  // rain clouds are darker below
+  col = mix(col, vec3(1.0, 1.0, 1.02), wx.b * 0.6 * step(0.35, v));  // towering storm tops
+  col = mix(col, vec3(0.78, 0.62, 0.44), wx.a * 0.8);         // dust and ash
+  vec3 c = toon(col, normalize(vN));
   oC = vec4(c, 1.0); oI = vec4(encN(normalize(mat3(uView) * normalize(vN))), 0.0, 1.0);
 }`];
 
@@ -5021,6 +5618,7 @@ class Ecosystem {
     else if (cause === 'predation') { this.stats.kills++; const an = /^[AEIOU]/.test(a.sp.common) ? 'an' : 'a'; this.emit(by.state === 'dive' ? `${this.label(by)} #${by.id} plucked ${an} ${this.label(a)} from the water` : `${this.label(by)} #${by.id} brought down ${an} ${this.label(a)}`, 'hunt', by); }
     else if (cause === 'age' && this.world.onScreen && this.world.onScreen(a)) this.emit(`${this.label(a)} #${a.id} died of old age (${Math.round(a.age / 60)} min)`, 'death', a);
     else if (cause === 'starvation') this.emit(`${this.label(a)} #${a.id} starved`, 'death', a);
+    else if (cause === 'storm') this.emit(`${this.label(a)} #${a.id} was caught by a tornado`, 'death', a);
   }
   // spatial hash + list of the simulated (active) agents, rebuilt every step
   index() {
@@ -5053,8 +5651,10 @@ class Ecosystem {
     return null;
   }
   think(a, env) {
-    const P = a.P, sp = a.sp, W = this.world;
-    const nearby = this.near(a, P.percep);
+    const P = a.P, sp = a.sp, W = this.world, M = W.meteo;
+    // fog, rain, snow and dust shorten how far a creature can see (or smell) what is around it
+    const perc = P.percep * (M ? 0.45 + 0.55 * M.vis : 1);
+    const nearby = this.near(a, perc);
     // a bird of prey that can take fish watches the water for one close enough to the surface
     const fisher = this.isFisher(sp), sight = fisher ? this.fishSight(a, env) : 0;
     let threat = null, td = 1e9, prey = null, pd = 1e9, mate = null, md = 1e9, carcass = null, cd = 1e9, cx = 0, cz = 0, cn = 0, fish = null, fs = 0;
@@ -5066,18 +5666,25 @@ class Ecosystem {
         continue;
       }
       // fish only notice a bird that is close overhead and low, or already plunging at them
-      if (sp.habitat === 'water' && b.sp.habitat === 'air' && ((b.alt > 3 && !b.stoop) || d > P.percep * 0.3)) continue;
-      if (sp.predators.includes(b.sp) && d < td && (b.state !== 'sleep' || d < P.percep * 0.3)) { threat = b; td = d; }
-      else if (fisher && b.sp.habitat === 'water') { if (sp.prey.includes(b.sp) && d < P.percep * sight) { const q = this.fishScore(a, b, d); if (q > fs) { fs = q; fish = b; } } }
+      if (sp.habitat === 'water' && b.sp.habitat === 'air' && ((b.alt > 3 && !b.stoop) || d > perc * 0.3)) continue;
+      if (sp.predators.includes(b.sp) && d < td && (b.state !== 'sleep' || d < perc * 0.3)) { threat = b; td = d; }
+      else if (fisher && b.sp.habitat === 'water') { if (sp.prey.includes(b.sp) && d < perc * sight) { const q = this.fishScore(a, b, d); if (q > fs) { fs = q; fish = b; } } }
       else if (sp.prey.includes(b.sp) && d < pd && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05) { prey = b; pd = d; }
       if (b.sp === sp) { cx += b.x; cz += b.z; cn++; if (b.sex !== a.sex && b.grow >= 1 && b.mateCD <= 0 && b.energy > 0.5 && d < md) { mate = b; md = d; } }
     }
     const sleepy = (P.noct ? env.night < 0.4 : env.night > 0.6) && sp.habitat !== 'water';
     const hungry = a.energy < 0.45 || (a.state === 'graze' && a.energy < 0.95) || (a.state === 'hunt' && a.energy < 0.8) || (a.state === 'fish' && a.energy < 0.9);
     const set = (s, t) => { if (a.state !== s) { if (s === 'flee') this.sound(a, 'flee'); else if (s === 'hunt' || s === 'dive') this.sound(a, 'attack'); a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
-    if (threat && td < P.percep * (a.state === 'sleep' ? 0.35 : 0.8)) { if (a.state === 'carry') this.drop(a); set('flee', threat); return; }
+    if (threat && td < perc * (a.state === 'sleep' ? 0.35 : 0.8)) { if (a.state === 'carry') this.drop(a); set('flee', threat); return; }
+    // a tornado bearing down: run from it
+    if (M && M.hazards.length && !a.cit && sp.habitat !== 'water') for (const hz of M.hazards) if (Math.hypot(hz.x - a.x, hz.z - a.z) < hz.r) { if (a.state === 'carry') this.drop(a); set('flee', hz); return; }
     // a plunge, or a catch on its way ashore, is seen through
     if (a.state === 'dive' || a.state === 'carry') return;
+    // severe weather (storms, hail, blizzards, gales, dust storms, cyclones): take cover and wait it out
+    if (M && !a.cit && sp.habitat !== 'water' && sp.fam !== 'floater') {
+      if (a.state === 'shelter') { if (M.severe > 0.38 && a.energy > 0.15) return; set('wander', null); a.stateT = 99; }
+      else if (M.severe > 0.55 && a.energy > 0.2) { const c = sp.fam === 'avian' && this.wet(a.x, a.z) ? this.shore(a) || [a.x, a.z] : this.cover(a); set('shelter', null); a.tx = c[0]; a.tz = c[1]; return; }
+    }
     if (sleepy && a.state !== 'hunt' && sp.fam !== 'floater') { set('sleep', null); return; }
     if (a.nav.lockT > 0 && a.state === 'wander') return;
     if (a.state === 'eat' && a.target && a.stateT < 7) return;
@@ -5110,14 +5717,29 @@ class Ecosystem {
   // ---- fishing: birds of prey patrol the shallows, watch for a fish near the surface, plunge,
   // and carry the catch ashore. Everything is decided by perception, hunger, depth, light,
   // weather and the hunter's own genes, step by step.
+  // somewhere out of the weather: under the nearest tree, else where it stands
+  cover(a) {
+    const W = this.world, ch = W.chunkAt ? W.chunkAt(a.x, a.z) : null;
+    let best = null, bd = 144;
+    if (ch && ch.trees) for (const t of ch.trees) { const d = (t.x - a.x) ** 2 + (t.z - a.z) ** 2; if (d < bd && Nav.ok(W, a, t.x + 0.7, t.z + 0.7, 0.1)) { bd = d; best = [t.x + 0.7, t.z + 0.7]; } }
+    return best || [a.x, a.z];
+  }
+  // a lightning strike close by scatters the animals around it
+  startle(x, z, r) {
+    const hz = { x, z, state: 'hazard' };
+    for (const a of this.act) {
+      if (a.state === 'dead' || a.cit || a.sp.habitat === 'water' || a.state === 'dive' || a.state === 'carry') continue;
+      if ((a.x - x) ** 2 + (a.z - z) ** 2 < r * r) { a.state = 'flee'; a.target = hz; a.stateT = 0; this.sound(a, 'flee'); }
+    }
+  }
   isFisher(sp) { const W = this.world; return sp.fam === 'avian' && sp.diet !== 'herbivore' && !W.gas && !!W.liquid && W.liquid !== 'lava' && sp.prey.some((q) => q.habitat === 'water'); }
   wet(x, z) { const W = this.world; return W.loaded(x, z) && W.waterAt(x, z) - W.heightAt(x, z) > 0.05 && !W.frozenAt(x, z); }
   // how well the water can be watched right now: daylight for day hunters, rain, snow, storms and wind
   fishSight(a, env) {
-    const w = this.world.weather, k = w && w.kind, i = w ? w.intensity : 0;
+    const w = this.world.weather, M = this.world.meteo;
     let s = 1 - 0.75 * (a.P.noct ? 1 - env.night : env.night);
-    if (k === 'rain' || k === 'snow' || k === 'dust' || k === 'ash') s *= 1 - 0.55 * i;
-    if (w && w.storm) s *= 1 - 0.85 * w.storm;
+    if (M) s *= (0.35 + 0.65 * M.vis) * (1 - 0.55 * M.rain) * (1 - 0.85 * M.severe);
+    else if (w && w.storm) s *= 1 - 0.85 * w.storm;
     if (w && w.wind) s *= 1 - 0.25 * clamp(Math.hypot(w.wind[0], w.wind[1]) - 0.6, 0, 1);
     return clamp(s, 0, 1);
   }
@@ -5164,11 +5786,15 @@ class Ecosystem {
     return null;
   }
   // the nearest dry land, where a catch is eaten or a night spent
+  // shore that the rising tide will still cover
+  tidal(x, z, r) { const W = this.world; if (r == null) r = W.tideRise ? W.tideRise() : 0; return r > 0 && W.waterAt(x, z) + r - W.heightAt(x, z) > 0.05; }
+  // the nearest dry ground, preferably above the reach of the rising tide
   shore(a) {
-    const W = this.world;
-    for (const d of [2, 4, 7, 11, 16, 22, 30, 40]) for (let k = 0; k < 12; k++) {
+    const W = this.world, rise = W.tideRise ? W.tideRise() : 0;
+    for (const r of rise ? [rise, 0] : [0]) for (const d of [2, 4, 7, 11, 16, 22, 30, 40]) for (let k = 0; k < 12; k++) {
       const ang = (k / 12) * TAU + a.anim.seed * 6, x = a.x + Math.cos(ang) * d, z = a.z + Math.sin(ang) * d;
       if (!W.loaded(x, z) || this.wet(x, z)) continue;
+      if (r && this.tidal(x, z, r)) continue;
       if (W.domes && W.domes.some((q) => (x - q.x) ** 2 + (z - q.z) ** 2 < q.r2)) continue;
       return [x, z];
     }
@@ -5325,7 +5951,9 @@ class Ecosystem {
     if (a.cit) { a.energy = 1; a.thirst = 0; a.age = Math.min(a.age, P.life * 0.5); }
     a.mateCD -= dt; a.huntCD -= dt; a.drinkCD -= dt; a.fishCD -= dt; a.diveCD -= dt;
     a.energy -= dt * 0.0045 * P.metab * (a.state === 'hunt' || a.state === 'flee' ? 2.2 : 1);
-    if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * 0.0035);
+    const M = W.meteo;
+    // heat makes thirst come faster; rain on the ground and the leaves slakes it
+    if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * 0.0035 * (M ? (1 + 0.8 * M.heat) * (1 - 0.6 * M.rain) : 1));
     // natural selection: a climate beyond the genome's tolerances costs energy (fur insulates),
     // so better-adapted lineages outlive and outbreed the rest
     if (!a.cit && sp.habitat !== 'water' && !W.gas) {
@@ -5358,7 +5986,8 @@ class Ecosystem {
         break;
       case 'graze':
         eat = sp.habitat === 'land' ? 1 : 0.3; jaw = 0.3 + 0.3 * Math.sin(anim.t * 6);
-        a.energy = Math.min(1, a.energy + dt * 0.05);
+        // snow and ash bury the forage; after rain it is lush
+        a.energy = Math.min(1, a.energy + dt * 0.05 * (M && sp.habitat === 'land' ? M.forage : 1));
         if (sp.habitat !== 'land') { spd = P.speed * 0.25; tx = a.x + Math.sin(a.heading) * 5; tz = a.z + Math.cos(a.heading) * 5; eat = 0; }
         else if (Math.sin(anim.t * 0.7 + anim.seed * 20) > 0.85) { spd = P.speed * 0.15; tx = a.x + Math.sin(a.heading + 0.3) * 3; tz = a.z + Math.cos(a.heading + 0.3) * 3; }
         if (a.energy > 0.97 && !a.cit) a.state = 'wander';
@@ -5371,8 +6000,8 @@ class Ecosystem {
         break;
       }
       case 'sleep':
-        // a land bird does not sleep on open water: it flies on to the nearest shore first
-        if (sp.fam === 'avian' && this.wet(a.x, a.z)) {
+        // a land bird does not sleep on open water (or where the tide is coming in): it flies on to dry shore first
+        if (sp.fam === 'avian' && (this.wet(a.x, a.z) || this.tidal(a.x, a.z))) {
           // (far out at sea it keeps flying on until land comes within reach)
           if (!a.dest || a.stateT < dt || Math.hypot(a.dest[0] - a.x, a.dest[1] - a.z) < 1.5) a.dest = this.shore(a) || [a.x + Math.sin(a.heading) * 30, a.z + Math.cos(a.heading) * 30];
           tx = a.dest[0]; tz = a.dest[1]; spd = P.speed * 0.6; toShore = true;
@@ -5456,6 +6085,10 @@ class Ecosystem {
         break;
       }
       case 'herd': spd = P.speed * 0.4; if (Math.hypot(tx - a.x, tz - a.z) < 3) a.state = 'wander'; break;
+      case 'shelter':
+        // hunkered down out of the weather (under a tree when there is one near)
+        if (Math.hypot(a.tx - a.x, a.tz - a.z) > 0.7) { tx = a.tx; tz = a.tz; spd = P.speed * 0.55; } else sleep = 0.6;
+        break;
       default: spd = Math.hypot(tx - a.x, tz - a.z) > 1.5 ? P.speed * (sp.habitat === 'air' ? 0.6 : 0.32) : 0;
     }
     if (sp.habitat === 'air') { spd = Math.max(spd, a.anim.fly > 0.5 ? P.speed * 0.45 : 0); if (a.state === 'sleep' && !toShore) spd = 0; }
@@ -5495,6 +6128,8 @@ class Ecosystem {
       if (Math.abs(dh) > 0.6 && dT < (a.v / rate) * 2.4 && sp.habitat !== 'air') block *= 0.15;
     }
     // a faster metabolism burns more energy but moves the body faster: a real trade-off for selection
+    // deep snow slows walkers down
+    if (M && sp.habitat === 'land' && M.snow > 0.2) spd *= 1 - 0.3 * M.snow;
     a.v += (spd * (0.55 + 0.45 * a.grow) * (0.85 + 0.3 * a.g[G.metab]) * block - a.v) * damp(4, dt);
     // never overshoot the waypoint (large steps at high time acceleration)
     let adv = a.v * dt;
@@ -5518,8 +6153,11 @@ class Ecosystem {
     if (Nav.watch(a, dt, spd > 0 && dT > 1.5 && a.state !== 'follow')) this.recover(a, env);
     const moved = Math.hypot(nx - a.x, nz - a.z);
     a.x = nx; a.z = nz;
-    // buoyant bodies drift with the jet stream and get caught in storm vortices
+    // buoyant bodies drift with the jet stream and get caught in storm vortices; fliers are pushed by strong wind
     if (W.gas && sp.habitat === 'air') { const w = W.gas.windAt(a.x, a.z), k = sp.fam === 'floater' ? 0.3 : 0.12; a.x += w[0] * k * dt; a.z += w[1] * k * dt; }
+    else if (M && sp.habitat === 'air' && a.anim.fly > 0.5) { a.x += M.windX * 0.06 * dt; a.z += M.windZ * 0.06 * dt; }
+    // a tornado passing over takes what it catches
+    if (M && M.hazards.length && !a.cit && sp.habitat !== 'water') for (const hz of M.hazards) if ((a.x - hz.x) ** 2 + (a.z - hz.z) ** 2 < hz.kill * hz.kill && this.rng.next() < dt * 0.7) { this.kill(a, 'storm'); return; }
     // the plunge reaches the water: depth, the fish's alertness, light, weather and skill decide the outcome
     if (a.state === 'dive' && tgt && tgt.state !== 'dead' && a.y <= W.waterAt(a.x, a.z) + 0.25) {
       const dep = W.waterAt(tgt.x, tgt.z) - tgt.y, reach = (P.bodyL * a.grow + tgt.P.bodyL * tgt.grow) * 0.5 + 0.7;
@@ -5554,7 +6192,7 @@ class Ecosystem {
       const surf = Math.max(gy, W.waterAt(a.x, a.z));
       if (sp.fam === 'avian') {
         // birds settle only on dry ground (or ice), never on open water
-        const wantLand = (a.state === 'sleep' || a.state === 'eat' || (a.state === 'graze' && W.waterAt(a.x, a.z) < gy) || (a.state === 'fish' && a.fmode === 'perch')) && !this.wet(a.x, a.z);
+        const wantLand = (a.state === 'sleep' || a.state === 'eat' || a.state === 'shelter' || (a.state === 'graze' && W.waterAt(a.x, a.z) < gy) || (a.state === 'fish' && a.fmode === 'perch')) && !this.wet(a.x, a.z) && !(a.state === 'sleep' && toShore);
         if (a.state === 'dive') { /* the plunge sets its own height */ }
         else if (a.state === 'fish' || a.state === 'carry') a.altT = wantLand ? 0 : a.state === 'carry' ? 4 : a.fmode === 'toPerch' ? 2.5 : 5.5;
         else {
@@ -5808,9 +6446,9 @@ const Nav = {
    there again restores the same individuals on the same local ground: a
    revisited site keeps its original anchor so the coordinates line up. Like
    every creature outside the view they were frozen in time while unobserved.
-   Parent–child links and the favourite creature are built on this.
+   Parent–child links and the favourite creatures are built on this.
    ============================================================================= */
-const DEATH_CAUSE = { age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city' };
+const DEATH_CAUSE = { age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city', storm: 'a tornado' };
 const dirOfLatLon = (ll) => { const la = ll[0] * Math.PI / 180, lo = ll[1] * Math.PI / 180; return [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)]; };
 
 const EcoSave = {
@@ -5854,10 +6492,10 @@ const EcoSave = {
     const live = eco.agents.filter((a) => !a.cit && !a.gone && a.state !== 'dead');
     const I = this.index(), known = I.sites.some((s) => s.id === v.siteId);
     if (!live.length && !known) return false;
-    const fav = Favorite.idIn(v);
+    const favs = Favorite.idsIn(v);
     if (live.length > this.MAX_AGENTS) {
-      // very busy sites keep the creatures nearest the observer, and always the favourite
-      const tg = v.cam.cur.target, d = (a) => (a.id === fav ? -1 : Math.hypot(a.x - tg[0], a.z - tg[2]));
+      // very busy sites keep the creatures nearest the observer, and always the favourites
+      const tg = v.cam.cur.target, d = (a) => (favs && favs.has(a.id) ? -1 : Math.hypot(a.x - tg[0], a.z - tg[2]));
       live.sort((a, b) => d(a) - d(b)); live.length = this.MAX_AGENTS;
     }
     const q = (x, k = 100) => Math.round(x * k) / k;
@@ -5882,15 +6520,16 @@ const EcoSave = {
     const json = JSON.stringify(rec);
     I.sites = I.sites.filter((s) => s.id !== rec.id);
     I.sites.unshift({ id: rec.id, u: rec.u, code: rec.code, dir: rec.dir, at: rec.at, n: live.length, box: isFinite(x0) ? [x0, z0, x1, z1] : null, world: v.planet.title });
-    // the most recently observed sites are kept; the favourite's home site is never forgotten
-    const keep = (s) => s.id === rec.id || (Favorite.d && s.id === Favorite.d.site);
-    const oldest = () => { for (let i = I.sites.length - 1; i >= 0; i--) if (!keep(I.sites[i])) return I.sites[i]; return null; };
+    // the most recently observed sites are kept; the home sites of favourites are only forgotten
+    // as a last resort, when the browser's storage is full
+    const favSites = Favorite.sites(), keep = (s, hard) => s.id === rec.id || (!hard && favSites.has(s.id));
+    const oldest = (hard) => { for (let i = I.sites.length - 1; i >= 0; i--) if (!keep(I.sites[i], hard)) return I.sites[i]; return null; };
     while (I.sites.length > this.MAX_SITES) { const o = oldest(); if (!o) break; this.drop(o.id, true); }
     let ok = this.put(this.KEY + ':' + rec.id, json);
-    for (let tries = 0; !ok && tries < 8; tries++) { const o = oldest(); if (!o) break; this.drop(o.id, true); ok = this.put(this.KEY + ':' + rec.id, json); }
+    for (let tries = 0; !ok && tries < 16; tries++) { const o = oldest() || oldest(true); if (!o) break; this.drop(o.id, true); ok = this.put(this.KEY + ':' + rec.id, json); }
     if (!ok) I.sites = I.sites.filter((s) => s.id !== rec.id);
     this.writeIndex();
-    if (ok && fav != null) Favorite.seen(v);
+    if (ok && favs) Favorite.seen(v);
     return ok;
   },
   drop(id, quiet) {
@@ -5944,60 +6583,120 @@ const EcoSave = {
 };
 
 /* =============================================================================
-   FAVOURITE CREATURE · one individual the observer keeps track of: marked on
-   screen wherever it goes, pointed to from the screen edge, remembered across
-   sessions (with its site), and reachable from anywhere in the universe.
+   FAVOURITE CREATURES · any number of individuals the observer keeps track of:
+   each is marked on screen wherever it goes, pointed to from the screen edge,
+   remembered across sessions (with its site) in the device's own records, not
+   in a save slot, and reachable from anywhere in the universe. All of them are
+   listed together in the Favourites tab of the Saves window.
    ============================================================================= */
 const Favorite = {
-  get d() { return (Store.d && Store.d.favorite) || null; },
-  // the favourite's id when it lives at the site shown by this view
-  idIn(v) { const f = this.d; return f && v && v.name === 'surface' && v.siteId === f.site ? f.id : null; },
-  is(v, a) { return !!a && !a.cit && this.idIn(v) === a.id; },
-  agentIn(v) { const id = this.idIn(v); if (id == null || !v.eco) return null; const a = v.eco.byId.get(id); return a && !a.cit ? a : null; },
-  set(v, a) {
-    const prev = this.d, same = prev && prev.site === v.siteId && prev.id === a.id;
-    Store.d.favorite = { u: Universe.name, code: v.siteCode, site: v.siteId, id: a.id, name: a.name, sp: a.sp.code, common: a.sp.common, fam: a.sp.fam, sex: a.sex, gen: a.gen, g: Genetics.toHex(a.g), world: v.planet.title, ll: v.surface.latLon(a.x, a.z), at: Date.now(), dead: null };
+  MAX: 120, ver: 0, _c: null,
+  // every favourite, newest first (saves from before multiple favourites are migrated by Store.load)
+  get list() { const d = Store.d; if (!d) return []; if (!Array.isArray(d.favorites)) d.favorites = []; return d.favorites; },
+  key(f) { return f.site + ':' + f.id; },
+  find(site, id) { return this.list.find((f) => f.site === site && f.id === id) || null; },
+  // the favourites living at the site shown by this view, by creature id
+  here(v) {
+    if (!v || v.name !== 'surface' || !v.siteId) return null;
+    const c = this._c;
+    if (c && c.site === v.siteId && c.ver === this.ver && c.n === this.list.length) return c.m;
+    const m = new Map();
+    for (const f of this.list) if (f.site === v.siteId) m.set(f.id, f);
+    this._c = { site: v.siteId, ver: this.ver, n: this.list.length, m };
+    return m;
+  },
+  entryOf(v, a) { const m = a && !a.cit && this.here(v); return (m && m.get(a.id)) || null; },
+  is(v, a) { return !!this.entryOf(v, a); },
+  // the ids of this site's favourites (kept first when a busy site is trimmed for saving)
+  idsIn(v) { const m = this.here(v); return m && m.size ? new Set(m.keys()) : null; },
+  // the favourites present in this view (living or not)
+  agentsIn(v) {
+    const m = this.here(v), out = [];
+    if (!m || !m.size || !v.eco) return out;
+    for (const id of m.keys()) { const a = v.eco.byId.get(id); if (a && !a.cit) out.push(a); }
+    return out;
+  },
+  sites() { return new Set(this.list.map((f) => f.site)); },
+  add(v, a) {
+    if (this.is(v, a)) return;
+    if (this.list.length >= this.MAX) { UI.toast(`You can keep up to ${this.MAX} favourites: remove some in Saves › Favourites`, 'err'); return; }
+    this.list.unshift({ u: Universe.name, code: v.siteCode, site: v.siteId, id: a.id, name: a.name, sp: a.sp.code, common: a.sp.common, fam: a.sp.fam, sex: a.sex, gen: a.gen, g: Genetics.toHex(a.g), world: v.planet.title, ll: v.surface.latLon(a.x, a.z), at: Date.now(), dead: null });
+    this.ver++;
     Store.save(true);
     EcoSave.save(v);
-    UI.toast(prev && !same ? `♥ ${a.name} is your favourite now (instead of ${prev.name})` : `♥ ${a.name} is your favourite creature`, 'ok');
-    UI.log(`♥ ${a.name} (${a.sp.common} #${a.id}) is now your favourite creature`, 'birth', () => v.inspect(a));
+    const n = this.list.length;
+    UI.toast(`♥ ${a.name} added to your favourites${n > 1 ? ` (${n})` : ''}`, 'ok');
+    UI.log(`♥ ${a.name} (${a.sp.common} #${a.id}) is now one of your favourite creatures`, 'birth', () => v.inspect(a));
   },
-  clear(quiet) { const f = this.d; Store.d.favorite = null; Store.save(true); if (f && !quiet) UI.toast(`${f.name} is no longer your favourite`); },
-  toggle(v, a) { if (this.is(v, a)) this.clear(); else this.set(v, a); },
-  // its last known whereabouts
-  seen(v) { const f = this.d, a = this.agentIn(v); if (!f || !a || a.state === 'dead') return; f.ll = v.surface.latLon(a.x, a.z); f.gen = a.gen; Store.save(); },
+  remove(f, quiet) {
+    const L = this.list, i = L.indexOf(f);
+    if (i < 0) return false;
+    L.splice(i, 1); this.ver++;
+    Store.save(true);
+    if (!quiet) UI.toast(`${f.name} is no longer a favourite`);
+    return true;
+  },
+  toggle(v, a) { const f = this.entryOf(v, a); if (f) this.remove(f); else this.add(v, a); },
+  // a clock reset rewinds a universe: its favourites belonged to the old timeline
+  clearUniverse(u) { const gone = this.list.filter((f) => f.u === u); for (const f of gone) this.list.splice(this.list.indexOf(f), 1); if (gone.length) { this.ver++; Store.save(true); } return gone; },
+  // their last known whereabouts
+  seen(v) {
+    let ch = false;
+    for (const a of this.agentsIn(v)) { if (a.state === 'dead') continue; const f = this.entryOf(v, a); f.ll = v.surface.latLon(a.x, a.z); f.gen = a.gen; ch = true; }
+    if (ch) Store.save();
+  },
   died(v, a, cause) {
-    const f = this.d;
-    if (!this.is(v, a) || f.dead) return;
+    const f = this.entryOf(v, a);
+    if (!f || f.dead) return;
     f.dead = { cause, t: App.t, age: a.age }; f.ll = v.surface.latLon(a.x, a.z);
     Store.save(true);
     const kin = a.kidsN ? ` — ${a.kidsN} offspring carry on its line` : '';
     UI.toast(`♥ ${a.name} has died (${DEATH_CAUSE[cause] || cause})`, 'err');
     UI.log(`♥ Your favourite ${a.sp.common}, ${a.name} #${a.id}, died of ${DEATH_CAUSE[cause] || cause} at ${fmt.dur(a.age)}${kin}`, 'death', () => v.inspect(a));
   },
-  // find it: follow it here, or travel to its world and site
-  go(app) {
-    const f = this.d;
-    if (!f) { UI.toast('No favourite yet: inspect a creature and tap ♥', 'err'); return false; }
+  status(f) { return f.dead ? `died of ${DEATH_CAUSE[f.dead.cause] || f.dead.cause}` : 'alive when last seen'; },
+  // follow one that lives in this view
+  follow(v, a) { v.inspect(a); v.follow = a; UI.toast(`Following ♥ ${a.name}`, 'ok'); },
+  // L: step through the favourites at this site; with none here, open the list of all of them
+  next(app) {
+    const v = app.view, al = this.agentsIn(v).filter((a) => a.state !== 'dead');
+    if (!al.length) { UI.openSaved('favs'); return false; }
+    const i = al.indexOf(v.follow);
+    this.follow(v, al[(i + 1) % al.length]);
+    return true;
+  },
+  // find one: follow it here, or travel to its world and site
+  go(app, f) {
+    if (!f) { this.next(app); return false; }
     const v = app.view;
     if (v.name === 'surface' && v.siteId === f.site) {
-      const a = this.agentIn(v);
-      if (a && a.state !== 'dead') { v.inspect(a); v.follow = a; UI.toast(`Following ♥ ${a.name}`, 'ok'); return true; }
+      const a = v.eco && v.eco.byId.get(f.id);
+      if (a && !a.cit && a.state !== 'dead') { this.follow(v, a); return true; }
       UI.toast(f.dead ? `${f.name} died here (${DEATH_CAUSE[f.dead.cause] || f.dead.cause})` : `${f.name} could not be found`, 'err');
       const loc = v.surface.localOf(dirOfLatLon(f.ll));
       if (loc) { v.follow = null; v.cam.goal.target = [loc[0], v.heightAt(loc[0], loc[1]), loc[1]]; }
       return false;
     }
     const addr = Codes.parse(f.code), res = addr && Codes.resolve(addr);
-    if (!res || !res.planet) { UI.toast('The favourite’s world could not be found', 'err'); return false; }
+    if (!res || !res.planet) { UI.toast(`${f.name}’s world could not be found`, 'err'); return false; }
     Store.d.universe = Universe.name;
     if (res.star.pos && !res.star.pocket) { app.views.galaxy.cam.goal.target = res.star.pos.slice(); app.views.galaxy.cam.snap(); }
-    app.seekFavorite = true;
+    app.seekFavorite = { site: f.site, id: f.id };
     app.go('surface', { planet: app.living(res.planet), dir: dirOfLatLon(f.ll), site: f.site, system: res.system });
     UI.toast(`Travelling to ♥ ${f.name} on ${f.world}`, 'ok');
     return true;
   },
-  portrait(size) { const f = this.d; if (!f) return null; return Portraits.el('fav:' + f.site + ':' + f.id, Genetics.express(Genetics.fromHex(f.g), f.fam), size); },
+  portrait(f, size) { return Portraits.el('fav:' + f.site + ':' + f.id, Genetics.express(Genetics.fromHex(f.g), f.fam), size); },
+  // saves from before multiple favourites kept a single one: it becomes the first of the list
+  migrate(d) {
+    if (!Array.isArray(d.favorites)) d.favorites = [];
+    const o = d.favorite;
+    if (o && typeof o === 'object' && o.site != null && o.id != null && typeof o.g === 'string') {
+      if (!d.favorites.some((f) => f.site === o.site && f.id === o.id)) d.favorites.unshift(Object.assign({ dead: null, at: Date.now() }, o));
+    }
+    delete d.favorite;
+    d.favorites = d.favorites.filter((f) => f && f.site != null && f.id != null && typeof f.g === 'string' && typeof f.code === 'string' && Array.isArray(f.ll));
+  },
 };
 </script>
 
@@ -7902,6 +8601,9 @@ class PlanetView {
       this.body = planet.original || planet; this.civT = 99; this.sites = []; this.civI = null; this.arcs = []; this.battles = []; this.voy = []; this.fleets = [];
       this.moonQueue = this.moons.slice();
       this.site = null;
+      // the world's weather, mapped at low resolution (refreshed a few rows per frame)
+      this.wx = !planet.isGiant && planet.clouds ? new Meteo.WxMap(planet, q === 'low' ? 64 : 96, q === 'low' ? 32 : 48) : null;
+      this.wxWait = 0; this.wxFlash = [];
       this.cam.goal.dist = planet.rings ? 6.2 : 4.1; this.cam.snap(); this.cam.cur.dist *= 1.8;
       // face the lit hemisphere
       const s = planet.sunDirWorld(this.app.t);
@@ -7918,12 +8620,36 @@ class PlanetView {
     const key = Ecology.community(p, t).map((s) => s.code).join('|');
     if (force || key !== this.lifeKey) { this.community = Ecology.community(p, t); if (this.lifeKey && key !== this.lifeKey && !force) this.app.ui.log(`Evolution on ${p.title}: the biosphere has changed`, 'evolve'); this.lifeKey = key; if (!force) this.app.ui.panelFor(this, true); }
   }
+  uploadWx() {
+    const gl = this.app.R.gl, W = this.wx;
+    if (!this.wxTex) {
+      this.wxTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.wxTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.wxTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, W.W, W.H, 0, gl.RGBA, gl.UNSIGNED_BYTE, W.data);
+    this.wxTexFor = this.planet;
+  }
   setSite(dir) {
     const p = this.planet, o = {};
     p.sample(dir[0], dir[1], dir[2], o);
     this.site = { dir: V3.norm(dir), s: o, lat: Math.asin(clamp(dir[1], -1, 1)) * 180 / Math.PI, lon: Math.atan2(dir[0], dir[2]) * 180 / Math.PI };
   }
   update(dt) {
+    // the weather map: a new pass whenever the clock has moved on (time-sliced so it never stalls a frame)
+    if (this.wx) {
+      this.wxWait -= dt;
+      if (this.wx.row > 0 || this.wx.ready < this.wx.H || (this.wxWait <= 0 && Math.abs(this.app.t - (this.wx.t == null ? -1e9 : this.wx.t)) > 12)) {
+        if (this.wx.refresh(this.app.t, this.app.mobile ? 2.5 : 4)) { this.wxWait = 1.5; this.uploadWx(); }
+      }
+      // lightning flickering in the storm cells
+      this.wxFlash = this.wxFlash.filter((f) => (f.k -= dt * 6) > 0);
+      if (this.wx.t != null && Math.random() < dt * 12) {
+        const W = this.wx, i = Math.floor(Math.random() * W.W * W.H);
+        if (W.data[i * 4 + 2] > 120) { const s = W.sites[i]; if (s) this.wxFlash.push({ d: s.d, k: 1 }); }
+      }
+    }
     if (this.moonQueue && this.moonQueue.length) { const m = this.moonQueue.shift(); if (!m.p.isGiant) { let w = m.p; try { w = Civ.worldOf(m.p, this.app.t); } catch (e) { w = m.p; } m.mesh = buildGlobe(w, 16); } }
     this.civT += dt; if (this.civT > 4 || Math.abs(this.app.t - (this.civAt || 0)) > 120) { this.civT = 0; this.refreshCiv(); }
     if (this.app.autopilot) this.cam.goal.yaw += dt * 0.08;
@@ -7997,9 +8723,21 @@ class PlanetView {
       GFX.setAll(P, { uModel: model, uBio: p.life.has ? 1 : 0, uBioCol: p.flora.glow, uSpec: 1, uOutline: 0.9 });
       this.globe.draw();
       if (p.clouds) {
-        const C = R.frame(R.P.clouds, cam, env);
-        GFX.setAll(C, { uModel: modelTRS(0, 0, 0, 1 + p.terrain.relief + 0.012, p.tilt, spin), uCover: p.clouds.cover, uRot: (t * 0.004) % TAU, uSeed: (p.seed % 1000) / 37, uCloudCol: p.clouds.color, uTime: T });
+        const C = R.frame(R.P.clouds, cam, env), on = this.wx && this.wxTex && this.wxTexFor === p && this.wx.t != null;
+        const cyc = on ? this.wx.stats.cyclones.slice(0, 4) : [], cu = new Float32Array(16);
+        cyc.forEach((c, i) => { cu[i * 4] = c.lat; cu[i * 4 + 1] = c.lon; cu[i * 4 + 2] = c.R; cu[i * 4 + 3] = c.int * c.hemi; });
+        if (on) { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.wxTex); gl.activeTexture(gl.TEXTURE0); }
+        GFX.setAll(C, { uModel: modelTRS(0, 0, 0, 1 + p.terrain.relief + 0.012, p.tilt, spin), uCover: p.clouds.cover, uRot: on ? 0 : (t * 0.004) % TAU, uSeed: (p.seed % 1000) / 37, uCloudCol: p.clouds.color, uTime: T, uWx: 3, uWxOn: on ? 1 : 0, uCyc: cu, uCycN: cyc.length });
         R.sphereMesh.draw();
+        // lightning in the storm cells
+        if (this.wxFlash.length) {
+          const fp = this.wxPts || (this.wxPts = new GFX.Stream(64, gl.POINTS)); fp.reset();
+          for (const f of this.wxFlash) { const w = p.toWorld(f.d, t); fp.push(...V3.scale(w, 1 + p.terrain.relief + 0.02), 0.85, 0.9, 1, f.k, 0.035, 0, 0); }
+          gl.depthMask(false); R.blend('add');
+          const PP = GFX.use(R.P.points); GFX.setAll(PP, { uVP: cam.vp, uScale: R.cssH * 0.5 * (cam.proj ? cam.proj[5] : 1), uTime: T, uMin: 2, uMax: 9, uMode: 1 });
+          fp.upload(); fp.draw();
+          R.blend('none'); gl.depthMask(true);
+        }
       }
     }
     if (p.rings) {
@@ -8135,6 +8873,13 @@ class PlanetView {
     for (const m of this.moons) {
       const pos = this.moonPos(m, t), p = this.cam.project(pos, R.cssW, R.cssH);
       if (p.visible && V3.dot(pos, V3.norm(this.cam.pos)) > -0.3) L.add(p.x, p.y + 14, m.p.title, 'lbl-moon');
+    }
+    // tropical cyclones in progress
+    if (this.wx && this.wx.stats) for (const c of this.wx.stats.cyclones) {
+      const w = this.planet.toWorld(c.dir, t);
+      if (V3.dot(w, V3.norm(this.cam.pos)) < 0.2) continue;
+      const pr = this.cam.project(V3.scale(w, 1.04), R.cssW, R.cssH);
+      if (pr.visible) L.add(pr.x, pr.y - 14, `${c.title}${c.cat ? ' · cat. ' + c.cat : ''}`, 'lbl-storm');
     }
     if (this.sites && this.sites.length) {
       const camDir = V3.norm(this.cam.pos), near = this.cam.cur.dist < 2.6;
@@ -8276,20 +9021,27 @@ class SurfaceView {
     this.selected = null; this.follow = null; this.poi = null;
     this.app.store.visit(Codes.ofPlanet(planet), planet);
     if (this.restored) this.app.ui.log(`Back at a known site: ${this.restored} creatures remembered from your last visit`, 'evolve');
-    // arriving to see the favourite creature
-    if (this.app.seekFavorite) {
-      this.app.seekFavorite = false;
-      const a = Favorite.agentIn(this), f = Favorite.d;
-      if (a && a.state !== 'dead') { this.selected = a; this.follow = a; this.cam.goal.target = [a.x, a.y, a.z]; this.cam.snap(); this.cam.cur.dist = 22; }
+    // arriving to see a favourite creature
+    const seek = this.app.seekFavorite;
+    if (seek) {
+      this.app.seekFavorite = null;
+      const f = Favorite.find(seek.site, seek.id), a = this.siteId === seek.site ? this.eco.byId.get(seek.id) : null;
+      if (a && !a.cit && a.state !== 'dead') { this.selected = a; this.follow = a; this.cam.goal.target = [a.x, a.y, a.z]; this.cam.snap(); this.cam.cur.dist = 22; }
       else if (f) this.app.ui.toast(f.dead ? `${f.name} died here (${DEATH_CAUSE[f.dead.cause] || f.dead.cause})` : `${f.name} could not be found at its site`, 'err');
     }
     this.app.ui.panelFor(this);
   }
-  exit() { this.dispose(); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); this.app.ui.markers.hide('fav'); this.app.ui.favEdge(null); }
+  exit() { this.dispose(); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); this.favMarks(null); this.app.ui.favEdge(null); }
+  // heart markers over the favourites on screen (one per creature; the unused ones are hidden)
+  favMarks(on) {
+    const M = this.app.ui.markers, prev = this._favMk || new Set();
+    for (const k of prev) if (!on || !on.has(k)) M.hide(k);
+    this._favMk = on;
+  }
   dispose() {
     if (this.eco) { try { EcoSave.save(this); } catch (e) { console.warn(e); } }
     for (const ch of this.chunks.values()) this.freeChunk(ch);
-    this.chunks.clear(); this._lc = null; this.drawn = null; this.queue = []; this.eco = null; this.civ = null; this.cities = []; this.domes = [];
+    this.chunks.clear(); this._lc = null; this.drawn = null; this.queue = []; this.eco = null; this.civ = null; this.cities = []; this.domes = []; this.weather = null; this.meteo = null;
   }
   freeChunk(ch) { if (ch.air) return; if (ch.gCity) ch.gCity.dispose(); if (ch.gTerrain) ch.gTerrain.dispose(); if (ch.gWater) ch.gWater.dispose(); if (ch.gFlora) ch.gFlora.dispose(); }
   genChunk(cx, cz) {
@@ -8328,14 +9080,22 @@ class SurfaceView {
     if (!ch || ch.air) return -1e9;
     const fx = x - ch.x0 + 1, fz = z - ch.z0 + 1, i = Math.floor(fx), j = Math.floor(fz), M = ch.M, k = j * M + i;
     const a = ch.W[k], b = ch.W[k + 1], c = ch.W[k + M], d = ch.W[k + M + 1];
-    if (a < -1e8 || b < -1e8 || c < -1e8 || d < -1e8) return fx - i < 0.5 ? (fz - j < 0.5 ? a : c) : (fz - j < 0.5 ? b : d);
-    return Surface.interp(ch, ch.W, x, z);
+    let w;
+    if (a < -1e8 || b < -1e8 || c < -1e8 || d < -1e8) w = fx - i < 0.5 ? (fz - j < 0.5 ? a : c) : (fz - j < 0.5 ? b : d);
+    else w = Surface.interp(ch, ch.W, x, z);
+    // the open sea rises and falls with the tides (lakes and rivers do not)
+    const td = this.weather ? this.weather.tide : 0;
+    return td && w > -0.02 && w < 0.02 ? w + td : w;
   }
+  // how much higher the sea can still rise with the tide (creatures settling by the shore keep above it)
+  tideRise() { const w = this.weather, C = w && w.climate; return C && C.tideAmp ? Math.max(0, C.tideAmp - w.tide) + 0.05 : 0; }
   biomeAt(x, z) { if (this.gas) return B.CLOUDS; const ch = this.chunkAt(x, z); if (!ch) return B.BARREN; return ch.B[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
   frozenAt(x, z) { const ch = this.chunkAt(x, z); if (!ch || ch.air) return 0; return ch.F[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
   // how much a river runs through this spot (0 = none): streams and rivers are heard, lakes are not
   riverAt(x, z) { const ch = this.chunkAt(x, z); if (!ch || !ch.Rv) return 0; return ch.Rv[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
-  tempAt(x, z) { if (this.gas) return this.planet.tempC; const ch = this.chunkAt(x, z); if (!ch) return 0; return ch.T[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
+  // the ground's climatological temperature, and the actual one (season, hour and passing weather included)
+  baseTempAt(x, z) { if (this.gas) return this.planet.tempC; const ch = this.chunkAt(x, z); if (!ch) return 0; return ch.T[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
+  tempAt(x, z) { return this.baseTempAt(x, z) + (this.weather && !this.gas ? this.weather.dT : 0); }
   viewExtent() { const c = this.cam.cur, hw = c.dist * this.app.R.aspect, hh = c.dist / Math.max(0.3, Math.sin(c.pitch)); return Math.hypot(hw, hh); }
   // terrain chunks being drawn this frame: together they are the rendered area
   drawnChunks() {
@@ -8555,9 +9315,21 @@ class SurfaceView {
     const tf = this.civ && this.civ.terra;
     if (tf) env.fogCol = Color.mix(env.fogCol, [0.55, 0.7, 0.9], 0.35 * clamp((t - tf.start) / (tf.end - tf.start), 0, 1) * (1 - env.night * 0.7));
     this.weather.update(Clock.paused ? 0 : Math.min(dt, 0.1), env);
-    // storm skies are dark, and lightning lights up the whole scene for an instant
-    const wx = this.weather;
-    if (wx.storm > 0) { env.fogCol = Color.mix(env.fogCol, [0.16, 0.18, 0.23], 0.45 * wx.storm); env.lightCol = Color.mul(env.lightCol, 1 - 0.35 * wx.storm); }
+    // the weather colours the scene: cloud dims the light, storms darken the sky, fog, dust and ash thicken
+    // the air, auroras glow over the night side, and lightning lights up everything for an instant
+    const wx = this.weather, S = wx.S;
+    if (S && !this.gas) {
+      const day = 1 - env.night;
+      env.lightCol = Color.mul(env.lightCol, 1 - 0.3 * S.cloud - 0.28 * S.storm);
+      env.fogCol = Color.mix(env.fogCol, Color.mix([0.1, 0.11, 0.15], [0.5, 0.53, 0.58], day), 0.3 * S.cloud + 0.35 * S.storm);
+      if (S.fog > 0.02) env.fogCol = Color.mix(env.fogCol, Color.mix([0.16, 0.17, 0.22], [0.78, 0.8, 0.84], day), 0.65 * S.fog);
+      if (S.dust > 0.02) { env.fogCol = Color.mix(env.fogCol, Color.mul([0.78, 0.6, 0.4], 0.35 + 0.65 * day), 0.75 * S.dust); env.lightCol = Color.mix(env.lightCol, [env.lightCol[0], env.lightCol[1] * 0.82, env.lightCol[2] * 0.62], S.dust); }
+      if (S.ash > 0.02) { env.fogCol = Color.mix(env.fogCol, [0.28, 0.26, 0.26], 0.6 * S.ash); env.lightCol = Color.mul(env.lightCol, 1 - 0.35 * S.ash); }
+      if (S.aurora > 0.05) env.amb = Color.mix(env.amb, [0.3, 0.75, 0.5], 0.25 * S.aurora * env.night);
+      // cloud shadows drift with the wind
+      this.cloudOff = this.cloudOff || [0, 0];
+      this.cloudOff[0] += wx.wind[0] * dt * 0.02 * (Clock.paused ? 0 : Math.min(Clock.speed, 30)); this.cloudOff[1] += wx.wind[1] * dt * 0.02 * (Clock.paused ? 0 : Math.min(Clock.speed, 30));
+    }
     if (wx.flash) { const k = wx.flash.k * (0.35 + 0.65 * wx.flash.near); env.amb = Color.mix(env.amb, [0.86, 0.9, 1], 0.6 * k); env.fogCol = Color.mix(env.fogCol, [0.7, 0.75, 0.9], 0.35 * k); }
     this.lifeT = (this.lifeT || 0) + dt;
     if (this.lifeT > 15) {
@@ -8587,6 +9359,19 @@ class SurfaceView {
     if (this.saveT > 20) { this.saveT = 0; try { EcoSave.save(this); } catch (e) { console.warn(e); } }
   }
   onScreen(a) { return this.visible(a.x, a.y, a.z, 0); }
+  // vegetation follows the seasons and the rain: autumn colours, winter dormancy, spring green, drought
+  floraTint() {
+    const W = this.weather.raw;
+    if (!W || this.gas) return { c: [1, 1, 1], k: 0 };
+    const tg = this.cam.cur.target, T = this.tempAt(tg[0], tg[2]), se = W.season ? W.season.name : '';
+    let c = [1, 1, 1], k = 0;
+    if (se === 'autumn' && T < 20 && T > -3) { c = [1.32, 0.8, 0.42]; k = 0.55 * smoothstep(21, 9, T); }
+    else if (se === 'winter' && T < 5) { c = [0.86, 0.84, 0.78]; k = 0.45 * smoothstep(5, -5, T); }
+    else if (se === 'spring' && T > 3) { c = [0.94, 1.14, 0.9]; k = 0.28; }
+    const drought = (1 - this.weather.wet) * smoothstep(27, 40, T) * (1 - clamp((W.hum || 0) * 1.3, 0, 1));
+    if (drought > 0.15) { c = Color.mix(c, [1.18, 1.0, 0.58], drought); k = Math.max(k, 0.5 * drought); }
+    return { c, k };
+  }
   // something plunged into the water (a fishing bird): spray, and its sound when close enough to hear
   onSplash(x, y, z, size) {
     if (!this.weather || !this.visible(x, y, z, 4)) return;
@@ -8601,7 +9386,9 @@ class SurfaceView {
   render(R) {
     const gl = R.gl, cam = this.cam.compute(R.aspect), env = this.env || this.lighting(), gas = this.gas, t = this.app.t;
     const tg = this.cam.cur.target, ext = this.viewExtent();
-    env.fogC = tg; env.fogMask = [1, 0, 1]; env.fog = gas ? [ext * 1.3, ext * 1.7 + 30] : [ext * 1.05, ext * 1.25 + 20];
+    // visibility closes in with fog, heavy rain, snow, dust and ash
+    const seeing = this.weather.vis;
+    env.fogC = tg; env.fogMask = [1, 0, 1]; env.fog = gas ? [ext * 1.3, ext * 1.7 + 30] : [ext * (0.12 + 0.93 * seeing), ext * (0.38 + 0.87 * seeing) + 20 * seeing];
     if (gas && gas.flash) env.amb = Color.mix(env.amb, [0.9, 0.93, 1], gas.flash.k * 0.45);
     R.begin(env.fogCol);
     const wind = this.weather.wind, vis = [...this.drawnChunks()], visible = (x, y, z, pad) => this.visible(x, y, z, pad);
@@ -8609,12 +9396,14 @@ class SurfaceView {
     else {
       // terrain + flora
       const P = R.frame(R.P.lit, cam, env);
-      GFX.setAll(P, { uModel: M4.create(), uTex: 1, uOutline: 0.38, uWind: [0, 0] });
+      // what the weather left on the ground: snow, wet earth, ash; and the shadows of passing clouds
+      const W = this.weather, S = W.S || {}, grnd = { uSnow: W.snow, uWet: W.wet, uAsh: W.ash, uCloud: (S.cloud || 0) * (1 - env.night) * 0.85, uCloudOff: this.cloudOff || [0, 0], uTintK: 0 };
+      GFX.setAll(P, Object.assign({ uModel: M4.create(), uTex: 1, uOutline: 0.38, uWind: [0, 0] }, grnd));
       for (const ch of vis) ch.gTerrain.draw();
-      const wm = Math.min(1, 1.6 / Math.max(1e-3, Math.hypot(wind[0], wind[1])));
-      GFX.setAll(P, { uTex: 0, uOutline: 0.75, uWind: [wind[0] * 0.3 * wm, wind[1] * 0.3 * wm] });
+      const wm = Math.min(1, 1.6 / Math.max(1e-3, Math.hypot(wind[0], wind[1]))), tint = this.floraTint();
+      GFX.setAll(P, { uTex: 0, uOutline: 0.75, uWind: [wind[0] * 0.3 * wm, wind[1] * 0.3 * wm], uTint: tint.c, uTintK: tint.k });
       for (const ch of vis) if (ch.gFlora) ch.gFlora.draw();
-      GFX.set(P, 'uWind', [0, 0]);
+      GFX.setAll(P, { uWind: [0, 0], uTintK: 0, uWet: 0 });
       for (const ch of vis) if (ch.gCity) ch.gCity.draw();
     }
     // creatures (and, in open air, the cloud formations they drift between)
@@ -8643,7 +9432,9 @@ class SurfaceView {
       R.blend('alpha');
       const P = R.frame(R.P.water, cam, env);
       const pal = this.planet.pal, lq = this.planet.liquid;
-      GFX.setAll(P, { uShallow: pal.shallow, uDeep: pal.deep, uFoam: lq === 'acid' ? [0.95, 1, 0.7] : lq === 'methane' ? [1, 0.85, 0.6] : [0.92, 0.97, 1], uLiquid: lq === 'lava' ? 1 : 0, uTime: this.app.anim });
+      const WS = this.weather.S || {};
+      GFX.setAll(P, { uShallow: pal.shallow, uDeep: pal.deep, uFoam: lq === 'acid' ? [0.95, 1, 0.7] : lq === 'methane' ? [1, 0.85, 0.6] : [0.92, 0.97, 1], uLiquid: lq === 'lava' ? 1 : 0, uTime: this.app.anim,
+        uTide: this.weather.tide || 0, uRough: clamp(Math.hypot(this.weather.wind[0], this.weather.wind[1]) / 2.6, 0, 1), uRain: (WS.precip || 0) * (1 - (WS.snowFrac || 0)) });
       for (const ch of vis) if (ch.gWater) ch.gWater.draw();
       R.blend('none');
     }
@@ -8699,18 +9490,23 @@ class SurfaceView {
       this.app.ui.markers.set('sel', p.x, p.y - 10, p.visible, 'arrow');
       L.add(p.x, p.y - 26, `${Favorite.is(this, a) ? '♥ ' : ''}${a.name} · ${a.sp.common}`, 'lbl-sel');
     } else this.app.ui.markers.hide('sel');
-    // the favourite creature: a heart over it on screen, an arrow at the screen edge when it is elsewhere
-    const fav = Favorite.agentIn(this);
-    if (fav && fav.state !== 'dead') {
-      const al = this.alpha == null ? 1 : this.alpha, top = (fav.P.legL || 0) * fav.grow + fav.P.bodyH * fav.grow + 0.4;
-      const p = this.cam.project([lerp(fav.ox, fav.x, al), lerp(fav.oy, fav.y, al) + top, lerp(fav.oz, fav.z, al)], R.cssW, R.cssH);
-      const on = fav.active && p.w > 0 && p.x > 0 && p.y > 0 && p.x < R.cssW && p.y < R.cssH;
-      const sel = fav === this.selected;
-      this.app.ui.markers.set('fav', p.x, p.y - (sel ? 40 : 12), on, 'fav');
-      if (on && !sel) L.add(p.x, p.y - 30, `♥ ${fav.name}`, 'lbl-fav');
-      const tg = this.cam.cur.target;
-      this.app.ui.favEdge(on ? null : { x: p.x, y: p.y, name: fav.name, d: Math.hypot(fav.x - tg[0], fav.z - tg[2]) });
-    } else { this.app.ui.markers.hide('fav'); this.app.ui.favEdge(null); }
+    // favourite creatures: a heart over each one on screen, arrows at the screen edge to the nearest ones elsewhere
+    const favs = Favorite.agentsIn(this);
+    if (favs.length) {
+      const al = this.alpha == null ? 1 : this.alpha, tg = this.cam.cur.target, marks = new Set(), away = [];
+      for (const fav of favs) {
+        if (fav.state === 'dead') continue;
+        const top = (fav.P.legL || 0) * fav.grow + fav.P.bodyH * fav.grow + 0.4;
+        const p = this.cam.project([lerp(fav.ox, fav.x, al), lerp(fav.oy, fav.y, al) + top, lerp(fav.oz, fav.z, al)], R.cssW, R.cssH);
+        const on = fav.active && p.w > 0 && p.x > 0 && p.y > 0 && p.x < R.cssW && p.y < R.cssH;
+        const sel = fav === this.selected, mk = 'fav:' + fav.id;
+        if (on) { this.app.ui.markers.set(mk, p.x, p.y - (sel ? 40 : 12), true, 'fav'); marks.add(mk); if (!sel) L.add(p.x, p.y - 30, `♥ ${fav.name}`, 'lbl-fav'); }
+        else away.push({ x: p.x, y: p.y, name: fav.name, d: Math.hypot(fav.x - tg[0], fav.z - tg[2]), a: fav });
+      }
+      this.favMarks(marks);
+      away.sort((a, b) => a.d - b.d);
+      this.app.ui.favEdge(away.length ? away.slice(0, this.app.mobile ? 2 : 3) : null);
+    } else { this.favMarks(null); this.app.ui.favEdge(null); }
     if (this.poi) { const p = this.cam.project([this.poi.x, this.poi.y + 2, this.poi.z], R.cssW, R.cssH); this.app.ui.markers.set('poi', p.x, p.y, p.visible, 'arrow'); }
     else this.app.ui.markers.hide('poi');
     for (const c of this.cities) {
@@ -8762,23 +9558,72 @@ class SurfaceView {
    WEATHER & AMBIENT PARTICLES (surface)
    ============================================================================= */
 class Weather {
+  // the sky over a surface site, driven by the planet's weather engine (Meteo): a smoothed local state,
+  // what it leaves behind on the ground (snow, wet ground, ash), tides, local vortices (tornadoes,
+  // dust devils), lightning, and all the particles. On gas giants the open atmosphere keeps its own sky.
   constructor(view) {
     this.view = view; const gl = view.app.R.gl;
-    this.pts = new GFX.Stream(2400, gl.POINTS); this.lines = new GFX.Stream(2400, gl.LINES);
-    this.N = 700; this.p = new Float32Array(this.N * 4);
+    this.pts = new GFX.Stream(4200, gl.POINTS); this.lines = new GFX.Stream(3600, gl.LINES);
+    this.N = 1100; this.p = new Float32Array(this.N * 4);
     const r = new RNG.Rand(12345);
     for (let i = 0; i < this.N; i++) { this.p[i * 4] = r.range(-1, 1); this.p[i * 4 + 1] = r.next(); this.p[i * 4 + 2] = r.range(-1, 1); this.p[i * 4 + 3] = r.next(); }
     this.wind = [0.5, 0.2]; this.kind = null; this.intensity = 0; this.flies = [];
     this.n = new Noise.Simplex(RNG.hash(view.planet.seed, 'weather'));
     this.puffs = []; this.drops = [];
+    this.storm = 0; this.hurricane = 0; this.flash = null;
+    this.S = null; this.raw = null; this.sampleT = 0; this.lastT = null;
+    this.snow = 0; this.wet = 0; this.ash = 0; this.tide = 0; this.dT = 0; this.vis = 1; this.cells = []; this.cellT = 0;
+    this.climate = view.gas ? null : Climate.of(view.planet);
   }
   label() {
-    if (this.hurricane > 0.3) return 'Hurricane';
-    if (this.storm > 0.35) return 'Thunderstorm';
-    if (!this.kind || this.intensity <= 0.05) return 'Clear';
-    return cap(this.kind === 'dust' && this.intensity > 0.6 ? 'dust storm' : this.kind);
+    if (this.view.gas) {
+      if (this.hurricane > 0.3) return 'Hurricane';
+      if (this.storm > 0.35) return 'Thunderstorm';
+      return this.kind === 'rain' && this.intensity > 0.05 ? 'Rain' : 'Open sky';
+    }
+    const W = this.raw;
+    if (!W) return 'Clear';
+    if (this.cells.some((c) => c.kind === 'tornado' && c.d < 60)) return 'Tornado';
+    return W.label;
   }
-  // a jagged bolt from the clouds down to the ground
+  // the place under the camera, as the weather engine sees it (the surface's own ground, not the coarse globe)
+  site() {
+    const v = this.view, S = v.surface, tg = v.cam.cur.target, d = S.dirAt(tg[0], tg[2]), f = S.fields(tg[0], tg[2], []);
+    const b = v.biomeAt(tg[0], tg[2]), dep = v.waterAt(tg[0], tg[2]) - v.heightAt(tg[0], tg[2]);
+    return { d, lat: Math.asin(clamp(d[1], -1, 1)), lon: Math.atan2(d[0], d[2]), e: f[0], t: v.baseTempAt(tg[0], tg[2]), m: f[2], b, sea: dep > 1.2 && !v.frozenAt(tg[0], tg[2]), ice: b === B.ICESHEET, dry: Climate.DRY[b] || 0, veg: BIOMES[b].prod };
+  }
+  // what the recent past left on the ground: integrate the last hours (on arrival, or after a jump in time)
+  spinUp(t) {
+    const v = this.view, site = this.site();
+    this.snow = 0; this.wet = 0; this.ash = 0;
+    for (let i = 12; i >= 1; i--) { const w = Meteo.at(v.planet, site.d, t - i * 900, site); this.accumulate(w, 900); }
+  }
+  accumulate(W, gdt) {
+    const k = gdt / 600, melt = Math.max(0, W.temp - 0.5) * 0.07 + Math.max(0, W.sun) * 0.03 * (W.temp > -3 ? 1 : 0.2);
+    this.snow = clamp(this.snow + (W.precip * W.snowFrac * 0.9 - melt * (1 - W.snowFrac)) * k, 0, 1);
+    this.wet = clamp(this.wet + (W.precip * (1 - W.snowFrac) * 1.6 - (0.12 + Math.max(0, W.temp) * 0.012 + Math.max(0, W.sun) * 0.1) * (1 - W.precip)) * k, 0, 1);
+    this.ash = clamp(this.ash + (W.ash * 0.8 - 0.04 - W.precip * 0.3) * k, 0, 1);
+  }
+  // deterministic local vortices near the observer: tornadoes from supercells, dust devils on hot plains
+  vortices(t) {
+    const v = this.view, S = this.S, tg = v.cam.cur.target, seed = v.eco ? v.eco.seed : 1, out = [], wx = this.wind[0], wz = this.wind[1], wl = Math.hypot(wx, wz) || 1;
+    const spawn = (kind, G, SLOT, pr, life0, life1, speed) => {
+      if (pr < 0.004) return;
+      const gx = Math.floor(tg[0] / G), gz = Math.floor(tg[2] / G), k1 = Math.floor(t / SLOT);
+      for (let cx = gx - 1; cx <= gx + 1; cx++) for (let cz = gz - 1; cz <= gz + 1; cz++) for (let k = k1 - 2; k <= k1; k++) {
+        const h = RNG.hash(seed, kind === 'tornado' ? 811 : 823, cx, cz, k), r = new RNG.Rand(h);
+        if (r.next() > pr) continue;
+        const t0 = (k + r.next()) * SLOT, life = r.range(life0, life1);
+        if (t < t0 || t > t0 + life) continue;
+        const age = (t - t0) / life, x0 = (cx + r.next()) * G, z0 = (cz + r.next()) * G, hd = Math.atan2(wz, wx) + r.range(-0.6, 0.6), sp = speed * r.range(0.6, 1.4), el = t - t0;
+        const x = x0 + Math.cos(hd) * sp * el + Math.sin(el * 0.21 + h) * 3, z = z0 + Math.sin(hd) * sp * el + Math.cos(el * 0.17 + h) * 3;
+        out.push({ kind, x, z, int: smoothstep(0, 0.12, age) * (1 - smoothstep(0.82, 1, age)), size: r.range(0.8, 1.3), d: Math.hypot(x - tg[0], z - tg[2]), id: h });
+      }
+    };
+    spawn('tornado', 180, 150, S.tornado * 0.5, 70, 190, 1.8);
+    spawn('devil', 50, 40, S.devil * 0.35, 18, 45, 0.6 + wl * 0.3);
+    return out;
+  }
   bolt(x, z) {
     const v = this.view, g = Math.max(v.heightAt(x, z), v.waterAt(x, z)), top = g + 34, pts = [[x, top, z]];
     let px = x, pz = z;
@@ -8793,47 +9638,65 @@ class Weather {
       this.drops.push([x, y + 0.1, z, Math.cos(a) * sp, 2.5 + Math.random() * 3.5 * (0.6 + size * 0.4), Math.sin(a) * sp, 0]);
     }
   }
+  updateGiant(dt, v, t, tg) {
+    const w = v.gas.windAt(tg[0], tg[2]), k = 0.8;
+    this.wind = [w[0] * k, w[1] * k];
+    this.kind = v.gas.here > 0.4 ? 'rain' : 'mist';
+    this.intensity = this.kind === 'rain' ? clamp(v.gas.here * 1.2, 0, 1) : smoothstep(0.1, 0.55, this.n.n2(t / 1200, 1.7) + 0.5);
+    this.storm = 0; this.hurricane = 0;
+  }
   update(dt, env) {
     const v = this.view, p = v.planet, t = v.app.t, tg = v.cam.cur.target;
-    const w = this.n.n2(t / 900, 3.3) , w2 = this.n.n2(t / 700 + 11, 7.7);
-    this.wind = [Math.cos(w2 * 3) * (0.4 + 0.6 * Math.abs(w)), Math.sin(w2 * 3) * (0.4 + 0.6 * Math.abs(w))];
-    const b = v.biomeAt(tg[0], tg[2]), temp = v.tempAt(tg[0], tg[2]);
-    let kind = null;
-    const T = p.type;
-    if (p.isGiant) kind = v.gas && v.gas.here > 0.4 ? 'rain' : 'mist';
-    else if (T === 'lava') kind = 'embers';
-    else if (T === 'fungal' || (T === 'toxic' && p.life.has)) kind = 'spores';
-    else if (T === 'toxic') kind = 'ash';
-    else if (p.kind === 'rocky' && p.pressure < 0.05) kind = null;
-    else if (b === B.DESERT || b === B.SALT || b === B.BARREN) kind = 'dust';
-    else if (temp < -1) kind = 'snow';
-    else if (p.liquid && p.clouds) kind = 'rain';
-    let inten = kind ? smoothstep(0.1, 0.55, this.n.n2(t / 1200, 1.7) + (kind === 'embers' || kind === 'spores' || kind === 'mist' ? 0.5 : 0)) : 0;
-    if (v.gas) {
-      // the jet stream and the storm's vortex carry everything in the air
-      const w = v.gas.windAt(tg[0], tg[2]), k = 0.8;
-      this.wind = [w[0] * k, w[1] * k];
-      if (kind === 'rain') inten = clamp(v.gas.here * 1.2, 0, 1);
-    }
-    // severe weather: thunderstorms where heavy rain meets warm air, and now and then a hurricane
-    // over warm oceans (rare, long-lived, with howling winds)
-    let storm = 0, hurricane = 0;
-    if (kind === 'rain' && !p.isGiant) {
-      const warm = smoothstep(2, 18, temp), wetW = T === 'ocean' || T === 'jungle' ? 1 : 0.75;
-      storm = smoothstep(0.6, 0.95, inten) * (0.35 + 0.65 * warm) * wetW;
-      if (T === 'ocean' || T === 'jungle' || T === 'terran') hurricane = smoothstep(0.62, 0.85, this.n.n2(t / 5200, 21.3)) * smoothstep(14, 24, temp) * (T === 'ocean' ? 1 : 0.7);
-      if (hurricane > 0.01) { inten = Math.max(inten, 0.55 + 0.45 * hurricane); storm = Math.max(storm, hurricane); }
-    }
-    this.storm = storm; this.hurricane = hurricane;
-    if (storm > 0) { const k = 1 + storm * 0.8 + hurricane * 2.2; this.wind = [this.wind[0] * k, this.wind[1] * k]; }
-    this.kind = kind; this.intensity = inten;
     this.dt = dt;
-    // lightning: the flash lights the land, the thunder follows (sooner and louder the closer the strike)
-    if (this.flash) { this.flash.k *= Math.exp(-dt * 6); if (this.flash.k < 0.02) this.flash = null; }
-    if (storm > 0.25 && dt > 0 && Math.random() < dt * (0.05 + 0.3 * storm)) {
-      const ext = v.viewExtent(), a = Math.random() * TAU, d = ext * (0.25 + Math.random() * 2.3), x = tg[0] + Math.cos(a) * d, z = tg[2] + Math.sin(a) * d;
-      this.flash = { x, z, k: 1, near: clamp(1.3 - d / ext, 0.15, 1), bolt: d < ext * 1.4 ? this.bolt(x, z) : null };
-      if (Sound.thunder) Sound.thunder(v, d / ext, storm, x, z);
+    if (v.gas) this.updateGiant(dt, v, t, tg);
+    else {
+      // sample the weather engine a few times a second (and at once after a jump in time)
+      this.sampleT -= dt;
+      const jumped = this.lastT == null || t < this.lastT - 1 || t - this.lastT > 1800;
+      if (this.sampleT <= 0 || jumped || !this.raw) {
+        this.sampleT = 0.25;
+        const site = this.site(), W = Meteo.at(p, site.d, t, site);
+        if (jumped) { this.spinUp(t); this.S = null; }
+        else this.accumulate(W, clamp(t - this.lastT, 0, 1800));
+        this.lastT = t; this.raw = W;
+        this.dT = W.temp - site.t;
+      }
+      const W = this.raw, K = ['cloud', 'precip', 'snowFrac', 'storm', 'hail', 'fog', 'dust', 'devil', 'tornado', 'windstorm', 'ash', 'aurora', 'vis', 'hum', 'lightning', 'we', 'wn', 'haze', 'heatWave', 'coldSnap'];
+      if (!this.S) { this.S = {}; for (const k of K) this.S[k] = W[k] || 0; }
+      const S = this.S, a = damp(1.2, dt);
+      for (const k of K) S[k] += ((W[k] || 0) - S[k]) * a;
+      // the surface frame is east (+x) / south (+z)
+      this.wind = [S.we * 0.8, -S.wn * 0.8];
+      this.storm = S.storm; this.hurricane = W.cyclone ? W.cyclone.int * smoothstep(1.1, 0.2, W.cyclone.x) : 0;
+      this.vis = S.vis;
+      this.tide = (W.tide || 0) + (W.cyclone ? W.cyclone.int * W.cyclone.wall * 0.7 : 0);
+      // particles: what is falling or blowing
+      const T = p.type;
+      let kind = null, inten = 0;
+      if (S.precip > 0.03) { kind = S.snowFrac > 0.5 ? 'snow' : 'rain'; inten = S.precip; }
+      else if (S.dust > 0.08) { kind = 'dust'; inten = S.dust; }
+      else if (S.ash > 0.08) { kind = 'ash'; inten = S.ash; }
+      else if (T === 'lava') { kind = 'embers'; inten = 0.6; }
+      else if (T === 'fungal' || (T === 'toxic' && p.life.has)) { kind = 'spores'; inten = 0.4 + 0.4 * S.haze; }
+      this.kind = kind; this.intensity = inten;
+      // lightning: the flash lights the land, the thunder follows (sooner and louder the closer the strike)
+      if (this.flash) { this.flash.k *= Math.exp(-dt * 6); if (this.flash.k < 0.02) this.flash = null; }
+      if (S.lightning > 0.2 && dt > 0 && !Clock.paused && Math.random() < dt * (0.04 + 0.32 * S.lightning)) {
+        const ext = v.viewExtent(), an = Math.random() * TAU, d = ext * (0.25 + Math.random() * 2.3), x = tg[0] + Math.cos(an) * d, z = tg[2] + Math.sin(an) * d;
+        this.flash = { x, z, k: 1, near: clamp(1.3 - d / ext, 0.15, 1), bolt: d < ext * 1.4 ? this.bolt(x, z) : null };
+        if (Sound.thunder) Sound.thunder(v, d / ext, Math.max(S.storm, S.ash), x, z);
+        if (this.flash.bolt && v.eco) v.eco.startle(x, z, 9);
+      }
+      // tornadoes and dust devils nearby
+      this.cellT -= dt;
+      if (this.cellT <= 0) { this.cellT = 0.2; this.cells = this.vortices(t); }
+      // what the world's creatures feel
+      const severe = clamp(Math.max(S.storm * 0.9, S.hail * 1.4, S.windstorm, S.dust * 1.1, this.hurricane * 1.3, S.precip * S.snowFrac * smoothstep(1.2, 2.2, Math.hypot(S.we, S.wn))), 0, 1);
+      v.meteo = {
+        severe, vis: S.vis, rain: S.precip * (1 - S.snowFrac), snow: this.snow, wet: this.wet, heat: smoothstep(32, 46, v.tempAt(tg[0], tg[2])), windX: this.wind[0], windZ: this.wind[1],
+        forage: clamp(1 - 0.6 * this.snow - 0.35 * this.ash + 0.15 * this.wet, 0.2, 1.15),
+        hazards: this.cells.filter((c) => c.kind === 'tornado' && c.int > 0.2).map((c) => ({ x: c.x, z: c.z, r: 14 * c.size, kill: 2.4 * c.size, state: 'hazard' })),
+      };
     }
     // geysers
     for (const ch of v.chunks.values()) for (const poi of ch.pois) if (poi.vent) {
@@ -8843,48 +9706,100 @@ class Weather {
     for (let i = this.puffs.length - 1; i >= 0; i--) { const q = this.puffs[i]; q[3] += dt; q[1] += dt * (5 - q[3] * 1.2); q[0] += this.wind[0] * dt; q[2] += this.wind[1] * dt; if (q[3] > 3.5) this.puffs.splice(i, 1); }
     if (this.puffs.length > 600) this.puffs.splice(0, this.puffs.length - 600);
     for (let i = this.drops.length - 1; i >= 0; i--) { const q = this.drops[i]; q[6] += dt; q[0] += q[3] * dt; q[1] += q[4] * dt; q[2] += q[5] * dt; q[4] -= 14 * dt; if (q[6] > 1.1) this.drops.splice(i, 1); }
-    // fireflies / pollen
+    // fireflies / pollen (not in a downpour or a gale)
+    const b = v.biomeAt(tg[0], tg[2]), calm = this.S ? 1 - clamp(this.S.precip * 1.5 + this.S.windstorm, 0, 1) : 1;
     const vegetated = p.life.has && BIOMES[b].prod > 0.4;
-    const nf = vegetated ? (env.night > 0.5 ? 40 : 14) : 0;
+    const nf = vegetated ? Math.round((env.night > 0.5 ? 40 : 14) * calm) : 0;
     while (this.flies.length < nf) this.flies.push([Math.random() * TAU, Math.random(), Math.random() * TAU, Math.random()]);
     this.flies.length = nf;
   }
   render(R, cam, env) {
-    const v = this.view, tg = v.cam.cur.target, ext = v.viewExtent(), T = v.app.anim, gl = R.gl, dt = this.dt || 0;
+    const v = this.view, tg = v.cam.cur.target, ext = v.viewExtent(), T = v.app.anim, gl = R.gl, dt = this.dt || 0, S = this.S;
     const pts = this.pts, lines = this.lines; pts.reset(); lines.reset();
-    const n = Math.floor(this.N * this.intensity), H = 26;
-    for (let i = 0; i < n; i++) {
-      const q = this.p, o = i * 4;
-      let fall = 0, drift = 1;
-      switch (this.kind) { case 'rain': fall = 1.1; drift = 0.4; break; case 'snow': fall = 0.12; drift = 0.8; break; case 'dust': fall = 0.02; drift = 3; break; case 'ash': fall = 0.05; drift = 0.8; break; case 'spores': fall = -0.03; drift = 0.4; break; case 'embers': fall = -0.08; drift = 0.5; break; case 'mist': fall = 0.005; drift = 1.2; break; }
+    const q = this.p, H = 26, wx = this.wind[0], wz = this.wind[1], med = this.climate && this.climate.medium;
+    const place = (i, fall, drift) => {
+      const o = i * 4;
       q[o + 1] = fract(q[o + 1] - fall * dt * 0.8);
-      q[o] = ((q[o] + this.wind[0] * drift * dt * 0.03 + 1) % 2 + 2) % 2 - 1; q[o + 2] = ((q[o + 2] + this.wind[1] * drift * dt * 0.03 + 1) % 2 + 2) % 2 - 1;
-      const x = tg[0] + q[o] * ext * 1.1, z = tg[2] + q[o + 2] * ext * 1.1, y = tg[1] + q[o + 1] * H - 4 + Math.sin(T + i) * (this.kind === 'snow' ? 0.3 : 0);
-      switch (this.kind) {
-        case 'rain': lines.push(x, y, z, 0.7, 0.8, 1, 0.7); lines.push(x + this.wind[0] * 0.15, y + 0.9, z + this.wind[1] * 0.15, 0.7, 0.8, 1, 0.7); break;
-        case 'snow': pts.push(x, y, z, 1, 1, 1, 1, 1.4, 0, 0); break;
-        case 'dust': pts.push(x, y * 0.35 + tg[1] * 0.65, z, 0.85, 0.7, 0.5, 0.7, 1, 0, 0); break;
-        case 'ash': pts.push(x, y, z, 0.35, 0.33, 0.35, 0.9, 1.2, 0, 0); break;
-        case 'spores': pts.push(x, y, z, ...v.planet.flora.glow, 0.9, 1.1, 0, 0); break;
-        case 'embers': pts.push(x, y, z, 1, 0.55 + 0.3 * Math.sin(T * 5 + i), 0.15, 1, 1.1, 0, 0); break;
-        case 'mist': if (i % 2) break; pts.push(x, y, z, ...(v.gas ? Color.mix(env.fogCol, [1, 1, 1], 0.45) : [1, 1, 1]), 0.4, 2.6, 0, 0); break;
+      q[o] = ((q[o] + wx * drift * dt * 0.03 + 1) % 2 + 2) % 2 - 1; q[o + 2] = ((q[o + 2] + wz * drift * dt * 0.03 + 1) % 2 + 2) % 2 - 1;
+      return [tg[0] + q[o] * ext * 1.1, tg[1] + q[o + 1] * H - 4, tg[2] + q[o + 2] * ext * 1.1];
+    };
+    let i = 0;
+    if (S && !v.gas) {
+      const nRain = Math.floor(this.N * 0.85 * S.precip * (1 - S.snowFrac)), nSnow = Math.floor(this.N * 0.8 * S.precip * S.snowFrac), nHail = Math.floor(this.N * 0.35 * S.hail);
+      const rc = med === 'acid' ? [0.82, 0.95, 0.55] : med === 'methane' ? [1, 0.78, 0.5] : [0.7, 0.8, 1], slant = 0.15 + 0.08 * Math.hypot(wx, wz);
+      for (let k = 0; k < nRain && i < this.N; k++, i++) { const [x, y, z] = place(i, 1.1 + S.precip * 0.4, 0.4); lines.push(x, y, z, ...rc, 0.7); lines.push(x + wx * slant, y + 0.9 + S.precip * 0.4, z + wz * slant, ...rc, 0.7); }
+      const blizz = smoothstep(1.2, 2.4, Math.hypot(wx, wz));
+      for (let k = 0; k < nSnow && i < this.N; k++, i++) {
+        const [x, y, z] = place(i, 0.12 + blizz * 0.1, 0.8 + blizz * 5);
+        if (blizz > 0.3 && k % 2) { lines.push(x, y, z, 1, 1, 1, 0.8); lines.push(x + wx * 0.45, y + 0.05, z + wz * 0.45, 1, 1, 1, 0.8); }
+        else pts.push(x, y + Math.sin(T + k) * 0.3, z, 1, 1, 1, 1, 1.4, 0, 0);
+      }
+      for (let k = 0; k < nHail && i < this.N; k++, i++) { const [x, y, z] = place(i, 2.4, 0.3); pts.push(x, y, z, 0.95, 0.98, 1, 1, 1.9, 0, 0); }
+      const nDust = Math.floor(this.N * 0.9 * Math.max(S.dust, S.ash * 0.7));
+      for (let k = 0; k < nDust && i < this.N; k++, i++) {
+        const [x, y, z] = place(i, S.dust > S.ash ? 0.02 : 0.05, S.dust > S.ash ? 3 : 0.8);
+        if (S.dust >= S.ash) pts.push(x, y * 0.35 + tg[1] * 0.65, z, 0.85, 0.7, 0.5, 0.75, 1.2, 0, 0); else pts.push(x, y, z, 0.35, 0.33, 0.35, 0.9, 1.2, 0, 0);
+      }
+      // ground mist
+      const nFog = Math.floor(160 * S.fog);
+      for (let k = 0; k < nFog && i < this.N; k++, i++) { const [x, , z] = place(i, 0, 0.3), gy = Math.max(v.heightAt(x, z), v.waterAt(x, z)); pts.push(x, gy + 0.4 + q[i * 4 + 3] * 2.2, z, ...Color.mix(env.fogCol, [1, 1, 1], 0.5), 0.35 * S.fog, 6, 0, 0); }
+      // tornadoes: a dark rotating funnel with a skirt of debris; dust devils: small tan columns
+      for (const c of this.cells) {
+        if (c.d > ext * 1.8 || c.int < 0.02) continue;
+        const gy = Math.max(v.heightAt(c.x, c.z), v.waterAt(c.x, c.z)), tor = c.kind === 'tornado', Hh = (tor ? 26 : 8) * c.size, n = tor ? 320 : 80;
+        for (let k = 0; k < n; k++) {
+          const f = (k + 0.5) / n, hh = f * Hh, rad = (tor ? 0.6 + hh * hh * 0.012 + hh * 0.05 : 0.3 + hh * 0.14) * (0.75 + 0.25 * Math.sin(k * 1.7)), an = T * (tor ? 7 : 9) + hh * (tor ? 0.9 : 1.6) + k * 2.399;
+          const g = tor ? 0.2 + 0.18 * Math.sin(k * 0.7) : 0, col = tor ? [0.22 + g, 0.23 + g, 0.27 + g] : [0.88, 0.74, 0.54];
+          pts.push(c.x + Math.cos(an) * rad, gy + hh, c.z + Math.sin(an) * rad, ...col, (tor ? 0.92 : 0.75) * c.int, tor ? 3.6 : 2.4, 0, 0);
+        }
+        if (tor) {
+          // debris whirling at the foot, the dark wall cloud above
+          for (let k = 0; k < 70; k++) { const an = T * 4 + k * 2.399, rr = 1.8 + (k % 7) * 0.5; pts.push(c.x + Math.cos(an) * rr, gy + 0.3 + (k % 4) * 0.6, c.z + Math.sin(an) * rr, 0.5, 0.42, 0.33, 0.8 * c.int, 2.6, 0, 0); }
+          for (let k = 0; k < 60; k++) { const an = k * 2.399 + T * 0.4, rr = 3 + (k % 9) * 1.1; pts.push(c.x + Math.cos(an) * rr, gy + Hh + 1 + (k % 3), c.z + Math.sin(an) * rr, 0.2, 0.21, 0.25, 0.7 * c.int, 6, 0, 0); }
+        }
+      }
+      // auroras: curtains of light over the night side
+      if (S.aurora > 0.05 && env.night > 0.4) {
+        for (let band = 0; band < 2; band++) {
+          const n = Math.floor(160 * S.aurora);
+          for (let k = 0; k < n; k++) {
+            const u = k / n * 2 - 1, x = tg[0] + u * ext * 1.2, z = tg[2] - ext * (0.1 + band * 0.25) + Math.sin(u * 3 + T * 0.3 + band) * 5 + Math.sin(u * 7.3 + T * 0.5) * 1.5, y = tg[1] + 7 + band * 3 + Math.sin(u * 5 + T * 0.4) * 1.5;
+            const g = 0.5 + 0.5 * Math.sin(u * 9 + T + band * 2), c = Color.mix([0.35, 1, 0.6], [0.8, 0.45, 1], g * 0.55 + band * 0.25);
+            lines.push(x, y, z, ...c, 0.75 * S.aurora); lines.push(x, y + 6 + 4 * g, z, ...c, 0.0);
+          }
+        }
+      }
+    } else if (this.kind) {
+      // giants (and before the first sample): the old sky
+      const n = Math.floor(this.N * 0.65 * this.intensity);
+      for (let k = 0; k < n; k++, i++) {
+        if (this.kind === 'rain') { const [x, y, z] = place(i, 1.1, 0.4); lines.push(x, y, z, 0.7, 0.8, 1, 0.7); lines.push(x + wx * 0.15, y + 0.9, z + wz * 0.15, 0.7, 0.8, 1, 0.7); }
+        else { const [x, y, z] = place(i, 0.005, 1.2); if (k % 2) continue; pts.push(x, y, z, ...(v.gas ? Color.mix(env.fogCol, [1, 1, 1], 0.45) : [1, 1, 1]), 0.4, 2.6, 0, 0); }
       }
     }
-    for (const q of this.puffs) { const g = 0.85 - q[3] * 0.15; pts.push(q[0], q[1], q[2], g, g, g + 0.05, 1 - q[3] / 3.5, 1.4 + q[3] * 1.2, 0, 0); }
-    for (const q of this.drops) pts.push(q[0], q[1], q[2], 0.85, 0.95, 1, 1 - q[6] / 1.1, 1.2, 0, 0);
+    // the planet's own airborne life and heat: spores, embers
+    if (this.kind === 'spores' || this.kind === 'embers') {
+      const n = Math.floor(this.N * 0.4 * this.intensity);
+      for (let k = 0; k < n && i < this.N; k++, i++) {
+        const [x, y, z] = place(i, this.kind === 'spores' ? -0.03 : -0.08, 0.5);
+        if (this.kind === 'spores') pts.push(x, y, z, ...v.planet.flora.glow, 0.9, 1.1, 0, 0); else pts.push(x, y, z, 1, 0.55 + 0.3 * Math.sin(T * 5 + k), 0.15, 1, 1.1, 0, 0);
+      }
+    }
+    for (const qq of this.puffs) { const g = 0.85 - qq[3] * 0.15; pts.push(qq[0], qq[1], qq[2], g, g, g + 0.05, 1 - qq[3] / 3.5, 1.4 + qq[3] * 1.2, 0, 0); }
+    for (const qq of this.drops) pts.push(qq[0], qq[1], qq[2], 0.85, 0.95, 1, 1 - qq[6] / 1.1, 1.2, 0, 0);
     const fl = this.flash;
-    if (fl && fl.bolt && fl.k > 0.25) for (let i = 1; i < fl.bolt.length; i++) { const a = fl.bolt[i - 1], b = fl.bolt[i]; lines.push(a[0], a[1], a[2], 0.9, 0.95, 1, fl.k); lines.push(b[0], b[1], b[2], 0.9, 0.95, 1, fl.k); }
+    if (fl && fl.bolt && fl.k > 0.25) for (let k = 1; k < fl.bolt.length; k++) { const a = fl.bolt[k - 1], b = fl.bolt[k]; lines.push(a[0], a[1], a[2], 0.9, 0.95, 1, fl.k); lines.push(b[0], b[1], b[2], 0.9, 0.95, 1, fl.k); }
     const glowPts = this.glow || (this.glow = new GFX.Stream(200, gl.POINTS)); glowPts.reset();
     const fc = env.night > 0.5 ? [0.75, 1, 0.35] : [1, 0.95, 0.75];
-    for (let i = 0; i < this.flies.length; i++) {
-      const f = this.flies[i], a = T * 0.3 * (0.5 + f[3]) + f[0];
+    for (let k = 0; k < this.flies.length; k++) {
+      const f = this.flies[k], a = T * 0.3 * (0.5 + f[3]) + f[0];
       const x = tg[0] + Math.cos(a) * ext * 0.8 * f[1] + Math.sin(T * 0.7 + f[2]) * 2, z = tg[2] + Math.sin(a * 1.3) * ext * 0.8 * f[3] + Math.cos(T * 0.5 + f[0]) * 2;
       const y = v.heightAt(x, z) + 0.8 + Math.sin(T * 1.7 + f[2]) * 0.5;
       glowPts.push(x, y, z, ...fc, 0.5 + 0.5 * Math.sin(T * 3 + f[2] * 5), 1, 0, 0);
     }
     gl.depthMask(false);
     const PP = GFX.use(R.P.points);
-    GFX.setAll(PP, { uVP: cam.vp, uScale: 1, uTime: T, uMin: 1, uMax: 4, uMode: 1 });
+    GFX.setAll(PP, { uVP: cam.vp, uScale: 1, uTime: T, uMin: 1, uMax: 7, uMode: 1 });
     R.blend('alpha');
     pts.upload(); pts.draw();
     GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); lines.upload(); lines.draw();
@@ -9480,6 +10395,16 @@ const Sound = (() => {
       e.gain.setValueAtTime(0, t0); e.gain.linearRampToValueAtTime(1, t0 + 0.012); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.17);
       o.connect(e); e.connect(out); o.start(t0); o.stop(t0 + 0.2);
     },
+    // a hailstone striking stone or wood: a sharp click with a short ring (its own small budget, so a
+    // hailstorm never crowds out the thunder)
+    tick(pan, vol) {
+      if ((this.ticks || 0) >= (App.mobile ? 3 : 6)) return;
+      this.ticks = (this.ticks || 0) + 1; setTimeout(() => { this.ticks--; }, 160); this.count('hail');
+      const t0 = ctx.currentTime + Math.random() * 0.08, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), e = ctx.createGain(), out = this.out(pan, vol);
+      src.buffer = this.noise.white; f.type = 'bandpass'; f.frequency.value = 2200 + Math.random() * 3200; f.Q.value = 3 + Math.random() * 5;
+      e.gain.setValueAtTime(0, t0); e.gain.linearRampToValueAtTime(1, t0 + 0.002); e.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05 + Math.random() * 0.05);
+      src.connect(f); f.connect(e); e.connect(out); src.start(t0, Math.random() * 2); src.stop(t0 + 0.12);
+    },
     // ice under strain: a jittery, rising stick-slip creak
     creak(pan, vol) {
       if (!this.voice(1.3)) return; this.count('ice');
@@ -9586,6 +10511,13 @@ const Sound = (() => {
       let vent = null, vd = 1e9;
       for (const ch of v.chunks.values()) for (const q of ch.pois) if (q.vent) { const d = Math.hypot(q.x - tg[0], q.z - tg[2]); if (d < vd) { vd = d; vent = q; } }
       s.vent = vent && vd < ext * 1.6 ? vent : null; s.ventD = vd / ext; s.ventPan = vent ? panOf(vent.x, vent.z) : 0;
+      // the nearest tornado and dust devil (heard from well beyond the view: a tornado roars for kilometres)
+      s.torn = 0; s.tornPan = 0; s.devil = 0; s.devilPan = 0;
+      for (const c of (v.weather && v.weather.cells) || []) {
+        const k = c.kind === 'tornado' ? c.int * c.size * (1 - smoothstep(6, 150, c.d)) : c.int * (1 - smoothstep(3, 45, c.d));
+        if (c.kind === 'tornado' && k > s.torn) { s.torn = k; s.tornPan = panOf(c.x, c.z); }
+        if (c.kind === 'devil' && k > s.devil) { s.devil = k; s.devilPan = panOf(c.x, c.z); }
+      }
       s.temp = v.tempAt(tg[0], tg[2]);
       this.s = s;
     },
@@ -9604,18 +10536,28 @@ const Sound = (() => {
       const A = air * (Clock.paused ? 0 : 1), zoom = clamp(1.25 - (v.cam.cur.dist - 8) / 55, 0.45, 1.15);
       const windM = Math.hypot(w.wind[0], w.wind[1]), storm = w.storm || 0, hur = w.hurricane || 0, rainI = w.kind === 'rain' ? w.intensity : 0;
       const warm = smoothstep(4, 16, s.temp), lowQ = app.mobile || app.quality === 'low';
+      // falling and lying snow and thick fog deaden the world: less high end, fewer distant voices
+      const S = w.S || {}, hail = S.hail || 0, muffle = clamp((w.kind === 'snow' ? w.intensity * 0.45 : 0) + (w.snow || 0) * 0.3 + (S.fog || 0) * 0.35, 0, 0.7), quiet = 1 - muffle;
+      const ev0 = (rate) => Math.random() < rate * 0.1, rp0 = () => (Math.random() * 2 - 1) * 0.8;
       // gusts: a wandering strength, livelier and harder in storms
       this.gustT -= 0.1;
       if (this.gustT <= 0) { this.gustTo = Math.random() * (0.55 + storm * 0.45); this.gustT = 0.8 + Math.random() * (3.2 - storm * 2); }
       this.gust += (this.gustTo - this.gust) * (0.08 + storm * 0.1);
       const g = this.gust, hi = 1.25 - zoom * 0.35;
       // wind: broadband rush, and a whistle when it is strong (and over ice and open sky)
-      this.set('wind', A * (0.115 + 0.1 * Math.min(windM, 2.5) + 0.12 * g * Math.min(windM, 2.5) + 0.1 * storm + 0.28 * hur + (gas ? 0.15 : 0) + s.desert * 0.05) * hi, { noise: 'pink', type: 'bandpass', f: 240 + 330 * Math.min(windM, 2) + 450 * g + 350 * hur, q: 0.6, tc: 0.35 });
+      this.set('wind', A * (0.115 + 0.1 * Math.min(windM, 2.5) + 0.12 * g * Math.min(windM, 2.5) + 0.1 * storm + 0.28 * hur + (gas ? 0.15 : 0) + s.desert * 0.05) * hi, { noise: 'pink', type: 'bandpass', f: (240 + 330 * Math.min(windM, 2) + 450 * g + 350 * hur) * (1 - muffle * 0.5), q: 0.6, tc: 0.35 });
       this.set('whistle', A * (Math.max(0, windM - 1.05) * 0.05 + hur * 0.12 + s.ice * 0.05 + (gas ? 0.04 : 0)) * (0.3 + g), { noise: 'white', type: 'bandpass', f: 750 + 1000 * g + 450 * hur, q: 10, tc: 0.35 });
       // rain on leaves and ground (the recorded rain loop plays along when it is available)
       const recorded = rain.started && rain.ch.length && !rain.ch[rain.active].el.error && rain.ch[rain.active].el.readyState >= 2;
       this.set('rain', A * rainI * (recorded ? 0.06 : 0.26) * (0.7 + 0.3 * zoom) * (1 + storm * 0.4), { noise: 'white', type: 'bandpass', f: 3800 - 1400 * storm, q: 0.35, tc: 0.7 });
       this.set('sand', A * (w.kind === 'dust' ? w.intensity : 0) * 0.12 * (0.4 + Math.min(windM, 2)), { noise: 'white', type: 'highpass', f: 2600, q: 0.4 });
+      // hail pelting the ground: hard, gritty and uneven
+      this.set('hail', A * hail * (0.12 + Math.random() * 0.14) * (0.7 + 0.3 * zoom), { noise: 'white', type: 'highpass', f: 1500 + Math.random() * 1500, q: 0.8, tc: 0.03, ftc: 0.03 });
+      for (let i = 0, n = Math.round(hail * (lowQ ? 2 : 4)); i < n; i++) if (ev0(A * 6)) this.tick(rp0(), (0.12 + Math.random() * 0.2) * zoom);
+      // a tornado: the freight-train roar and the whine of the vortex; a dust devil's passing whoosh
+      this.set('tornado', A * s.torn * 0.55, { noise: 'brown', type: 'lowpass', f: 130 + 160 * s.torn, q: 0.7, tc: 0.4, pan: s.tornPan * 0.8 });
+      this.set('tornWhine', A * s.torn * s.torn * 0.08 * (0.6 + 0.4 * g), { noise: 'white', type: 'bandpass', f: 520 + 380 * g, q: 6, tc: 0.4, pan: s.tornPan * 0.8 });
+      this.set('devil', A * s.devil * 0.14 * (0.6 + 0.8 * g), { noise: 'pink', type: 'bandpass', f: 700 + 700 * g, q: 1.2, tc: 0.25, pan: s.devilPan * 0.8 });
       // the low roar: a hurricane, a gas giant's depths, molten ground
       this.set('rumble', A * (hur * 0.38 + storm * 0.05 + (gas ? 0.2 + 0.25 * (v.gas.here || 0) : 0) + s.lava * 0.28 * zoom), { noise: 'brown', type: 'lowpass', f: 95 + 70 * hur + (gas ? 40 : 0), q: 0.6 });
       // rivers and streams babble: a narrow band of noise that jumps about in pitch and level
@@ -9637,9 +10579,9 @@ const Sound = (() => {
       this.set('steam', vent * 0.45, { noise: 'white', type: 'bandpass', f: 2300, q: 0.7, tc: 0.08, pan: s.ventPan * 0.8 });
       this.set('ventLow', vent * 0.4, { noise: 'brown', type: 'lowpass', f: 180, q: 0.8, tc: 0.1, pan: s.ventPan * 0.6 });
       // biome voices
-      this.crickets(A * s.veg * night * warm * (1 - rainI * 0.7) * (1 - storm) * 0.035 * zoom);
-      const ev = (rate) => Math.random() < rate * 0.1, rp = () => (Math.random() * 2 - 1) * 0.8, busy = lowQ ? 0.6 : 1;
-      if (ev(A * s.trees * day * smoothstep(-6, 6, s.temp) * (1 - rainI * 0.8) * (1 - storm) * 1.1 * busy)) this.chirp(rp(), 0.1 * zoom);
+      this.crickets(A * s.veg * night * warm * (1 - rainI * 0.7) * (1 - storm) * quiet * 0.035 * zoom);
+      const ev = ev0, rp = rp0, busy = lowQ ? 0.6 : 1;
+      if (ev(A * s.trees * day * smoothstep(-6, 6, s.temp) * (1 - rainI * 0.8) * (1 - storm) * (1 - hail) * quiet * 1.1 * busy)) this.chirp(rp(), 0.1 * zoom);
       if (ev(A * (s.wet + s.water * s.veg * 0.5) * (night * 0.8 + rainI * 0.5) * warm * 0.9 * busy)) this.croak(rp(), 0.12 * zoom);
       if (ev(A * s.frozen * 0.12)) this.creak(rp(), 0.12 * zoom);
       if (ev(A * s.crystal * (0.1 + windM * 0.25))) this.chime(rp(), 0.06 * zoom);
@@ -9703,7 +10645,7 @@ const Sound = (() => {
 const Store = {
   KEY: 'procedurality3d:v1', d: null, _t: 0,
   defaults() {
-    return { v: 2, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false, audio: { master: 0.8, music: 0.55, sfx: 0.8, amb: 0.7, muted: false, breaks: 'normal' } }, clocks: {}, lastSeen: 0, location: null, bookmarks: [], species: [], civs: [], visited: {}, favorite: null, firstRun: true };
+    return { v: 2, universe: 'ORIGIN', settings: { pixel: 'auto', outline: true, posterize: false, vignette: true, quality: '', fps: false, audio: { master: 0.8, music: 0.55, sfx: 0.8, amb: 0.7, muted: false, breaks: 'normal' } }, clocks: {}, lastSeen: 0, location: null, bookmarks: [], species: [], civs: [], visited: {}, favorites: [], firstRun: true };
   },
   load() {
     let d = null;
@@ -9716,6 +10658,8 @@ const Store = {
     this.d.settings = Object.assign(def.settings, (d && d.settings) || {});
     if (!this.d.clocks || typeof this.d.clocks !== 'object') this.d.clocks = {};
     delete this.d.clockOffset; delete this.d.lastUniverseT;
+    // a single favourite (older saves) becomes the first of the favourites list
+    Favorite.migrate(this.d);
   },
   save(now) {
     clearTimeout(this._t);
@@ -9748,15 +10692,22 @@ const Store = {
     if (i >= 0) L.splice(i, 1); else L.unshift({ code: c.code, name: Civ.civName(c), world: c.home.title, at: Date.now() });
     this.save(); return i < 0;
   },
-  exportJSON() { return JSON.stringify({ app: 'Procedurality-3D', v: 2, universe: this.d.universe, bookmarks: this.d.bookmarks, species: this.d.species, civs: this.d.civs || [], visited: this.d.visited, settings: this.d.settings }, null, 1); },
+  exportJSON() { return JSON.stringify({ app: 'Procedurality-3D', v: 2, universe: this.d.universe, bookmarks: this.d.bookmarks, species: this.d.species, civs: this.d.civs || [], favorites: this.d.favorites || [], visited: this.d.visited, settings: this.d.settings }, null, 1); },
   importJSON(txt) {
     const j = JSON.parse(txt);
     if (!j || j.app !== 'Procedurality-3D') throw new Error('Not a Procedurality save file');
     const merge = (a, b, key) => { const seen = new Set(a.map((x) => x[key])); for (const x of b || []) if (!seen.has(x[key])) a.push(x); };
     merge(this.d.bookmarks, j.bookmarks, 'code'); merge(this.d.species, j.species, 'code'); merge(this.d.civs || (this.d.civs = []), j.civs, 'code');
+    // favourites (a file from before multiple favourites may carry none, or a single one)
+    const fav = { favorites: Array.isArray(j.favorites) ? j.favorites.slice() : [], favorite: j.favorite };
+    Favorite.migrate(fav);
+    const had = new Set(Favorite.list.map((x) => Favorite.key(x)));
+    let nf = 0;
+    for (const x of fav.favorites) if (!had.has(Favorite.key(x)) && Favorite.list.length < Favorite.MAX) { Favorite.list.push(x); nf++; }
+    if (nf) Favorite.ver++;
     Object.assign(this.d.visited, j.visited || {});
     this.save(true);
-    return { bookmarks: (j.bookmarks || []).length, species: (j.species || []).length };
+    return { bookmarks: (j.bookmarks || []).length, species: (j.species || []).length, favorites: nf };
   },
 };
 
@@ -9842,6 +10793,17 @@ const ICONS = {
   heart: ['........', '.##..##.', '########', '########', '.######.', '..####..', '...##...', '........'],
   full: ['###..###', '##....##', '#.#..#.#', '........', '........', '#.#..#.#', '##....##', '###..###'],
   shrink: ['#.#..#.#', '.##..##.', '###..###', '........', '........', '###..###', '.##..##.', '#.#..#.#'],
+  sun: ['...##...', '.#....#.', '...##...', '#.####.#', '#.####.#', '...##...', '.#....#.', '...##...'],
+  moon: ['..###...', '.##.....', '##......', '##......', '##......', '.##.....', '..###...', '........'],
+  cloud: ['........', '...##...', '..####..', '.######.', '########', '########', '........', '........'],
+  rain: ['...##...', '..####..', '.######.', '########', '........', '.#..#..#', '#..#..#.', '........'],
+  snow: ['...##...', '..####..', '.######.', '########', '........', '#.#.#.#.', '.#.#.#.#', '#.#.#.#.'],
+  storm: ['...##...', '..####..', '.######.', '########', '...##...', '..##....', '...##...', '....#...'],
+  hail: ['...##...', '..####..', '.######.', '########', '........', '##..##..', '##..##..', '....##..'],
+  fog: ['........', '#######.', '........', '.#######', '........', '#######.', '........', '.######.'],
+  dust: ['........', '..#.#.#.', '.#.#.#..', '#.#.#.#.', '.#.#.#.#', '#.#.#.#.', '.#.#.#..', '........'],
+  wind: ['......#.', '######.#', '......#.', '####....', '....#...', '#######.', '.......#', '......#.'],
+  cyclone: ['..####..', '.#....#.', '#..##..#', '#.#..#.#', '#.#.#..#', '#..#...#', '.#....#.', '..####..'],
 };
 function icon(name, cls = '') {
   const rows = ICONS[name] || ICONS.info;
@@ -10027,7 +10989,7 @@ const UI = {
     tool('search', 'Survey scanner (/)', () => this.openSearch());
     tool('dice', 'Jump to a random world (R)', () => app.randomWorld());
     tool('star', 'Saved places & discoveries (B)', () => this.openSaved());
-    this.favBtn = tool('heart', 'Go to favourite creature (L)', () => Favorite.go(app), 'btn-fav');
+    this.favBtn = tool('heart', 'Favourite creatures (L)', () => this.openSaved('favs'), 'btn-fav');
     tool('seed', 'Seeds & codes (G)', () => this.openSeeds());
     this.autoBtn = tool('auto', 'Autopilot observer (P)', () => app.setAutopilot(!app.autopilot), 'btn-auto');
     this.soundBtn = tool(Sound.muted ? 'mute' : 'sound', 'Sound on / off (M)', () => this.toggleSound(), 'btn-sound');
@@ -10074,17 +11036,12 @@ const UI = {
     });
     el.scrollLeft = el.scrollWidth;
   },
-  // off-screen favourite: a heart pinned to the screen edge, pointing the way (tap to go there)
-  favEdge(o) {
-    let e = this.favEl;
-    if (!o) { if (e && !e.hidden) e.hidden = true; return; }
-    if (!e) {
-      e = this.favEl = h('button', { id: 'fav-edge', title: 'Go to your favourite creature (L)', 'aria-label': 'Go to favourite creature', onclick: () => Favorite.go(this.app) }, h('span', { class: 'fe-arrow' }, h('i')), h('span', { class: 'fe-heart' }, '♥'), h('span', { class: 'fe-t' }));
-      document.body.append(e);
-    }
-    const W = innerWidth, H = innerHeight, cx = W / 2, cy = H / 2;
-    let dx = o.x - cx, dy = o.y - cy;
-    if (!isFinite(dx) || !isFinite(dy) || Math.hypot(dx, dy) < 1) { dx = 0; dy = -1; }
+  // off-screen favourites: hearts pinned to the screen edge, pointing the way (tap one to follow it)
+  favEdge(list) {
+    const pool = this.favEls || (this.favEls = []), n = list ? list.length : 0;
+    for (let i = n; i < pool.length; i++) if (!pool[i].hidden) pool[i].hidden = true;
+    if (!n) return;
+    const W = innerWidth, H = innerHeight;
     // keep clear of the top bar, the bottom HUD and an open panel
     this._prT = (this._prT || 0) - 1;
     if (this._prT <= 0) { this._prT = 20; this._pr = this.panel.visible ? this.panelEl.getBoundingClientRect() : null; }
@@ -10092,15 +11049,29 @@ const UI = {
     const pr = this._pr;
     if (pr && pr.width < W * 0.8) x1 = Math.min(x1, pr.left - 60); else if (pr) y1 = Math.min(y1, pr.top - 34);
     if (x1 < x0 + 20) x1 = x0 + 20; if (y1 < y0 + 20) y1 = y0 + 20;
-    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-    dx = o.x - mx; dy = o.y - my;
-    if (!isFinite(dx) || !isFinite(dy) || Math.hypot(dx, dy) < 1) { dx = 0; dy = -1; }
-    const kx = dx > 0 ? (x1 - mx) / dx : dx < 0 ? (x0 - mx) / dx : Infinity, ky = dy > 0 ? (y1 - my) / dy : dy < 0 ? (y0 - my) / dy : Infinity;
-    const k = Math.min(kx, ky), x = mx + dx * k, y = my + dy * k;
-    e.hidden = false;
-    e.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-50%)`;
-    e.firstChild.style.transform = `rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`;
-    if (e._t !== o.name) { e.lastChild.textContent = o.name; e._t = o.name; }
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, placed = [];
+    for (let i = 0; i < n; i++) {
+      const o = list[i];
+      let e = pool[i];
+      if (!e) {
+        e = pool[i] = h('button', { class: 'fav-edge', title: 'Follow this favourite (L steps through them)', 'aria-label': 'Follow favourite creature', onclick: () => { const v = this.app.view, a = e._a; if (a && v.eco && v.eco.byId.get(a.id) === a && a.state !== 'dead') Favorite.follow(v, a); } }, h('span', { class: 'fe-arrow' }, h('i')), h('span', { class: 'fe-heart' }, '♥'), h('span', { class: 'fe-t' }));
+        if (i === 0) e.id = 'fav-edge';
+        document.body.append(e);
+      }
+      e._a = o.a;
+      let dx = o.x - mx, dy = o.y - my;
+      if (!isFinite(dx) || !isFinite(dy) || Math.hypot(dx, dy) < 1) { dx = 0; dy = -1; }
+      const kx = dx > 0 ? (x1 - mx) / dx : dx < 0 ? (x0 - mx) / dx : Infinity, ky = dy > 0 ? (y1 - my) / dy : dy < 0 ? (y0 - my) / dy : Infinity;
+      const k = Math.min(kx, ky), side = kx < ky;
+      let x = mx + dx * k, y = my + dy * k;
+      // several in the same direction line up along the edge instead of stacking
+      for (let t = 0; t < 6 && placed.some((q) => Math.abs(q[0] - x) < 50 && Math.abs(q[1] - y) < 58); t++) { if (side) y = clamp(y + (y > my ? -60 : 60), y0, y1); else x = clamp(x + (x > mx ? -54 : 54), x0, x1); }
+      placed.push([x, y]);
+      e.hidden = false;
+      e.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-50%)`;
+      e.firstChild.style.transform = `rotate(${Math.atan2(dy, dx).toFixed(3)}rad)`;
+      if (e._t !== o.name) { e.lastChild.textContent = o.name; e._t = o.name; }
+    }
   },
   hint(t) { this.hintEl.textContent = t || ''; this.hintEl.classList.remove('fade'); clearTimeout(this._ht); this._ht = setTimeout(() => this.hintEl.classList.add('fade'), 9000); },
   toast(msg, kind = '') {
@@ -10157,7 +11128,7 @@ const UI = {
     this.toast(Sound.muted ? 'Sound muted' : 'Sound on');
   },
   openSearch() { Modals.search(this.app); },
-  openSaved() { Modals.saved(this.app); },
+  openSaved(tab) { Modals.saved(this.app, tab); },
   openSeeds() { Modals.seeds(this.app); },
   openSettings() { Modals.settings(this.app); },
   openHelp() { Modals.help(this.app); },
@@ -10203,7 +11174,7 @@ class PanelCtl {
     this.head.innerHTML = '';
     const actions = h('div', { class: 'p-actions' });
     if (c.bookmark) { const on = Store.isBookmarked(c.bookmark.code); actions.append(h('button', { class: 'ib ' + (on ? 'gold' : ''), title: on ? 'Remove bookmark' : 'Bookmark', onclick: () => { const added = Store.toggleBookmark(c.bookmark); UI.toast(added ? `Saved “${c.bookmark.name}”` : 'Bookmark removed', added ? 'ok' : ''); this.render(); } }, icon('star'))); }
-    if (c.favorite) actions.append(h('button', { class: 'ib ' + (c.favorite.on ? 'fav-on' : ''), title: c.favorite.on ? 'Remove from favourite' : 'Make this your favourite creature', 'aria-label': 'Favourite', onclick: c.favorite.fn }, icon('heart')));
+    if (c.favorite) actions.append(h('button', { class: 'ib ' + (c.favorite.on ? 'fav-on' : ''), title: c.favorite.on ? 'Remove from favourites' : 'Add to favourites', 'aria-label': c.favorite.on ? 'Remove from favourites' : 'Add to favourites', 'aria-pressed': c.favorite.on ? 'true' : 'false', onclick: c.favorite.fn }, icon('heart')));
     if (c.code) actions.append(h('button', { class: 'ib', title: 'Copy seed code', onclick: () => copyText(c.code) }, icon('copy')));
     actions.append(h('button', { class: 'ib', title: 'Close', onclick: () => { this.hide(); if (c.onClose) c.onClose(); UI.quick(c.persistQuick ? c.quick || [] : []); } }, icon('close')));
     this.head.append(h('div', { class: 'p-icon' }, c.icon || null), h('div', { class: 'p-title' }, h('h2', null, c.title), c.sub ? h('div', { class: 'p-sub' }, c.sub) : null, c.badges ? h('div', { class: 'badges' }, c.badges) : null), actions);
@@ -10340,6 +11311,7 @@ function planetPanel(p, app, o) {
       section('Resources', p.resources.map((r) => bar(r.name, r.amt / 100, r.col, `${r.amt}%`))),
       section('Surface features', h('div', { class: 'gases' }, Object.entries(p.features).filter(([, v]) => v).map(([k]) => chip({ ruins: 'Precursor ruins', monolith: 'Monoliths', geysers: 'Geothermal vents', fossils: 'Fossil beds', nests: 'Nesting grounds', arches: 'Rock arches' }[k]))))) },
   ];
+  tabs.push({ id: 'climate', label: 'Climate', render: (live) => climateBody(p, app, view, live) });
   if (p.life.has) tabs.push({ id: 'life', label: 'Life', render: (live) => lifeTab(p, app, live) });
   let civI = null;
   try { civI = p.isGiant ? null : Civ.atBody(p.original || p, t); } catch (e) { civI = null; }
@@ -10384,6 +11356,7 @@ function siteTab(v, app) {
   const s = v.site, p = v.planet, o = s.s;
   return h('div', null,
     h('div', { class: 'grid' }, stat('Latitude', `${s.lat.toFixed(2)}°`), stat('Longitude', `${s.lon.toFixed(2)}°`), stat('Biome', BIOMES[o.b].name), stat('Temperature', fmt.temp(o.t)), stat('Elevation', p.isGiant ? '—' : `${Math.round(o.e * (o.e > 0 ? 8800 : 6500))} m`), stat('Moisture', fmt.pct(o.m))),
+    (() => { const C = Climate.of(p); if (!C.hasAir || p.isGiant) return null; const site = Meteo.siteOf(p, s.dir), W = Meteo.at(p, s.dir, app.t, site); return section(`Weather · ${W.label}`, weatherGrid(W, C), forecastStrip(p, s.dir, app.t, site)); })(),
     h('p', { class: 'muted small' }, 'The pin rotates with the planet. Descend to observe this exact site.'));
 }
 
@@ -10408,9 +11381,11 @@ function locationPanel(v, app) {
         };
         fill(); live(fill);
         return h('div', null, g,
+          h('p', { class: 'small muted' }, `${v.weather.label()} · `, h('a', { class: 'kinlink', onclick: () => { UI.panel.tab = 'weather'; UI.panel.render(); } }, 'weather & forecast')),
           probe ? section('Probe', h('p', { class: 'muted small' }, `${BIOMES[v.biomeAt(probe[0], probe[2])].name} · elevation ${Math.round(probe[1] * 190)} m · ${fmt.temp(v.tempAt(probe[0], probe[2]))}`)) : null,
           section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.active && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : 'This world is lifeless. Only wind and stone.')));
       } },
+      { id: 'weather', label: 'Weather', render: (live) => weatherView(v, app, live) },
     ],
     actions: [v.community.length ? { label: 'Follow a creature', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.active && a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } else UI.toast('No creatures in range'); } } : null, { label: 'Orbit', icon: 'up', fn: () => app.openPlanet(p, v.surface.dirAt(tg[0], tg[2])) }].filter(Boolean),
     quick: v.community.length ? [{ label: 'Follow', icon: 'eye', fn: () => { const al = v.eco.agents.filter((a) => a.active && a.state !== 'dead'); if (al.length) { const a = al[Math.floor(Math.random() * al.length)]; v.inspect(a); v.follow = a; } } }] : [], persistQuick: true,
@@ -10423,7 +11398,7 @@ function poiPanel(poi, v, app) {
     onClose: () => { v.poi = null; },
   };
 }
-const STATE_LABEL = { wander: 'Wandering', graze: 'Grazing', hunt: 'Hunting', eat: 'Feeding', flee: 'Fleeing!', sleep: 'Sleeping', drink: 'Drinking', mate: 'Courting', follow: 'Following parent', herd: 'Rejoining herd', dead: 'Deceased', work: 'Working', fight: 'Fighting!' };
+const STATE_LABEL = { wander: 'Wandering', graze: 'Grazing', hunt: 'Hunting', eat: 'Feeding', flee: 'Fleeing!', sleep: 'Sleeping', drink: 'Drinking', mate: 'Courting', follow: 'Following parent', herd: 'Rejoining herd', dead: 'Deceased', work: 'Working', fight: 'Fighting!', shelter: 'Sheltering from the weather', fish: 'Fishing', dive: 'Diving for a fish!', carry: 'Carrying its catch' };
 // direct offspring of an individual that are alive at this site (never siblings, ancestors or strangers)
 function offspringOf(a, eco) {
   const out = [];
@@ -10454,7 +11429,7 @@ function creaturePanel(a, v, app) {
         box.innerHTML = '';
         const nk = offspringOf(a, v.eco).length;
         box.append(...[
-          fav ? h('p', { class: 'favnote' }, '♥ Your favourite creature — marked wherever it goes, remembered across visits.') : null,
+          fav ? h('p', { class: 'favnote' }, '♥ One of your favourite creatures — marked wherever it goes, remembered across visits and listed in Saves › Favourites.') : null,
           h('div', { class: 'grid' }, stat('Activity', STATE_LABEL[a.state] || a.state, a.state === 'flee' || a.state === 'hunt' ? 'hot' : ''), stat('Sex', a.sex === 'F' ? '♀ Female' : '♂ Male'), stat('Age', `${fmt.dur(a.age)} · ${a.grow < 1 ? 'juvenile' : 'adult'}`), stat('Generation', String(a.gen)), stat('Length', `${(P.lengthM * a.grow).toFixed(1)} m`), stat('Mass', `${fmt.sig(P.massKg * Math.pow(a.grow, 3))} kg`)),
           bar('Energy', a.energy, '#7be07b'), sp.habitat === 'land' ? bar('Hydration', 1 - a.thirst, '#5cc8ff') : null, bar('Alertness', 1 - a.rest, '#ffd166'), bar('Life elapsed', a.age / P.life, '#c58cff', `${fmt.dur(a.age)} / ${fmt.dur(P.life)}`),
           parentsLine(a, v),
@@ -10478,6 +11453,125 @@ function creaturePanel(a, v, app) {
     quick: [{ label: v.follow === a ? 'Unfollow' : 'Follow', icon: 'eye', fn: () => { v.follow = v.follow === a ? null : a; UI.panelFor(v, true); } }, { label: fav ? 'Unfav' : 'Fav', icon: 'heart', fn: favAct.fn }],
     onClose: () => { v.selected = null; v.follow = null; },
   };
+}
+/* ---------------------------------------------------------------- favourite creatures (Saves › Favourites) */
+// every favourite in one place, whatever world, site or universe it lives in: tap to travel there
+function favoritesList(app, redraw) {
+  const L = Favorite.list, box = h('div', { class: 'favlist' }), v = app.view;
+  if (!L.length) {
+    box.append(h('p', { class: 'muted' }, 'No favourite creatures yet. Inspect any creature on a planet surface and tap ♥ to keep track of it — you can favourite as many as you like.'));
+    return box;
+  }
+  const worlds = new Set(L.map((f) => f.u + '/' + f.code)).size, dead = L.filter((f) => f.dead);
+  box.append(h('p', { class: 'muted small' }, `${L.length} favourite${L.length > 1 ? 's' : ''} on ${worlds} world${worlds > 1 ? 's' : ''}${dead.length ? ` · ${dead.length} no longer living` : ''}. They are kept on this device for every universe and save, not in a single slot. Tap one to travel to it.`));
+  const here = v && v.name === 'surface' ? Favorite.here(v) : null;
+  for (const f of L) {
+    const a = here && here.has(f.id) && here.get(f.id) === f && v.eco ? v.eco.byId.get(f.id) : null, live = a && !a.cit && a.state !== 'dead';
+    const other = f.u !== Universe.name;
+    const status = f.dead ? chip(`died of ${DEATH_CAUSE[f.dead.cause] || f.dead.cause}`, 'c-dead') : live ? chip(`here · ${(STATE_LABEL[a.state] || a.state).replace('!', '')}`, 'c-life') : chip('alive when last seen', 'c-pop');
+    const go = () => { UI.closeModal(); Favorite.go(app, f); };
+    box.append(h('div', { class: 'prow favrow' + (f.dead ? ' gone' : '') },
+      Favorite.portrait(f, 48),
+      h('div', { class: 'fav-main', onclick: go },
+        h('b', null, `♥ ${f.name} #${f.id}`),
+        h('small', null, `${f.common} · ${f.sex === 'F' ? '♀' : '♂'} · generation ${f.gen}`),
+        h('small', null, `${f.world}${other ? ` · universe ${f.u}` : ''} · ${Math.abs(f.ll[0]).toFixed(1)}°${f.ll[0] >= 0 ? 'N' : 'S'} ${Math.abs(f.ll[1]).toFixed(1)}°${f.ll[1] >= 0 ? 'E' : 'W'}`),
+        h('div', { class: 'srow-tags' }, status)),
+      h('div', { class: 'fav-act' },
+        btn(live ? 'Follow' : f.dead ? 'Visit' : 'Go', go, { icon: 'eye', title: `${live ? 'Follow' : f.dead ? 'Visit where' : 'Go to'} ${f.name}${f.dead ? ' died' : ''}` }),
+        h('button', { class: 'ib', title: `Remove ${f.name} from favourites`, 'aria-label': `Remove ${f.name} from favourites`, onclick: () => { Favorite.remove(f); redraw(); if (v && v.name === 'surface') UI.panelFor(v, true); } }, icon('close')))));
+  }
+  if (dead.length) box.append(h('div', { class: 'row' }, btn(`Remove the ${dead.length} that died`, () => { for (const f of dead) Favorite.remove(f, true); UI.toast(`${dead.length} favourite${dead.length > 1 ? 's' : ''} removed`); redraw(); }, { icon: 'close' })));
+  return box;
+}
+
+/* ---------------------------------------------------------------- climate & weather */
+// the compass point the wind blows from
+function windFrom(we, wn) { const a = Math.atan2(-we, -wn); return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(mod(a, TAU) / (TAU / 8)) % 8]; }
+const windText = (W) => (W.wind < 0.12 ? 'calm' : `${Math.round(W.wind * 7)} m/s from the ${windFrom(W.we, W.wn)}`);
+const visText = (v) => (v > 0.95 ? 'unlimited' : `${fmt.sig(Math.max(0.05, v * v * 30))} km`);
+function precipText(W) {
+  if (!W.pType || W.precip < 0.05) return 'none';
+  const k = W.precip > 0.72 ? 'heavy ' : W.precip > 0.3 ? '' : 'light ';
+  return k + ({ rain: 'rain', snow: 'snow', sleet: 'sleet', hail: 'hail', methane: 'methane rain', 'methane snow': 'methane snow', acid: 'acid rain' }[W.pType] || W.pType);
+}
+function seasonText(W) { const s = W.season; return !s || s.name === 'no seasons' ? 'none (little tilt or a short year)' : s.name === 'eternal' ? 'none (tidally locked)' : `${s.name} (${W.lat >= 0 ? 'north' : 'south'})`; }
+function tideText(C, W) { return !C.tideAmp ? 'none' : `${W.tide >= 0 ? '+' : ''}${(W.tide * 0.5).toFixed(2)} m · range ${(C.tideAmp * 0.75).toFixed(1)} m`; }
+// the hour ahead in ten-minute steps (the weather is deterministic, so the forecast is exact)
+const FC_STEP = 600;
+function forecastStrip(p, d, t, site) {
+  const f = Meteo.forecast(p, d, t, site, 6, FC_STEP);
+  return h('div', { class: 'fc' }, f.map((q) => h('div', { class: 'fc-i', title: q.label }, h('small', null, `+${Math.round((q.t - t) / 60)} min`), icon(q.icon === 'none' ? 'close' : q.icon, 'mid'), h('b', null, fmt.temp(q.temp)), h('small', null, q.label))));
+}
+function weatherGrid(W, C, extra) {
+  return h('div', { class: 'grid' }, stat('Temperature', fmt.temp(W.temp)), stat('Normal now', fmt.temp(W.tempClim)), stat('Humidity', fmt.pct(W.hum)), stat('Wind', windText(W)),
+    stat('Visibility', visText(W.vis)), stat('Pressure', `${fmt.n(W.pressure)} hPa`), stat('Cloud cover', fmt.pct(W.cloud)), stat('Precipitation', precipText(W)),
+    stat('Season', seasonText(W)), stat('Tide', tideText(C, W)), ...(extra || []));
+}
+// the surface site: conditions now, what they leave behind, and the forecast
+function weatherView(v, app, live) {
+  const box = h('div'), now = h('div'), fc = h('div');
+  if (v.gas) {
+    const g = v.gas;
+    box.append(h('p', { class: 'desc' }, 'The open atmosphere of a giant: jet streams race along the bands, and storm systems wider than worlds drift through the cloud decks.'), now);
+    const fill = () => { now.innerHTML = ''; now.append(h('div', { class: 'grid' }, stat('Conditions', v.weather.label()), stat('Storm here', fmt.pct(g.here || 0)), stat('Wind', `${Math.round(Math.hypot(...v.weather.wind) * 9)} m/s`), stat('Lightning', g.flash ? 'close by' : g.here > 0.2 ? 'in the storm' : 'none'))); };
+    fill(); live(fill);
+    return box;
+  }
+  let fcAt = -1e9, fcReal = 0;
+  const C = Climate.of(v.planet);
+  const fill = () => {
+    const wx = v.weather, W = wx.raw;
+    if (!W) return;
+    now.innerHTML = '';
+    const ev = W.events.slice(); if (wx.cells.some((c) => c.kind === 'tornado')) ev.unshift('tornado on the ground'); if (wx.cells.some((c) => c.kind === 'devil')) ev.push('dust devils');
+    now.append(...[h('div', { class: 'wxnow' }, icon(W.icon === 'none' ? 'close' : wx.label() === 'Tornado' ? 'wind' : W.icon, 'big'), h('div', null, h('b', null, wx.label()), h('small', null, ev.length ? cap(ev.join(' · ')) : C.label))),
+      W.cyclone ? h('p', { class: 'small k-battle' }, `${W.cyclone.title}, ${W.cyclone.catLabel}${W.cyclone.eye ? ' — you are in its eye' : W.cyclone.wall > 0.5 ? ' — in the eyewall' : ''}`) : null,
+      weatherGrid(W, C, [stat('Snow on the ground', fmt.pct(wx.snow)), stat('Ground', wx.wet > 0.5 ? 'soaked' : wx.wet > 0.15 ? 'wet' : wx.ash > 0.2 ? 'ash-covered' : 'dry')])].filter(Boolean));
+    // the forecast is refreshed now and then (every few minutes of universal time, or every few seconds of real time)
+    if (Math.abs(W.t - fcAt) > FC_STEP / 4 || performance.now() - fcReal > 8000) { fcAt = W.t; fcReal = performance.now(); fc.innerHTML = ''; fc.append(forecastStrip(v.planet, W.site.d, W.t, W.site)); }
+  };
+  box.append(now, section('Forecast · next hour', fc), section('Climate', h('p', { class: 'small' }, C.label), btn('Climate of this world', () => Modals.climate(app, v.planet), { icon: 'cloud' })));
+  fill(); live(fill);
+  return box;
+}
+// a world's climate: what drives it, what it makes likely, and the weather across it right now
+function climateBody(p, app, view, live) {
+  const C = Climate.of(p), box = h('div');
+  if (!C.rocky) {
+    box.append(h('p', { class: 'desc' }, C.label), h('div', { class: 'grid' }, stat('Starlight', `${fmt.sig(C.flux)}× Earth`), stat('Day', fmt.dur(p.dayLength)), stat('Bands', String(Math.round(p.gas.bands))), stat('Great storm', p.gas.storm ? 'yes' : 'none')),
+      h('p', { class: 'small muted' }, 'Giants have no surface climate: their weather is the banded jets, the storm vortices and the lightning of the deep atmosphere. Descend into the clouds to see it.'));
+    return box;
+  }
+  const lvl = (k) => (k < 0.05 ? 'none' : k < 0.25 ? 'low' : k < 0.55 ? 'moderate' : 'high');
+  const host = p.isMoon ? p.parent : p;
+  box.append(h('p', { class: 'desc' }, C.label + '.'),
+    h('div', { class: 'grid' },
+      stat('Starlight', `${fmt.sig(C.flux)}× Earth`), stat('Without greenhouse', fmt.temp(C.teq)), stat('Greenhouse warming', C.hasAir ? `${C.greenhouse >= 0 ? '+' : ''}${Math.round(C.greenhouse)}°C` : 'none'), stat('Mean temperature', fmt.temp(p.tempC)),
+      stat('Day (sunrise to sunrise)', p.tidalLock ? 'endless: locked to the star' : `${fmt.dur(C.solarDay)}${Math.abs(C.solarDay / p.dayLength - 1) > 0.1 ? ` · rotation ${fmt.dur(p.dayLength)}` : ''}`), stat('Year', fmt.dur(host.period)), stat('Seasons', C.seasonAmp < 0.8 ? (p.tidalLock ? 'none (locked)' : 'negligible') : `±${Math.round(C.seasonAmp)}°C (tilt ${Math.round(p.tilt * 57.3)}°)`), stat('Day–night swing', p.tidalLock ? `±${Math.round(C.lockAmp)}°C day side / night side` : `±${Math.round(C.diurnalAmp)}°C`),
+      stat('Tides', C.tideAmp ? `${(C.tideAmp * 0.75).toFixed(1)} m range${C.moonTides.length ? ` · ${C.moonTides.length} moon${C.moonTides.length > 1 ? 's' : ''}` : ' · the star'}` : C.ocean ? 'negligible' : 'no seas'), stat('Volcanism', `${lvl(C.volc)}${C.hotspots.length ? ` · ${C.hotspots.length} region${C.hotspots.length > 1 ? 's' : ''}` : ''}${C.tidalHeat > 0.05 ? ' (tidal heating)' : ''}`),
+      stat('Circulation', !C.hasAir ? 'no air' : p.tidalLock ? 'day-to-night flow' : C.threeCell ? 'trade winds · westerlies · polar easterlies' : 'one broad cell (slow rotation)'), stat('Moisture', !C.medium ? 'no volatiles' : `${lvl(C.humidK)} · ${Math.round(C.ocean * 100)}% ${C.medium === 'water' ? 'sea' : C.medium}`)));
+  if (C.phenomena.length) box.append(section('What the climate allows', C.phenomena.slice(0, 12).map((q) => h('div', { title: q.why }, bar(q.name, q.k, q.k > 0.6 ? '#ff9b7a' : q.k > 0.3 ? '#ffd166' : '#5cc8ff', lvl(q.k)), h('small', { class: 'muted' }, q.why)))));
+  else box.append(section('What the climate allows', h('p', { class: 'muted small' }, 'Nothing: without air there is no weather.')));
+  const nowEl = h('div'), siteEl = h('div');
+  box.append(nowEl, siteEl);
+  let siteAt = -1e9;
+  const fill = () => {
+    const t = app.t;
+    nowEl.innerHTML = '';
+    const st = view && view.wx && view.wx.stats;
+    if (C.hasAir && st) {
+      nowEl.append(section('Across the world right now', h('div', { class: 'grid' }, stat('Raining or snowing', fmt.pct(st.rain)), stat('Thunderstorms', fmt.pct(st.storm)), stat('Snow', fmt.pct(st.snow)), stat('Dust & ash', fmt.pct(st.dust)), stat('Clear skies', fmt.pct(st.clear)), stat('Cyclones', String(st.cyclones.length)))));
+      if (st.cyclones.length) nowEl.append(h('div', { class: 'plist' }, st.cyclones.map((c) => h('div', { class: 'prow', onclick: () => { if (view.setSite) { view.setSite(c.dir); const w = p.toWorld(c.dir, app.t); view.cam.goal.yaw = Math.atan2(w[0], w[2]); view.cam.goal.pitch = clamp(Math.asin(w[1]), -1.2, 1.2); app.ui.panelFor(view, true, 'site'); } } }, icon('cyclone', 'mid'), h('div', null, h('b', null, c.title), h('small', null, `${c.catLabel} · ${Math.abs(Math.round(c.lat * 57.3))}°${c.lat >= 0 ? 'N' : 'S'} ${Math.abs(Math.round(c.lon * 57.3))}°${c.lon >= 0 ? 'E' : 'W'} · tap to pin its position`))))));
+    } else if (C.hasAir && view && view.wx) nowEl.append(section('Across the world right now', h('p', { class: 'muted small' }, 'Mapping the weather…')));
+    if (view && view.site && C.hasAir && (Math.abs(t - siteAt) > 300 || !siteEl.firstChild)) {
+      siteAt = t; siteEl.innerHTML = '';
+      const site = Meteo.siteOf(p, view.site.dir), W = Meteo.at(p, view.site.dir, t, site);
+      siteEl.append(section(`At the landing site · ${W.label}`, weatherGrid(W, C), forecastStrip(p, view.site.dir, t, site)));
+    }
+  };
+  fill(); if (live) live(fill);
+  return box;
 }
 function lineageStrip(sp, t) {
   const L = Ecology.lineage(sp);
@@ -10818,16 +11912,14 @@ const Modals = {
     };
     UI.modal('Survey scanner', h('div', null, form, h('div', { class: 'row' }, btn('Scan', run, { icon: 'search', cls: 'primary' }), btn('Random world', () => { UI.closeModal(); app.randomWorld(); }, { icon: 'dice' })), status, results), { icon: 'search', wide: true });
   },
-  saved(app) {
-    let tab = 'places';
+  saved(app, tab0) {
+    let tab = tab0 || 'places';
     const body = h('div');
     const draw = () => {
       body.innerHTML = '';
-      const tabs = h('nav', { class: 'p-tabs' }, [['places', `Places (${Store.d.bookmarks.length})`], ['species', `Species (${Store.d.species.length})`], ['civs', `Civilizations (${(Store.d.civs || []).length})`], ['data', 'Import / export']].map(([id, l]) => h('button', { class: 'tab' + (tab === id ? ' on' : ''), onclick: () => { tab = id; draw(); } }, l)));
-      // the favourite creature, wherever it lives
-      const f = Favorite.d;
-      if (f) body.append(h('div', { class: 'prow favrow' }, Favorite.portrait(48), h('div', { onclick: () => { UI.closeModal(); Favorite.go(app); } }, h('b', null, `♥ ${f.name}`), h('small', null, `${f.common} · generation ${f.gen} · ${f.world}${f.dead ? ` · died of ${DEATH_CAUSE[f.dead.cause] || f.dead.cause}` : ''}`)), btn(f.dead ? 'Visit' : 'Go', () => { UI.closeModal(); Favorite.go(app); }, { icon: 'eye' }), h('button', { class: 'ib', title: 'Forget this favourite', onclick: () => { Favorite.clear(); draw(); } }, icon('close'))));
+      const tabs = h('nav', { class: 'p-tabs' }, [['places', `Places (${Store.d.bookmarks.length})`], ['favs', `♥ Favourites (${Favorite.list.length})`], ['species', `Species (${Store.d.species.length})`], ['civs', `Civilizations (${(Store.d.civs || []).length})`], ['data', 'Import / export']].map(([id, l]) => h('button', { class: 'tab' + (tab === id ? ' on' : '') + (id === 'favs' ? ' tab-fav' : ''), onclick: () => { tab = id; draw(); } }, l)));
       body.append(tabs);
+      if (tab === 'favs') { body.append(favoritesList(app, draw)); return; }
       if (tab === 'places') {
         if (!Store.d.bookmarks.length) body.append(h('p', { class: 'muted' }, 'Nothing saved yet. Use the ★ button on any star, planet or surface site.'));
         for (const b of Store.d.bookmarks) body.append(h('div', { class: 'prow' }, icon(b.kind === 'system' ? 'star' : 'planet', 'mid'), h('div', { onclick: () => { UI.closeModal(); app.openCode(b.code); } }, h('b', null, b.name), h('small', null, `${b.type || ''}${b.sub ? ' · ' + b.sub : ''}`), h('code', { class: 'tiny' }, b.code)), h('button', { class: 'ib', title: 'Delete', onclick: () => { Store.toggleBookmark(b); draw(); } }, icon('close'))));
@@ -10848,9 +11940,9 @@ const Modals = {
         body.append(grid);
       } else {
         const ta = h('textarea', { class: 'codebox', rows: 6, placeholder: 'Paste exported save JSON here…' });
-        body.append(section('Export', h('p', { class: 'muted small' }, 'Bookmarks, catalogued species and settings as JSON.'), h('div', { class: 'row' }, btn('Download file', () => { const blob = new Blob([Store.exportJSON()], { type: 'application/json' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'procedurality-save.json' }); document.body.append(a); a.click(); a.remove(); }, { icon: 'down' }), btn('Copy JSON', () => copyText(Store.exportJSON()), { icon: 'copy' }))),
-          section('Import', ta, h('div', { class: 'row' }, btn('Import pasted', () => { try { const r = Store.importJSON(ta.value); UI.toast(`Imported ${r.bookmarks} places, ${r.species} species`, 'ok'); draw(); } catch (e) { UI.toast(e.message, 'err'); } }, { icon: 'up' }),
-            h('label', { class: 'btn' }, icon('up'), h('span', null, 'Load file'), h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: async (e) => { try { const r = Store.importJSON(await e.target.files[0].text()); UI.toast(`Imported ${r.bookmarks} places, ${r.species} species`, 'ok'); draw(); } catch (er) { UI.toast(er.message, 'err'); } } })))));
+        body.append(section('Export', h('p', { class: 'muted small' }, 'Bookmarks, favourite creatures, catalogued species and settings as JSON.'), h('div', { class: 'row' }, btn('Download file', () => { const blob = new Blob([Store.exportJSON()], { type: 'application/json' }); const a = h('a', { href: URL.createObjectURL(blob), download: 'procedurality-save.json' }); document.body.append(a); a.click(); a.remove(); }, { icon: 'down' }), btn('Copy JSON', () => copyText(Store.exportJSON()), { icon: 'copy' }))),
+          section('Import', ta, h('div', { class: 'row' }, btn('Import pasted', () => { try { const r = Store.importJSON(ta.value); UI.toast(`Imported ${r.bookmarks} places, ${r.species} species, ${r.favorites} favourites`, 'ok'); draw(); } catch (e) { UI.toast(e.message, 'err'); } }, { icon: 'up' }),
+            h('label', { class: 'btn' }, icon('up'), h('span', null, 'Load file'), h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: async (e) => { try { const r = Store.importJSON(await e.target.files[0].text()); UI.toast(`Imported ${r.bookmarks} places, ${r.species} species, ${r.favorites} favourites`, 'ok'); draw(); } catch (er) { UI.toast(er.message, 'err'); } } })))));
       }
     };
     draw();
@@ -10888,8 +11980,9 @@ const Modals = {
           h('p', { class: 'muted small' }, 'Space themes play among the stars, planet themes while you orbit or walk a world, with quiet breaks between pieces. Creatures call when they attack, flee or are inspected.'),
         ];
       })()),
-      section('Data', h('div', { class: 'row' }, btn('Reset universe clock', () => { if (confirm(`Reset the clock of universe “${Universe.name}” to cycle 0? Its civilizations start over as tribes and the wildlife remembered there is forgotten.`)) { UI.closeModal(); app.resetClock(); } }), btn('Erase all saved data', () => { if (confirm('Erase bookmarks, discoveries, settings, remembered wildlife and your favourite creature?')) { app.erasing = true; EcoSave.eraseAll(); localStorage.removeItem(Store.KEY); location.reload(); } }, { cls: 'danger' })))), { icon: 'gear' });
+      section('Data', h('div', { class: 'row' }, btn('Reset universe clock', () => { if (confirm(`Reset the clock of universe “${Universe.name}” to cycle 0? Its civilizations start over as tribes and the wildlife remembered there is forgotten.`)) { UI.closeModal(); app.resetClock(); } }), btn('Erase all saved data', () => { if (confirm('Erase bookmarks, discoveries, settings, remembered wildlife and your favourite creatures?')) { app.erasing = true; EcoSave.eraseAll(); localStorage.removeItem(Store.KEY); location.reload(); } }, { cls: 'danger' })))), { icon: 'gear' });
   },
+  climate(app, p) { UI.modal(`Climate · ${p.title}`, climateBody(p, app, null, null), { icon: 'cloud' }); },
   help(app) {
     UI.modal('Observer’s handbook', h('div', { class: 'help' },
       h('p', null, 'You are an observer drifting through an infinite, seeded universe. Nothing here is stored — every star, world, river and creature is regenerated from numbers. The universe runs on a shared clock and keeps evolving while you are away.'),
@@ -10898,8 +11991,8 @@ const Modals = {
         h('li', null, h('b', null, 'System · '), 'planets move along real orbits. Tap to inspect, double-tap to observe.'),
         h('li', null, h('b', null, 'Planet · '), 'drag to spin the globe, tap to pick a landing site, double-tap to descend.'),
         h('li', null, h('b', null, 'Surface · '), 'drag to pan, twist / right-drag / Q·E to rotate, tap a creature to study its genome and offspring.'))),
-      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface'], ['F', 'follow selected'], ['L', 'go to favourite'], ['Shift + F', 'fullscreen']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
-      section('Life', h('p', null, 'Creatures belong to nine body-plan families (quadrupeds, bipeds, hexapods, octopods, serpents, avians, swimmers, gastropods, aerostats). A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to make one individual your favourite: it is marked wherever it goes and the ♥ button (or L) finds it again from anywhere. Every site you observe remembers its wildlife between visits.')),
+      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface'], ['F', 'follow selected'], ['L', 'next favourite here · all favourites'], ['Shift + F', 'fullscreen']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
+      section('Life', h('p', null, 'Creatures belong to nine body-plan families (quadrupeds, bipeds, hexapods, octopods, serpents, avians, swimmers, gastropods, aerostats). A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
       section('Sound', h('p', null, 'Besides music and creature calls, nature is synthesized live: wind and gusts, rain, rivers and streams, surf, geysers, lava, thunder, storms and hurricanes, birdsong by day and insects and frogs at night. It follows the terrain within earshot, the weather, the hour and the zoom — and thin air carries little sound, vacuum none.')),
       section('Civilizations', h('p', null, 'On some living worlds a species becomes sapient and founds tribes. Each people has its own procedurally generated culture — values, palette, architecture, city layout, clothing, weapons, vehicles, spacecraft, emblem and language. Hidden progress (growth, discoveries, trade, war, exploration) carries them from ', h('b', null, 'tribes'), ' to ', h('b', null, 'nations'), ' with international trade, to ', h('b', null, 'colonizing their star system'), ' (domed cities on hostile worlds), and finally to ', h('b', null, 'intergalactic'), ' powers that terraform worlds, settle neighbouring stars, trade, ally, conquer or exterminate. History runs per galactic region in ages; look for the Civilization tab on planets, city lights on night sides, trade routes in systems and territories on the galaxy map, then land on a settlement to watch its citizens.')),
       section('Seeds', h('p', null, 'Codes like ', h('code', null, 'ORIGIN:3,-2:1:2'), ' mean universe : sector : star : planet : moon. Share them, bookmark them, or type any words to create a pocket system. Civilization codes add ', h('code', null, '$age.index'), '.'))), { icon: 'help', wide: true });
@@ -11048,7 +12141,7 @@ const Input = {
       case '?': UI.openHelp(); break;
       case 'enter': app.primary(); break;
       case 'f': if (e.shiftKey) app.toggleFullscreen(); else if (app.view.name === 'surface' && app.view.selected) { app.view.follow = app.view.follow ? null : app.view.selected; } break;
-      case 'l': Favorite.go(app); break;
+      case 'l': Favorite.next(app); break;
     }
   },
   tick(dt) {
@@ -11271,12 +12364,12 @@ const App = {
   resetClock() {
     this.syncClock(); Clock.reset();
     Civ.reset(); this._feedR = null;
-    // the remembered wildlife (and the favourite) of this universe belonged to the old timeline
+    // the remembered wildlife (and the favourites) of this universe belonged to the old timeline
     const v = this.views.surface;
     if (v.eco) v.eco.discarded = true;
     EcoSave.clearUniverse(Universe.name);
-    const f = Favorite.d;
-    if (f && f.u === Universe.name) { Favorite.clear(true); UI.log(`♥ ${f.name} belonged to the old timeline and is no longer your favourite.`, 'evolve'); }
+    const gone = Favorite.clearUniverse(Universe.name);
+    if (gone.length) UI.log(`♥ ${gone.length > 1 ? `${gone.length} favourite creatures (${gone.map((f) => f.name).join(', ')}) belonged` : `${gone[0].name} belonged`} to the old timeline and ${gone.length > 1 ? 'are' : 'is'} no longer among your favourites.`, 'evolve');
     const code = this.locationCode();
     if (code) this.openCode(code, true);
     UI.log(`The clock of universe “${Universe.name}” was reset to cycle 0.`, 'evolve');
