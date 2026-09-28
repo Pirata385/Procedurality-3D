@@ -176,6 +176,19 @@ body.compact .fc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .srow-main b { display: block; font: 700 13px var(--mono); }
 .srow-main i { display: block; color: var(--muted); font-size: 12px; }
 .srow-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.srow.micro { cursor: default; }
+.srow.micro:hover { background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; }
+.srow.micro .srow-main i { color: var(--ink, #e8ecff); font-style: italic; }
+.srow.micro .srow-main small { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; }
+h4.grp { margin: 12px 0 2px; font: 800 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin: 8px 0 10px; }
+.rung { background: #0b1032; box-shadow: inset 0 0 0 1px #1d2466; padding: 4px 3px; text-align: center; min-width: 0; }
+.rung-n { display: block; font: 800 12px var(--mono); color: var(--muted); }
+.rung-l { display: block; font-size: 9px; line-height: 1.15; color: var(--muted); overflow-wrap: normal; word-break: normal; hyphens: auto; }
+.rung.on { background: #123a3a; box-shadow: inset 0 0 0 1px #2c7d6c; }
+.rung.on .rung-n, .rung.on .rung-l { color: #5cf2c6; }
+.rung.cur { box-shadow: inset 0 0 0 2px #5cf2c6; }
+.rung.out { opacity: 0.35; }
 .sphead { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
 .sphead .portrait.big { width: 112px; height: 112px; background: radial-gradient(#243282, #0b1032 70%); box-shadow: inset 0 0 0 2px var(--line2); }
 .sphead h3 { margin: 0; font: 800 15px var(--mono); }
@@ -358,6 +371,24 @@ p.k-battle { color: #ffab9a; }
 .p-tabs .tab.tab-fav { color: #ff9fc6; }
 .p-tabs .tab.tab-fav.on { color: #ffd6e6; }
 body.noui .fav-edge { display: none !important; }
+/* ---------- dive gauge ---------- */
+#dive { position: fixed; left: 14px; bottom: 62px; z-index: 13; display: flex; flex-direction: column; gap: 6px; max-width: 300px; pointer-events: auto; }
+#dive[hidden] { display: none; }
+#dive .dv-read { background: #0b1032e6; box-shadow: inset 0 0 0 2px #1d2466; padding: 6px 9px; display: grid; gap: 1px; }
+#dive.under .dv-read { box-shadow: inset 0 0 0 2px #2f7fae; background: #041a2ce8; }
+#dive .dv-read b { font: 700 12px var(--mono); color: #bfe8ff; }
+#dive .dv-read small { font-size: 11px; color: var(--muted); line-height: 1.3; }
+#dive .dv-read small:empty { display: none; }
+#dive .dv-btns { display: flex; gap: 6px; }
+#dive .dv-b { width: auto; padding: 0 10px; gap: 6px; display: inline-flex; align-items: center; height: 36px; touch-action: none; user-select: none; -webkit-user-select: none; }
+#dive .dv-b span { font: 700 11px var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+#dive:not(.under) .dv-b:not(:first-child) { display: none; }
+body.noui #dive { display: none !important; }
+body.mobile:not(.landscape) #dive { left: 10px; bottom: auto; top: calc(var(--top-h, 96px) + 52px); max-width: 60vw; }
+body.mobile.panel-open:not(.landscape) #dive .dv-read small { display: none; }
+body.compact #dive { left: calc(10px + var(--sl, 0px)); bottom: 54px; }
+body.compact #dive .dv-b span { display: none; }
+body.compact #dive .dv-read small.dv-c { display: none; }
 
 body.noui #top, body.noui #panel, body.noui #hud, body.noui #logbox, body.noui #labels, body.noui #markers, body.noui #toasts { display: none !important; }
 
@@ -768,6 +799,8 @@ const Names = (() => {
     hexapod: ['ptera', 'opoda', 'ceris', 'myrmex', 'scarabus'], octopod: ['arachne', 'ctenus', 'pholcus', 'tarantis'],
     serpent: ['ophis', 'naja', 'boa', 'draco', 'hydrus'], avian: ['pteryx', 'ornis', 'avis', 'cygnus'],
     aquatic: ['ichthys', 'delphis', 'selache', 'teuthis'], blob: ['plasma', 'morpha', 'limax', 'gelus'], floater: ['physa', 'aeris', 'nephos', 'medusa'],
+    cetacean: ['cetus', 'delphis', 'balaena', 'physeter'], plesio: ['saurus', 'nectes', 'pliosaurus', 'dracon'], ray: ['batis', 'raja', 'myliobatis', 'manta'], eel: ['muraena', 'anguilla', 'ophichthys'],
+    jelly: ['medusa', 'aurelia', 'cnida', 'physalia'], cephalo: ['teuthis', 'octopus', 'sepia', 'nautilus'], crustacean: ['cancer', 'homarus', 'carcinus', 'squilla'], echino: ['aster', 'echinus', 'holothuria', 'ophiura'], siphon: ['physalia', 'nectophora', 'siphonia'],
   };
   const EPITHET = ['ensis', 'ica', 'oides', 'ata', 'ina', 'alis', 'ior', 'ifer', 'osa', 'ulus', 'ax', 'ans'];
   const stem = (r) => word(r, 1, 2).replace(/[aeiouy]+$/, '').toLowerCase();
@@ -2110,6 +2143,28 @@ const FAMILIES = {
   floater: { name: 'Aerostat', cls: 'Aerostata', hab: 'air', size: [1.1, 3.2], leg: [0, 0], seg: [3, 8], speed: [1, 2.4],
     nouns: { herbivore: ['Drifter', 'Balloon', 'Jelly'], carnivore: ['Stinger', 'Siphon'], omnivore: ['Floater'] } },
 };
+// the seas' own body plans (only the marine lineage slots use them, so older species never change)
+Object.assign(FAMILIES, {
+  cetacean: { name: 'Cetoid', cls: 'Cetoidea', hab: 'water', size: [2.2, 7.5], leg: [0, 0], seg: [3, 6], speed: [2.6, 6], massK: 3, lenK: 2.8, breathes: true,
+    nouns: { herbivore: ['Baleen', 'Sievewhale', 'Krillmaw'], carnivore: ['Orca', 'Hunterwhale', 'Spermwhale'], omnivore: ['Dolphin', 'Porpoise'] } },
+  plesio: { name: 'Marine reptile', cls: 'Plesiosauria', hab: 'water', size: [1.4, 5], leg: [0, 0], seg: [3, 6], speed: [2.2, 5.2], massK: 1.4, lenK: 2, breathes: true,
+    nouns: { herbivore: ['Paddler', 'Seagrazer'], carnivore: ['Plesiosaur', 'Pliosaur', 'Seadragon'], omnivore: ['Nothosaur'] } },
+  ray: { name: 'Ray', cls: 'Batoidea', hab: 'water', size: [0.8, 4], leg: [0, 0], seg: [3, 6], speed: [1.8, 4.5], massK: 0.5, lenK: 1.3,
+    nouns: { herbivore: ['Manta', 'Glider'], carnivore: ['Stingray', 'Skate'], omnivore: ['Ray'] } },
+  eel: { name: 'Eel', cls: 'Anguilliformes', hab: 'water', size: [0.7, 2.6], leg: [0, 0], seg: [8, 14], speed: [1.6, 4.2], massK: 0.35, lenK: 1,
+    nouns: { herbivore: ['Ribbon', 'Oarfish'], carnivore: ['Moray', 'Gulper', 'Snapjaw'], omnivore: ['Eel'] } },
+  jelly: { name: 'Medusa', cls: 'Medusozoa', hab: 'water', size: [0.4, 2.2], leg: [0, 0], seg: [4, 10], speed: [0.35, 1.1], massK: 0.02, lenK: 1.6, drift: true,
+    nouns: { herbivore: ['Jelly', 'Moonbell'], carnivore: ["Man-o'-war", 'Stinger', 'Boxjelly'], omnivore: ['Medusa'] } },
+  cephalo: { name: 'Cephalopod', cls: 'Cephalopoda', hab: 'water', size: [0.5, 3.8], leg: [0, 0], seg: [8, 10], speed: [1.8, 5], massK: 0.6, lenK: 2.4,
+    nouns: { herbivore: ['Nautiloid'], carnivore: ['Squid', 'Octopus', 'Kraken'], omnivore: ['Cuttle'] } },
+  crustacean: { name: 'Crustacean', cls: 'Crustacea', hab: 'water', size: [0.35, 1.8], leg: [0.3, 0.8], seg: [3, 7], speed: [0.8, 2.6], massK: 0.6, lenK: 1, benthic: true,
+    nouns: { herbivore: ['Isopod', 'Grazercrab'], carnivore: ['Lobster', 'Mantisshrimp', 'Crab'], omnivore: ['Crab', 'Prawn'] } },
+  echino: { name: 'Echinoderm', cls: 'Echinodermata', hab: 'water', size: [0.3, 1.2], leg: [0, 0], seg: [5, 8], speed: [0.2, 0.7], massK: 0.4, lenK: 1, benthic: true,
+    nouns: { herbivore: ['Urchin', 'Seacucumber'], carnivore: ['Seastar', 'Sunstar'], omnivore: ['Brittlestar'] } },
+  siphon: { name: 'Siphonophore', cls: 'Siphonophora', hab: 'water', size: [0.6, 2.4], leg: [0, 0], seg: [4, 9], speed: [0.4, 1.3], massK: 0.02, lenK: 3, drift: true,
+    nouns: { herbivore: ['Driftchain'], carnivore: ['Siphon', 'Lurechain'], omnivore: ['Colony'] } },
+});
+const MARINE_FAMS = ['aquatic', 'cetacean', 'plesio', 'ray', 'eel', 'jelly', 'cephalo', 'crustacean', 'echino', 'siphon'];
 const LAND_FAMS = ['quadruped', 'biped', 'hexapod', 'octopod', 'serpent', 'blob'];
 
 const Genetics = (() => {
@@ -2191,9 +2246,10 @@ const Genetics = (() => {
     P.aggro = g[G.aggro]; P.social = g[G.social]; P.percep = lerp(9, 26, g[G.percep]); P.fert = g[G.fertility];
     P.life = lerp(900, 2400, g[G.longevity]) * (0.75 + S * 0.22);
     P.noct = g[G.nocturnal] > 0.62; P.metab = lerp(0.6, 1.4, g[G.metab]);
-    P.massKg = Math.max(0.2, Math.round(Math.pow(S, 3) * lerp(28, 85, g[G.girth]) * (fam === 'floater' ? 0.04 : fam === 'avian' ? 0.2 : 1) * 10) / 10);
-    P.lengthM = Math.round(S * 1.4 * (fam === 'serpent' ? P.segs * 0.22 : 1) * 10) / 10;
+    P.massKg = Math.max(0.2, Math.round(Math.pow(S, 3) * lerp(28, 85, g[G.girth]) * (fam === 'floater' ? 0.04 : fam === 'avian' ? 0.2 : F.massK || 1) * 10) / 10);
+    P.lengthM = Math.round(S * 1.4 * (fam === 'serpent' || fam === 'eel' ? P.segs * 0.22 : F.lenK || 1) * 10) / 10;
     P.carn = g[G.diet];
+    if (F.hab === 'water' && fam !== 'aquatic') { P.ears = 0; P.fur = 0; }
     return P;
   }
 
@@ -2273,7 +2329,88 @@ const Ecology = (() => {
 
   const DIET_BAND = { herbivore: [0, 0.3], omnivore: [0.38, 0.62], carnivore: [0.72, 1] };
 
+  // ---- the seas: lineage slots from MARINE0 up, one per aquatic niche, each bound to a zone and a depth band
+  const MARINE0 = 16;
+  const ZPROD = { reef: 1.4, kelp: 1.3, upwelling: 1.4, seagrass: 1.1, lagoon: 0.9, shelf: 1, estuary: 1.1, marsh: 0.7, mangrove: 0.9, polar: 1.1, underice: 0.6, open: 0.8, slope: 0.6, seamount: 0.8, abyss: 0.45, trench: 0.3, vent: 0.9, stromatolite: 0.5, hydrocarbon: 0.6, acid: 0.6, lake: 1 };
+  const COAST = ['reef', 'lagoon', 'kelp', 'seagrass', 'shelf', 'upwelling', 'estuary', 'marsh', 'mangrove', 'polar', 'stromatolite'];
+  const HAB = {
+    coast: { band: [0.4, 4.5], floor: [1, 6.5], zones: COAST, fam: { aquatic: 3, ray: 1.2, cephalo: 1.2, crustacean: 1.5, echino: 1.2, eel: 1, plesio: 0.5, cetacean: 0.5, jelly: 0.6 } },
+    open: { band: [0.5, 9], floor: [3.5, 99], zones: ['open', 'slope', 'seamount', 'abyss', 'trench', 'vent', 'upwelling', 'polar', 'shelf', 'reef', 'kelp', 'lagoon', 'hydrocarbon', 'acid'], fam: { cetacean: 2, plesio: 1.1, aquatic: 2, ray: 1, jelly: 1.5, cephalo: 1.2, siphon: 1, eel: 0.4 } },
+    ice: { band: [0.4, 7], floor: [1.5, 99], zones: ['polar', 'underice', 'open', 'slope', 'shelf'], ice: true, fam: { cetacean: 2, aquatic: 2, cephalo: 1, jelly: 0.8, crustacean: 1, plesio: 0.6 } },
+    twilight: { band: [4, 14], floor: [5, 99], zones: ['slope', 'seamount', 'open', 'abyss', 'trench', 'vent'], fam: { aquatic: 2, cephalo: 1.6, eel: 1, jelly: 1.2, siphon: 1.4, crustacean: 0.8 } },
+    abyss: { band: [11, 34], floor: [12, 99], zones: ['abyss', 'trench', 'seamount', 'vent', 'slope', 'open'], fam: { aquatic: 2, eel: 1.5, cephalo: 1.4, jelly: 1, siphon: 1, crustacean: 1.2, echino: 1.2 } },
+    trench: { band: [20, 75], floor: [24, 99], zones: ['trench', 'abyss'], fam: { aquatic: 1.5, eel: 1.2, crustacean: 1.5, echino: 1.5, cephalo: 0.6 } },
+    vent: { band: [6, 99], floor: [6, 99], zones: ['vent', 'abyss', 'trench', 'slope', 'seamount'], vent: true, fam: { crustacean: 2.5, echino: 0.8, eel: 0.6, aquatic: 0.8 } },
+    fresh: { band: [0.3, 2.5], floor: [1, 8], zones: ['lake', 'river', 'saltlake', 'glacial'], fresh: true, fam: { aquatic: 3, crustacean: 1.5, eel: 1, echino: 0.2, plesio: 0.3, cetacean: 0.3 } },
+    exotic: { band: [0.4, 6], floor: [1, 99], zones: ['hydrocarbon', 'acid'], fam: { aquatic: 1.5, jelly: 1.5, eel: 1.2, siphon: 1, crustacean: 1 } },
+  };
+  const tmplOf = (z) => (COAST.includes(z) ? (z === 'polar' ? 'ice' : 'coast') : z === 'underice' ? 'ice' : z === 'open' ? 'open' : z === 'slope' || z === 'seamount' ? 'twilight' : z === 'abyss' ? 'abyss' : z === 'trench' ? 'trench' : z === 'vent' ? 'vent' : z === 'lake' ? 'fresh' : 'exotic');
+  function marineCount(p) {
+    if (!p.life.has || p.isGiant || !p.liquid || p.liquid === 'lava' || p.coverage < 0.05) return 0;
+    const S = Ocean.stats(p);
+    return clamp(Math.round(1 + p.coverage * 5 + Math.min(5, S.zones.length) * 0.5), 1, 8);
+  }
+  // the pressures of an aquatic habitat shape the genome: light (or its absence), depth, cold, heat, food
+  function adaptMarine(g, p, fam, hab, diet, r) {
+    const A = [], z = hab.zone, deep = hab.band[0] > 3.5 || hab.vent, F = FAMILIES[fam];
+    g[G.aquatic] = 1;
+    if (fam === 'aquatic' || fam === 'ray') g[G.fins] = lerp(g[G.fins], 1, 0.6);
+    if (deep) {
+      if (r.chance(0.5)) { g[G.eyes] = lerp(g[G.eyes], 1, 0.85); A.push(['Enormous light-gathering eyes', 'the last glimmer of the twilight zone']); }
+      else { g[G.eyes] *= 0.25; g[G.percep] = lerp(g[G.percep], 1, 0.5); A.push(['Vestigial eyes; pressure and scent senses', 'lightless depths']); }
+      g[G.glow] = lerp(g[G.glow], 1, 0.8); A.push([diet === 'carnivore' ? 'Glowing lure' : 'Bioluminescent signals', 'darkness below the sunlit zone']);
+      if (!hab.vent) { g[G.val] *= 0.55; if (r.chance(0.6)) g[G.hue] = fract(r.range(-0.03, 0.03)); A.push(['Deep red or black skin', 'red light never reaches this deep, so red is invisible']); }
+      g[G.metab] *= 0.55; g[G.longevity] = lerp(g[G.longevity], 1, 0.4); A.push(['Slow metabolism, long life', 'cold, food-poor depths']);
+      if (fam === 'cephalo' || fam === 'crustacean' || fam === 'echino' || fam === 'siphon') { g[G.size] = lerp(g[G.size], 1, 0.55); A.push(['Deep-sea gigantism', 'cold water and crushing pressure']); }
+      A.push(['Pressure-proof proteins', `${fmt.n(Math.round(Ocean.depthM(hab.band[0] + 2) / 50) * 50)} m of water overhead or more`]);
+      if (diet === 'carnivore') { g[G.jaw] = lerp(g[G.jaw], 1, 0.6); A.push(['Huge jaws and a stretchy stomach', 'meals are rare in the dark']); }
+    }
+    if (hab.vent) { g[G.heat] = lerp(g[G.heat], 1, 0.9); g[G.val] = lerp(g[G.val], 0.95, 0.6); g[G.sat] *= 0.3; A.push(['Chemosynthetic symbionts', 'energy from vent chemistry, not sunlight'], ['Heat-hardened enzymes', 'water at the chimneys reaches 350 °C']); }
+    if (z === 'reef' || z === 'lagoon') { g[G.sat] = lerp(g[G.sat], 1, 0.7); g[G.val] = lerp(g[G.val], 1, 0.5); g[G.pattern] = r.range(0.25, 0.75); g[G.size] *= 0.6; A.push(['Vivid reef coloration', 'signals and camouflage among the corals'], ['Compact, agile body', 'manoeuvring in the reef']); }
+    if (z === 'kelp' || z === 'seagrass') { const fl = Color.toHsv(p.flora.leaf); g[G.hue] = fract(fl[0] + r.range(-0.05, 0.05)); g[G.sat] = 0.5; A.push(['Weed-coloured camouflage', Ocean.ZONES[Ocean.Z[z]].name.toLowerCase()]); }
+    if (z === 'open' || z === 'upwelling') { g[G.pattern] = r.range(0, 0.12); g[G.length] = lerp(g[G.length], 1, 0.5); g[G.girth] *= 0.8; g[G.speed] = lerp(g[G.speed], 1, 0.4); A.push(['Counter-shaded, streamlined body', 'open blue water']); if (diet === 'herbivore') { g[G.social] = lerp(g[G.social], 1, 0.6); A.push(['Schooling', 'safety in numbers']); } }
+    if (hab.ice) { g[G.cold] = lerp(g[G.cold], 1, 0.9); g[G.girth] = lerp(g[G.girth], 1, 0.5); g[G.size] = lerp(g[G.size], 1, 0.3); A.push([fam === 'cetacean' || fam === 'plesio' ? 'Thick blubber' : 'Antifreeze blood proteins', 'near-freezing water']); }
+    if (z === 'estuary' || z === 'marsh' || z === 'mangrove') { g[G.percep] = lerp(g[G.percep], 1, 0.4); g[G.eyes] *= 0.6; g[G.append] = lerp(g[G.append], 1, 0.5); A.push(['Brackish-tolerant kidneys', 'water swinging between salt and fresh'], ['Feeler barbels', 'murky water']); }
+    if (hab.fresh) A.push(['Freshwater osmoregulation', 'inland lakes and rivers']);
+    if (diet === 'herbivore' && (fam === 'cetacean' || fam === 'ray' || fam === 'aquatic') && !deep && !hab.fresh) { g[G.size] = lerp(g[G.size], 1, 0.7); g[G.jaw] *= 0.4; A.push(['Gigantic filter feeder', 'strains plankton: the microbes and tiny drifters of the sea']); }
+    if (F.breathes) { A.push(['Breath-hold diving', 'breathes air at the surface']); if (deep) A.push(['Collapsible lungs', 'dives to the deep between breaths']); }
+    if (fam === 'cephalo') A.push(['Ink and jet propulsion', 'escape'], ['Colour-changing skin', 'camouflage and display']);
+    if (F.drift) A.push([diet === 'carnivore' ? 'Stinging tentacles' : 'Filter-feeding tentacles', 'drifting with the currents']);
+    if (fam === 'crustacean') A.push(['Armoured exoskeleton', 'life on the sea floor']);
+    if (fam === 'echino') A.push(['Tube feet and radial body', 'slow life on the sea floor']);
+    if (p.type === 'methane') A.push(['Cryo-solvent biochemistry', 'liquid methane seas']);
+    if (p.type === 'toxic') A.push(['Acid-proof cuticle', 'acid seas']);
+    if (p.gravity > 1.4) A.push(['Water-borne bulk', `buoyancy lifts the weight of ${p.gravity.toFixed(1)} g`]);
+    if (!p.isGiant && ['M', 'D', 'NS', 'BH', 'RG'].includes(p.star.cls) && !deep) g[G.eyes] = lerp(g[G.eyes], 1, 0.4);
+    return A;
+  }
+  function marineBase(p, slot, anchor) {
+    const r = new RNG.Rand(RNG.hash(p.seed, 'marine', slot, anchor)), OS = Ocean.stats(p), k = slot - MARINE0;
+    const zw = OS.zones.filter((q) => ZPROD[q.key]).map((q) => [q.key, Math.pow(q.f + 0.02, 0.55) * ZPROD[q.key]]);
+    if (OS.fresh) zw.push(['lake', 0.12]);
+    // the first lineages hold the richest waters (a grazer or filter feeder, then a hunter); the rest spread into every
+    // zone, weighted by its productivity more than its extent (life crowds the coasts and reefs, not the open deep)
+    const zone = k < 2 && zw.length ? zw.slice().sort((a, b) => b[1] - a[1])[0][0] : zw.length ? r.weighted(zw) : 'open';
+    const T = HAB[tmplOf(zone)];
+    let fam = r.weighted(Object.entries(T.fam));
+    let diet = k === 0 ? 'herbivore' : k === 1 ? 'carnivore' : r.weighted([['herbivore', 4], ['carnivore', 3], ['omnivore', 2]]);
+    if (fam === 'echino' && diet === 'omnivore' && r.chance(0.5)) diet = 'herbivore';
+    const benthic = !!FAMILIES[fam].benthic || (fam === 'ray' && r.chance(0.4)) || (fam === 'eel' && r.chance(0.3));
+    const hab = { zone, tmpl: tmplOf(zone), zones: new Set(T.zones.map((q) => Ocean.Z[q])), band: T.band.slice(), floor: T.floor.slice(), benthic, breathes: !!FAMILIES[fam].breathes, drift: !!FAMILIES[fam].drift, ice: !!T.ice, vent: !!T.vent, fresh: !!T.fresh };
+    // air-breathers can be found anywhere from the surface down to their deepest dive
+    if (hab.breathes) hab.band[0] = 0.3;
+    if (benthic) hab.band = [hab.floor[0], Math.min(99, hab.floor[1])];
+    const g = Genetics.random(r), band = DIET_BAND[diet];
+    g[G.diet] = r.range(band[0], band[1]);
+    if (diet === 'carnivore') { g[G.jaw] = lerp(g[G.jaw], 1, 0.6); g[G.speed] = lerp(g[G.speed], 1, 0.45); g[G.aggro] = lerp(g[G.aggro], 1, 0.6); g[G.percep] = lerp(g[G.percep], 1, 0.4); g[G.social] *= 0.6; g[G.size] = lerp(g[G.size], 1, 0.3); }
+    if (diet === 'herbivore') { g[G.aggro] *= 0.5; g[G.social] = lerp(g[G.social], 1, 0.4); g[G.jaw] *= 0.6; }
+    const adaptations = adaptMarine(g, p, fam, hab, diet, r);
+    const sp = { planet: p, slot, anchor, era: anchor, gen: 0, fam, diet, g, home: hab.band[1] > 7 ? B.DEEP : B.SHALLOW, marine: hab, adaptations, ancestor: null, founder: true };
+    return finalize(sp);
+  }
+
   function base(p, slot, anchor) {
+    if (slot >= MARINE0) return marineBase(p, slot, anchor);
     const r = new RNG.Rand(RNG.hash(p.seed, 'lineage', slot, anchor));
     let fam;
     const w = familyWeights(p);
@@ -2300,7 +2437,7 @@ const Ecology = (() => {
     const g = Genetics.mutate(prev.g, r, 0.45, 0.11);
     const band = DIET_BAND[prev.diet];
     g[G.diet] = clamp(g[G.diet], band[0], band[1]);
-    if (prev.fam === 'aquatic') g[G.aquatic] = 1;
+    if (prev.fam === 'aquatic' || prev.marine) g[G.aquatic] = 1;
     // name the most visible change
     let bi = 0, bd = 0;
     for (let i = 0; i < NG; i++) { if (HUE_GENES.has(i) || i === G.diet) continue; const d = g[i] - prev.g[i]; if (Math.abs(d) > Math.abs(bd)) { bd = d; bi = i; } }
@@ -2344,7 +2481,10 @@ const Ecology = (() => {
     sp.phase = r.range(0, TAU);
     sp.code = Codes.ofPlanet(p) + '#' + sp.slot + '.' + sp.era;
     sp.name = `${sp.genus} ${sp.epithet}`;
-    const lvl = sp.diet === 'herbivore' ? (sp.fam === 'aquatic' ? 'Filter feeder' : sp.pheno.S > 1.6 ? 'Megaherbivore' : sp.pheno.neckL > sp.pheno.S * 0.4 ? 'Browser' : 'Grazer') : sp.diet === 'omnivore' ? (sp.fam === 'avian' ? 'Opportunist' : 'Forager') : sp.pheno.S > 1.7 ? 'Apex predator' : sp.fam === 'avian' ? 'Aerial hunter' : 'Predator';
+    const M = sp.marine, big = sp.pheno.S > 2.4;
+    const lvl = M ? (sp.diet === 'herbivore' ? (M.vent ? 'Chemosynthetic grazer' : M.drift ? 'Planktivore' : M.benthic ? (sp.fam === 'echino' ? 'Grazer' : 'Detritivore') : big || sp.adaptations.some((q) => q[0] === 'Gigantic filter feeder') ? 'Filter feeder' : 'Grazer')
+      : sp.diet === 'carnivore' ? (M.drift ? 'Stinging predator' : big ? 'Apex predator' : M.band[0] > 3.5 ? 'Ambush predator' : 'Predator') : M.benthic ? 'Scavenger' : 'Forager')
+      : sp.diet === 'herbivore' ? (sp.fam === 'aquatic' ? 'Filter feeder' : sp.pheno.S > 1.6 ? 'Megaherbivore' : sp.pheno.neckL > sp.pheno.S * 0.4 ? 'Browser' : 'Grazer') : sp.diet === 'omnivore' ? (sp.fam === 'avian' ? 'Opportunist' : 'Forager') : sp.pheno.S > 1.7 ? 'Apex predator' : sp.fam === 'avian' ? 'Aerial hunter' : 'Predator';
     sp.role = lvl;
     return sp;
   }
@@ -2378,7 +2518,14 @@ const Ecology = (() => {
 
   function canEat(a, b) {
     if (b.pheno.S > a.pheno.S * 0.92) return false;
-    if (a.habitat === 'water') return b.habitat === 'water';
+    if (a.habitat === 'water') {
+      if (b.habitat !== 'water') return false;
+      // (a hunter only meets prey that shares its waters: the same depths, fresh or salt)
+      const A = a.marine, Bm = b.marine;
+      if (A && Bm) return A.band[0] <= Bm.band[1] + 2 && Bm.band[0] <= A.band[1] + 2 && A.fresh === Bm.fresh;
+      if (A || Bm) { const q = A || Bm; return q.band[0] < 3 && !q.fresh; }
+      return true;
+    }
     if (a.habitat === 'land') return b.habitat === 'land';
     if (a.fam === 'avian') return (b.habitat === 'land' && b.pheno.S < a.pheno.S * 0.8) || b.fam === 'avian' || (b.habitat === 'water' && b.pheno.S < a.pheno.S);
     return b.habitat === 'air';
@@ -2388,6 +2535,7 @@ const Ecology = (() => {
     p.prepare();
     const list = [];
     for (let s = 0; s < p.life.count; s++) { const sp = speciesAt(p, s, t); if (sp) list.push(sp); }
+    for (let k = 0, n = marineCount(p); k < n; k++) { const sp = speciesAt(p, MARINE0 + k, t); if (sp) list.push(sp); }
     for (const sp of list) { sp.prey = []; sp.predators = []; }
     for (const a of list) if (a.diet !== 'herbivore') for (const b of list) if (a !== b && b.diet !== 'carnivore' && canEat(a, b)) { a.prey.push(b); b.predators.push(a); }
     for (const a of list) {
@@ -2435,7 +2583,448 @@ const Ecology = (() => {
     g[G.hue] = fract(g[G.hue] + r.gauss() * 0.02); g[G.val] = clamp(g[G.val] + r.gauss() * 0.05, 0, 1);
     return g;
   }
-  return { community, speciesAt, speciesOfEra, linkWeb, canEat, population, history, lineage, slotEra, individual, LINEAGE };
+  // is this lineage slot one of the world's (land and air slots, then the marine ones)?
+  const validSlot = (p, slot) => slot < p.life.count || (slot >= MARINE0 && slot < MARINE0 + marineCount(p));
+  return { community, speciesAt, speciesOfEra, linkWeb, canEat, population, history, lineage, slotEra, individual, LINEAGE, MARINE0, marineCount, validSlot };
+})();
+</script>
+
+<!-- ===== Biosphere · origin of life, geological stages, microbial evolution, ocean zones ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   BIOSPHERE · the origin of life and its slow climb in complexity, the microbial
+   communities that evolve on every living world, and the zones of its seas.
+   Abiogenesis is a procedural possibility, not a certainty: it depends on a
+   solvent, temperatures that keep it liquid, raw chemistry, a source of energy,
+   shelter from radiation and time. Where it happened, life climbs through
+   geological stages (first cells → microbial mats → complex cells → the first
+   multicellular life → complex ecosystems) on the world's own geological clock,
+   which keeps running with universal time. Microbial strains reproduce, mutate,
+   adapt to their niches, compete and diversify era after era, deterministically
+   from the planet's seed.
+   ============================================================================= */
+const GEO_S = 60000; // universal seconds per billion years of geological time (≈ 17 hours)
+
+const Biosphere = (() => {
+  const cache = new WeakMap();
+  const STAGES = [
+    { key: 'sterile', name: 'Sterile', desc: 'No life, and none on the way: the conditions never came together.' },
+    { key: 'prebiotic', name: 'Prebiotic chemistry', desc: 'Organic molecules accumulate in warm pools and around vents, but nothing yet copies itself.' },
+    { key: 'cells', name: 'First cells', desc: 'Simple self-copying cells: single-celled chemotrophs in sediments and around hot vents.' },
+    { key: 'mats', name: 'Microbial mats', desc: 'Photosynthesis has evolved: coloured mats and stromatolites carpet the sunlit shallows.' },
+    { key: 'complex', name: 'Complex cells', desc: 'Larger cells with internal compartments; oxygen and new metabolisms spread through the seas.' },
+    { key: 'multi', name: 'First multicellular life', desc: 'Colonies and simple multicellular organisms — algae, sponges, soft-bodied drifters — fill the seas.' },
+    { key: 'animals', name: 'Complex ecosystems', desc: 'Animals and plants in food webs on land and sea, all resting on a foundation of microbes.' },
+  ];
+  // when each stage begins, in billions of years after the origin of life (at the reference pace)
+  const AT = [0, 0, 0, 0.45, 1.3, 2.2, 3.0];
+  const gasPct = (p, list) => ((p.atmo && p.atmo.gases) || []).reduce((s, g) => s + (list.includes(g[0]) ? g[1] : 0), 0);
+
+  function of(p) {
+    let B = cache.get(p);
+    if (B) return B;
+    p.prepare();
+    const r = new RNG.Rand(RNG.hash(p.seed, 'biosphere'));
+    const C = Climate.of(p), star = p.star, rocky = p.kind === 'rocky', F = {};
+    B = { p, rocky, factors: F, notes: [] };
+    // --- the solvent: a liquid for chemistry to happen in
+    let solvent = 0, medium = null, habitat = 'surface';
+    const icy = rocky && (p.type === 'ice' || p.type === 'tundra' || p.type === 'methane') && (C.tidalHeat > 0.04 || (p.features && p.features.geysers));
+    if (!rocky) { solvent = 0.3; medium = 'clouds'; habitat = 'clouds'; }
+    else if (p.liquid === 'water') { solvent = 0.55 + 0.45 * Math.min(1, p.coverage * 2); medium = 'water'; }
+    else if (p.liquid === 'acid') { solvent = 0.5; medium = 'acid'; }
+    else if (p.liquid === 'methane') { solvent = 0.42; medium = 'methane'; }
+    else if (icy) { solvent = 0.55; medium = 'water'; habitat = 'subsurface'; }
+    else if (p.pressure > 0.02 && p.tempMax > 0 && p.tempMin < 90 && (p.type === 'desert' || p.type === 'arid' || p.type === 'fungal')) { solvent = 0.22; medium = 'water'; }
+    if (p.liquid === 'lava') { solvent = icy ? solvent : 0; }
+    F.solvent = { k: solvent, text: !medium ? 'no liquid anywhere' : habitat === 'subsurface' ? 'an ocean under the ice, warmed from within' : medium === 'clouds' ? 'droplets in the cloud decks' : medium === 'water' ? (p.liquid ? `liquid water covers ${Math.round(p.coverage * 100)}%` : 'only traces of water') : medium === 'methane' ? 'liquid methane: a cold, slow solvent' : 'sulfuric acid seas' };
+    // --- temperatures that keep it liquid (some of the world at least)
+    const win = medium === 'methane' ? [-190, -155] : medium === 'acid' ? [-10, 160] : [-12, 110];
+    let temp = 0;
+    if (habitat === 'subsurface') temp = 0.8;
+    else if (medium === 'clouds') temp = smoothstep(-120, -20, p.tempC) * (1 - smoothstep(80, 250, p.tempC)) * 0.8;
+    else if (medium) {
+      const lo = Math.max(win[0], p.tempMin), hi = Math.min(win[1], p.tempMax), span = Math.max(1, p.tempMax - p.tempMin);
+      const overlap = clamp((hi - lo) / span, 0, 1), mid = (win[0] + win[1]) / 2, near = 1 - clamp(Math.abs(p.tempC - (medium === 'water' ? 25 : mid)) / 90, 0, 1);
+      temp = overlap > 0 ? clamp(0.3 + 0.45 * overlap + 0.35 * near, 0, 1) : 0;
+    }
+    F.temperature = { k: temp, text: habitat === 'subsurface' ? 'tidal and radiogenic heat under the ice' : `${Math.round(p.tempMin)}…${Math.round(p.tempMax)} °C against a liquid range of ${win[0]}…${win[1]} °C` };
+    // --- raw chemistry: carbon, nitrogen, water, sulfur
+    const carbon = gasPct(p, ['CO₂', 'CH₄', 'CO']), nitro = gasPct(p, ['N₂', 'NH₃']), sulfur = gasPct(p, ['SO₂', 'H₂S', 'S₂']);
+    let chem = (habitat === 'subsurface' ? 0.45 : 0.15) + (carbon > 0.02 ? 0.35 : 0) + (nitro > 1 ? 0.25 : 0) + (medium === 'water' ? 0.15 : 0) + (sulfur > 0.5 ? 0.1 : 0) - (p.type === 'toxic' ? 0.15 : 0);
+    if (!rocky) chem = 0.35;
+    chem = clamp(chem, 0, 1);
+    F.chemistry = { k: chem, text: `${carbon > 0.02 ? 'carbon' : 'little carbon'}, ${nitro > 1 ? 'nitrogen' : 'little nitrogen'}${sulfur > 0.5 ? ', sulfur compounds' : ''}${p.pressure < 0.005 ? ' (no air: rock–water chemistry only)' : ''}` };
+    // --- energy: starlight for photosynthesis, or heat and chemistry from within
+    const photic = smoothstep(0.02, 0.25, C.flux) * (1 - smoothstep(4, 14, C.flux)) * (habitat === 'subsurface' ? 0 : 1);
+    const geo = Math.max(C.volc, C.tidalHeat * 1.5, p.features && p.features.geysers ? 0.35 : 0, 0.12);
+    F.energy = { k: clamp(Math.max(photic * 0.95, geo), 0, 1), text: `${photic > 0.3 ? `starlight ${fmt.sig(C.flux)}× Earth` : 'little usable starlight'} · ${geo > 0.3 ? 'active geothermal and volcanic heat' : 'modest internal heat'}` };
+    // --- shelter from radiation (water and air absorb it)
+    let harm = { NS: 0.65, BH: 0.5, O: 0.45, B: 0.35, M: 0.15, D: 0.2 }[star.cls] || 0.05;
+    if (p.pressure < 0.1 && habitat === 'surface') harm += 0.25;
+    const shelter = rocky ? 1 - harm * (1 - 0.7 * (medium === 'water' || habitat === 'subsurface' ? 1 : 0)) : 0.8;
+    F.shelter = { k: clamp(shelter, 0, 1), text: harm > 0.3 ? `harsh radiation from a ${star.typeLabel.toLowerCase()}${medium === 'water' ? ', shielded by water' : ''}` : 'a gentle star and protective air or water' };
+    // --- the chance that life starts at all, and how long it takes
+    const potential = clamp(solvent * Math.pow(temp, 0.7) * (0.4 + 0.6 * chem) * (0.3 + 0.7 * F.energy.k) * F.shelter.k, 0, 1);
+    B.potential = potential; B.medium = medium; B.habitat = habitat;
+    const luck = r.next(), originBase = lerp(0.1, 1.5, Math.pow(r.next(), 1.4)) / (0.45 + potential);
+    B.emerged = luck < potential * 0.92;
+    B.originGyr = clamp(originBase, 0.06, 2.8);
+    B.rateK = r.range(0.6, 1.5) * (medium === 'methane' ? 0.35 : medium === 'acid' ? 0.75 : 1) * (0.65 + 0.35 * F.energy.k);
+    B.cap = habitat === 'subsurface' ? 4 : 5;
+    // complex life (and every biosphere a civilization seeded) exists by construction: its history is fitted to the star's age
+    if (p.life.has || p.terraformed) {
+      B.emerged = true; B.cap = 6;
+      // (life without water: silicate chemistry on molten worlds, exotic solvents elsewhere)
+      if (!medium) { medium = B.medium = p.liquid === 'lava' ? 'silicate' : 'exotic'; habitat = B.habitat = rocky ? 'surface' : 'clouds'; }
+      B.originGyr = Math.min(B.originGyr, Math.max(0.03, star.age * 0.22));
+      const avail = Math.max(0.05, star.age - B.originGyr);
+      if (B.rateK * avail < AT[6] * 1.02) { B.rateK = AT[6] * 1.05 / avail; B.notes.push('evolution raced ahead here, far faster than usual'); }
+    }
+    F.time = { k: clamp((star.age - B.originGyr) / 3, 0, 1), text: `the system is ${fmt.sig(star.age)} billion years old` };
+    // what the verdict rests on
+    const weakest = Object.entries(F).filter(([k]) => k !== 'time').sort((a, b) => a[1].k - b[1].k)[0];
+    B.limit = weakest ? weakest[0] : null;
+    cache.set(p, B);
+    return B;
+  }
+  const ageAt = (p, t) => p.star.age + Math.max(0, t) / GEO_S;
+  // the stage of life on a world at universal time t (and when the next one begins)
+  function stageAt(p, t) {
+    const B = of(p), age = ageAt(p, t);
+    if (!B.emerged) return { i: B.potential > 0.12 && age > 0.2 ? 1 : 0, B, age, since: null, next: null };
+    const since = age - B.originGyr;
+    if (since < 0) return { i: 1, B, age, since, next: { i: 2, gyr: -since, t: t + (-since) * GEO_S } };
+    let i = 2;
+    for (let k = 3; k <= 6; k++) if (since * B.rateK >= AT[k]) i = k;
+    i = Math.min(i, B.cap);
+    const next = i < B.cap ? { i: i + 1, gyr: AT[i + 1] / B.rateK - since } : null;
+    if (next) next.t = t + next.gyr * GEO_S;
+    return { i, B, age, since, next };
+  }
+  // the whole history of a living world, in billions of years since its formation
+  function timeline(p) {
+    const B = of(p);
+    if (!B.emerged) return [];
+    const out = [{ i: 2, gyr: B.originGyr }];
+    for (let k = 3; k <= B.cap; k++) out.push({ i: k, gyr: B.originGyr + AT[k] / B.rateK });
+    return out;
+  }
+  return { STAGES, AT, of, ageAt, stageAt, timeline };
+})();
+
+/* ---------------------------------------------------------------------------
+   Microbial evolution: strains in niches, era by era (deterministic)
+   --------------------------------------------------------------------------- */
+const Microbes = (() => {
+  const ERA = 1200; // universal seconds per microbial era (20 min)
+  const GENE = ['tOpt', 'tWide', 'photo', 'chemo', 'hetero', 'oxy', 'size', 'shape', 'motile', 'hue', 'multi', 'lum'];
+  const M = {}; GENE.forEach((k, i) => { M[k] = i; });
+  const GN = GENE.length;
+  const SHAPES = [['coccus', 'Spherical'], ['bacter', 'Rod-shaped'], ['vibrio', 'Comma-shaped'], ['spira', 'Spiral'], ['nema', 'Filamentous'], ['cystis', 'Colonial']];
+  const MAXS = 14;
+  const cache = new Map();
+  const tOf = (g) => -20 + g[M.tOpt] * 140;
+  const shapeOf = (g) => Math.min(5, Math.floor(g[M.shape] * 5.999));
+
+  // the environments a world offers its microbes
+  function niches(p) {
+    const B = Biosphere.of(p), C = Climate.of(p), out = [];
+    if (!B.medium) return out;
+    const O2 = ((p.atmo && p.atmo.gases) || []).reduce((s, g) => s + (g[0] === 'O₂' ? g[1] : 0), 0) / 25;
+    const T = p.tempC, flux = clamp(C.flux, 0, 3);
+    const add = (key, name, env) => out.push(Object.assign({ key, name }, env));
+    if (B.habitat === 'clouds') { add('clouds', 'Cloud droplets', { T: clamp(T, -60, 60), light: 0.8 * Math.min(1, flux), chem: 0.3, org: 0.2, oxy: 0.1, cap: 1 }); return out; }
+    if (B.habitat === 'subsurface') {
+      add('ocean', 'Sub-ice ocean', { T: 3, light: 0, chem: 0.55, org: 0.25, oxy: 0.05, cap: 1 });
+      add('vent', 'Seafloor vents', { T: 80, light: 0, chem: 0.95, org: 0.2, oxy: 0, cap: 0.6 });
+      return out;
+    }
+    const surfT = B.medium === 'methane' ? -178 : B.medium === 'silicate' ? clamp(T, 20, 400) : T;
+    add('sunlit', B.medium === 'water' ? 'Sunlit surface water' : 'Sunlit shallows', { T: surfT, light: Math.min(1, flux * 0.9), chem: 0.2, org: 0.35, oxy: clamp(O2, 0, 1), cap: 1.2 });
+    if (p.coverage > 0.25) add('deep', 'Deep water', { T: B.medium === 'methane' ? -180 : Math.min(T, 4), light: 0, chem: 0.25, org: 0.3, oxy: clamp(O2 * 0.6, 0, 1), cap: 0.8 });
+    add('sediment', 'Sediments', { T: surfT, light: 0.05, chem: 0.4, org: 0.75, oxy: 0.02, cap: 0.9 });
+    if (C.volc > 0.05 || C.tidalHeat > 0.03 || (p.features && p.features.geysers)) add('vent', 'Hydrothermal vents', { T: 85, light: 0, chem: 1, org: 0.2, oxy: 0, cap: 0.6 });
+    if (p.features && p.features.geysers && B.medium === 'water') add('spring', 'Hot springs', { T: 65, light: Math.min(1, flux), chem: 0.7, org: 0.25, oxy: clamp(O2, 0, 1), cap: 0.4 });
+    if (p.tempMin < -2 && B.medium === 'water') add('ice', 'Sea ice and brine', { T: -6, light: 0.4 * Math.min(1, flux), chem: 0.2, org: 0.3, oxy: clamp(O2, 0, 1), cap: 0.4 });
+    if (p.pressure > 0.02 && (1 - (p.coverage || 0)) > 0.1) add('soil', 'Land surfaces', { T: T, light: Math.min(1, flux), chem: 0.15, org: 0.35, oxy: clamp(O2, 0, 1), cap: 0.7, dry: true });
+    return out;
+  }
+  // how well a genome grows in a niche (energy captured × thermal fit, minus the running costs)
+  function fitness(g, n, stage) {
+    const tw = 8 + g[M.tWide] * 38, th = Math.exp(-(((n.T - tOf(g)) / tw) ** 2));
+    const met = g[M.photo] + g[M.chemo] + g[M.hetero];
+    const energy = (g[M.photo] * n.light + g[M.chemo] * n.chem + g[M.hetero] * n.org) / (0.55 + 0.45 * met);
+    const oxy = n.oxy > 0.3 ? g[M.oxy] * 0.3 * n.oxy : -g[M.oxy] * 0.35 * (1 - n.oxy);
+    const big = stage >= 4 ? 0.04 : 0.16, cost = big * g[M.size] + (stage >= 5 ? 0.03 : 0.1) * g[M.multi] + 0.04 * g[M.motile] + 0.03 * g[M.tWide];
+    const bonus = 0.08 * g[M.motile] * n.org + (stage >= 4 ? 0.1 * g[M.size] : 0) + (stage >= 5 ? 0.12 * g[M.multi] : 0) - (n.dry ? 0.1 * (1 - g[M.multi]) : 0);
+    return Math.max(0, th * energy * (1 + oxy) + bonus - cost);
+  }
+  // innovations only arrive with the stage that made them possible
+  function gate(g, stage) {
+    if (stage < 3) g[M.photo] = Math.min(g[M.photo], 0.08);
+    if (stage < 4) { g[M.size] = Math.min(g[M.size], 0.4); g[M.oxy] = Math.min(g[M.oxy], 0.35); }
+    if (stage < 5) g[M.multi] = Math.min(g[M.multi], 0.2);
+    return g;
+  }
+  function mutate(g, r, rate, amt, stage) {
+    const o = Float32Array.from(g);
+    for (let i = 0; i < GN; i++) { if (r.next() >= rate) continue; const v = o[i] + r.gauss() * amt; o[i] = i === M.hue ? fract(v) : clamp(v, 0, 1); }
+    return gate(o, stage);
+  }
+  const EPI = (n, g) => {
+    const T = tOf(g);
+    if (n.key === 'vent') return T > 70 ? 'hyperthermophilus' : 'ventralis';
+    if (n.key === 'spring') return 'thermophilus';
+    if (n.key === 'ice') return 'glacialis';
+    if (n.key === 'deep' || n.key === 'ocean') return 'abyssalis';
+    if (n.key === 'sediment') return g[M.chemo] > 0.5 ? 'ferrooxidans' : 'limicola';
+    if (n.key === 'soil') return 'terrestris';
+    if (n.key === 'clouds') return 'aerius';
+    return g[M.photo] > 0.5 ? 'lucidus' : 'marinus';
+  };
+  function strain(p, id, g, niche, era, parent, r) {
+    const sh = shapeOf(g), stem = Names.word(r, 1, 2).replace(/[aeiouy]+$/, '').toLowerCase();
+    return { id, g, niche, x: 0.05, born: era, parent, name: `${stem[0].toUpperCase()}${stem.slice(1)}o${SHAPES[sh][0]} ${EPI(niche, g)}` };
+  }
+  // a founding community, adapted to its niches by the evolution that came before
+  function found(p, stage, niche, era, idBase, n) {
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const nc = niche[k % niche.length], r = new RNG.Rand(RNG.hash(p.seed, 'microbe-found', era, k));
+      const g = new Float32Array(GN);
+      for (let i = 0; i < GN; i++) g[i] = r.next();
+      g[M.tOpt] = clamp((nc.T + 20) / 140 + r.gauss() * 0.05, 0, 1);
+      if (nc.light > 0.3 && stage >= 3 && r.chance(0.7)) g[M.photo] = r.range(0.55, 0.95); else if (nc.chem > 0.5) g[M.chemo] = r.range(0.55, 0.95); else g[M.hetero] = r.range(0.5, 0.9);
+      g[M.lum] = r.next() * r.next();
+      gate(g, stage);
+      const s = strain(p, idBase + k, g, nc, era, null, r);
+      s.x = 0.3 / Math.ceil(n / niche.length);
+      out.push(s);
+    }
+    return out;
+  }
+  // one era: mutation and selection, competition for each niche's capacity, extinction, speciation, colonization
+  function stepEra(S, p, era, stage) {
+    const r = new RNG.Rand(RNG.hash(p.seed, 'microbe-era', era)), ev = (txt, kind) => { S.events.push({ era, txt, kind }); if (S.events.length > 40) S.events.shift(); };
+    const N = S.niches;
+    // (a lineage keeps its cell shape, and so its name, until it splits)
+    for (const s of S.strains) { const sh = s.g[M.shape]; s.g = mutate(s.g, r, 0.22, 0.05, stage); s.g[M.shape] = sh; s.f = fitness(s.g, s.niche, stage); }
+    for (const n of N) {
+      const L = S.strains.filter((s) => s.niche === n);
+      if (!L.length) continue;
+      let tot = 0, mean = 0;
+      for (const s of L) { tot += s.x; mean += s.f * s.x; }
+      mean /= Math.max(1e-6, tot);
+      for (const s of L) s.x = Math.max(0, s.x + s.x * (s.f - mean) * 1.1 + 0.06 * (1 - tot) * s.f * s.x / Math.max(tot, 0.05) + s.x * r.gauss() * 0.03);
+      tot = L.reduce((q, s) => q + s.x, 0);
+      if (tot > 1) for (const s of L) s.x /= tot;
+    }
+    // extinction: strains squeezed out by fitter competitors (a niche always keeps its last lineage)
+    for (const s of S.strains.slice()) {
+      if (s.x >= 0.004) continue;
+      if (S.strains.filter((q) => q.niche === s.niche).length <= 1) { s.x = 0.004; continue; }
+      S.strains.splice(S.strains.indexOf(s), 1); S.lost++;
+      ev(`${s.name} was outcompeted and died out in the ${s.niche.name.toLowerCase()}`, 'extinct');
+    }
+    // speciation: a thriving strain splits into two lineages
+    for (const s of S.strains.slice()) {
+      if (S.strains.length >= MAXS || s.x < 0.22 || r.next() > 0.07) continue;
+      const g = mutate(s.g, r, 0.6, 0.12, stage), d = strain(p, S.next++, g, s.niche, era, s.id, r);
+      d.x = s.x * 0.25; s.x *= 0.75; S.strains.push(d); S.born++;
+      ev(`${s.name} split into a new lineage, ${d.name}`, 'split');
+    }
+    // colonization: an empty niche is invaded by whoever can make a living there
+    for (const n of N) {
+      if (S.strains.length >= MAXS || S.strains.some((s) => s.niche === n) || r.next() > 0.3) continue;
+      let best = null, bf = 0.12;
+      for (const s of S.strains) { const f = fitness(s.g, n, stage); if (f > bf) { bf = f; best = s; } }
+      if (!best) continue;
+      const d = strain(p, S.next++, mutate(best.g, r, 0.5, 0.1, stage), n, era, best.id, r);
+      d.x = 0.05; S.strains.push(d); S.born++;
+      ev(`${d.name}, descended from ${best.name}, colonized the ${n.name.toLowerCase()}`, 'colonize');
+    }
+    // the great innovations, once the stage allows them
+    const inn = (k, test, fx, txt) => {
+      if (S.innov[k] || !test) return;
+      const cands = S.strains.filter(fx.pick);
+      if (!cands.length) return;
+      const s = cands[Math.floor(r.next() * cands.length)];
+      fx.apply(s.g); s.f = fitness(s.g, s.niche, stage); s.x = Math.max(s.x, 0.2);
+      S.innov[k] = era; ev(txt(s), 'innovation');
+    };
+    inn('photo', stage >= 3, { pick: (s) => s.niche.light > 0.2, apply: (g) => { g[M.photo] = 0.85; } }, (s) => `Photosynthesis evolved in ${s.name}: sunlight becomes food`);
+    inn('complex', stage >= 4, { pick: () => true, apply: (g) => { g[M.size] = 0.75; g[M.oxy] = Math.max(g[M.oxy], 0.6); } }, (s) => `${s.name} engulfed a partner cell and became complex, with internal compartments`);
+    inn('multi', stage >= 5, { pick: () => true, apply: (g) => { g[M.multi] = 0.85; g[M.size] = Math.max(g[M.size], 0.7); } }, (s) => `${s.name} began living as a multicellular colony`);
+  }
+  // the state of a world's microbial life at universal time t (cached, advanced incrementally)
+  const WIN = 6000; // eras simulated at most (older history is summarized by a fresh founding community)
+  const PRE = 360;  // eras of prehistory before universal time 0: an old biosphere is already diverse when first seen
+  function state(p, t) {
+    const era = Math.max(0, Math.floor(t / ERA)), key = p.seed + ':' + (p.terraformed ? 'tf' : '');
+    let S = cache.get(key);
+    const base = era > WIN ? Math.floor(era / WIN) * WIN - WIN : -PRE;
+    if (!S || S.era > era || S.base !== base) S = null;
+    const N = niches(p);
+    if (!S) {
+      if (!N.length) { S = { p, era, base, strains: [], niches: N, events: [], innov: {}, next: 1, born: 0, lost: 0, stage: 0, origin: null }; cache.set(key, S); return S; }
+      S = { p, era: base - 1, base, strains: [], niches: N, events: [], innov: {}, next: 1, born: 0, lost: 0, stage: 0, origin: null };
+      if (cache.size > 60) cache.delete(cache.keys().next().value);
+      cache.set(key, S);
+    }
+    for (let e = S.era + 1; e <= era; e++) {
+      const st = Biosphere.stageAt(p, e * ERA).i;
+      S.stage = st;
+      if (st < 2) continue;
+      if (!S.strains.length) {
+        // life arises now (or already had, before this record begins)
+        const n = st >= 6 ? 10 : st >= 5 ? 8 : st >= 4 ? 6 : st >= 3 ? 4 : 2;
+        S.strains = found(p, st, N, e, S.next, n); S.next += n;
+        if (e > base) S.events.push({ era: e, txt: 'Life arose: the first self-copying cells appeared', kind: 'origin' });
+        S.origin = S.origin == null ? e : S.origin;
+        if (st >= 3 && N.some((n) => n.light > 0.2)) S.innov.photo = S.innov.photo || e;
+        if (st >= 4) S.innov.complex = S.innov.complex || e;
+        if (st >= 5) S.innov.multi = S.innov.multi || e;
+        continue;
+      }
+      stepEra(S, p, e, st);
+    }
+    S.era = Math.max(S.era, era);
+    return S;
+  }
+  const colorOf = (g) => Color.hsv(g[M.hue], 0.55 + 0.3 * g[M.photo], 0.55 + 0.35 * (1 - g[M.chemo] * 0.5));
+  function describe(s) {
+    const g = s.g, sh = SHAPES[shapeOf(g)][1], met = g[M.photo] >= Math.max(g[M.chemo], g[M.hetero]) ? 'phototroph' : g[M.chemo] >= g[M.hetero] ? 'chemotroph' : 'decomposer';
+    const T = tOf(g), therm = T > 70 ? 'hyperthermophile' : T > 45 ? 'thermophile' : T < 5 ? 'psychrophile' : 'mesophile';
+    return { shape: sh, metab: met, therm, T: Math.round(T), aerobic: g[M.oxy] > 0.5, size: g[M.size] > 0.6 ? 'large, complex cell' : g[M.size] > 0.3 ? 'medium cell' : 'tiny cell', multi: g[M.multi] > 0.6 ? 'multicellular colonies' : g[M.multi] > 0.35 ? 'loose colonies' : 'single cells', motile: g[M.motile] > 0.6 ? 'flagellated swimmer' : g[M.motile] > 0.35 ? 'glides' : 'drifts', lum: g[M.lum] > 0.7 };
+  }
+  // what a world's microbes look like from the outside: blooms, mats, vent and spring colours, glowing plankton
+  function summary(p, t) {
+    const S = state(p, t), st = Biosphere.stageAt(p, t).i, out = { stage: st, bloom: 0, bloomCol: null, matCol: null, ventCol: null, springCol: null, lum: 0, strains: S.strains.length, stromatolites: st >= 3 && !p.life.has };
+    let best = {};
+    for (const s of S.strains) {
+      const k = s.niche.key, w = s.x * (1 + s.g[M.photo]);
+      if (!best[k] || w > best[k].w) best[k] = { w, s };
+      if (k === 'sunlit') { out.bloom += s.x * s.g[M.photo]; if (s.g[M.lum] > 0.7) out.lum = Math.max(out.lum, s.x * 1.5); }
+    }
+    const col = (k) => (best[k] ? colorOf(best[k].s.g) : null);
+    out.bloomCol = col('sunlit'); out.matCol = col('sunlit') || col('sediment'); out.ventCol = col('vent'); out.springCol = col('spring') || col('vent'); out.soilCol = col('soil');
+    out.bloom = clamp(out.bloom * 1.6, 0, 1); out.lum = clamp(out.lum, 0, 1);
+    return out;
+  }
+  return { ERA, GENE, M, SHAPES, niches, fitness, state, summary, describe, colorOf, shapeOf, tOf };
+})();
+
+/* ---------------------------------------------------------------------------
+   Ocean zones: aquatic habitats by depth, temperature, light, pressure,
+   currents, nutrients, terrain and proximity to land
+   --------------------------------------------------------------------------- */
+const Ocean = (() => {
+  const ZONES = [
+    { key: 'reef', name: 'Coral reef', desc: 'Warm, clear, sunlit shallows built up by colonies of reef-forming animals.', sea: [0.95, 0.9, 0.78] },
+    { key: 'stromatolite', name: 'Stromatolite shallows', desc: 'Layered domes built by microbial mats in warm, sunlit water.', sea: [0.8, 0.72, 0.58] },
+    { key: 'lagoon', name: 'Lagoon', desc: 'Calm, warm, sandy water sheltered behind reefs and sandbars.', sea: [0.96, 0.92, 0.8] },
+    { key: 'kelp', name: 'Kelp forest', desc: 'Cool, nutrient-rich coastal water under towering algae.', sea: [0.42, 0.4, 0.36] },
+    { key: 'seagrass', name: 'Seagrass meadow', desc: 'Sheltered sandy shallows carpeted with flowering sea plants.', sea: [0.76, 0.72, 0.6] },
+    { key: 'mangrove', name: 'Mangrove coast', desc: 'Warm tidal shallows among the stilt roots of salt-tolerant trees.', sea: [0.42, 0.36, 0.28] },
+    { key: 'marsh', name: 'Coastal wetland', desc: 'Salt marsh, reed beds and tidal flats at the edge of land and sea.', sea: [0.45, 0.4, 0.32] },
+    { key: 'estuary', name: 'Estuary', desc: 'Brackish, murky water where rivers meet the sea: rich and changeable.', sea: [0.5, 0.44, 0.34] },
+    { key: 'upwelling', name: 'Upwelling zone', desc: 'Cold deep water rising along the coast carries nutrients into the light.', sea: [0.5, 0.52, 0.5] },
+    { key: 'shelf', name: 'Continental shelf', desc: 'Sunlit sandy and muddy plains off the coasts.', sea: [0.74, 0.68, 0.54] },
+    { key: 'polar', name: 'Polar sea', desc: 'Near-freezing water, seasonal sea ice and explosive summer blooms.', sea: [0.55, 0.58, 0.6] },
+    { key: 'underice', name: 'Under-ice sea', desc: 'Dim blue water beneath a ceiling of sea ice.', sea: [0.5, 0.55, 0.6] },
+    { key: 'open', name: 'Open ocean', desc: 'The blue water column far from land: sunlit above, twilight below.', sea: [0.42, 0.44, 0.46] },
+    { key: 'slope', name: 'Continental slope', desc: 'The steep drop from the shelf into the deep.', sea: [0.38, 0.37, 0.36] },
+    { key: 'seamount', name: 'Seamount', desc: 'A submarine mountain rising from the deep, a magnet for life.', sea: [0.34, 0.32, 0.33] },
+    { key: 'abyss', name: 'Abyssal plain', desc: 'Dark, cold, crushing: an endless plain of ooze under kilometres of water.', sea: [0.36, 0.36, 0.37] },
+    { key: 'trench', name: 'Hadal trench', desc: 'The deepest places: narrow chasms far below the abyssal plain.', sea: [0.26, 0.26, 0.29] },
+    { key: 'vent', name: 'Hydrothermal vents', desc: 'Superheated, mineral-laden water from the crust feeds chemosynthetic life.', sea: [0.2, 0.18, 0.18] },
+    { key: 'lake', name: 'Freshwater lake', desc: 'Inland fresh water fed by rivers and rain.', sea: [0.48, 0.44, 0.34] },
+    { key: 'saltlake', name: 'Salt lake', desc: 'An inland lake so salty that only specialists survive.', sea: [0.85, 0.82, 0.74] },
+    { key: 'glacial', name: 'Glacial lake', desc: 'Frigid meltwater under ice most of the year.', sea: [0.55, 0.6, 0.65] },
+    { key: 'river', name: 'River', desc: 'Flowing fresh water.', sea: [0.5, 0.46, 0.36] },
+    { key: 'hydrocarbon', name: 'Hydrocarbon sea', desc: 'A sea of liquid methane and ethane at around −180 °C.', sea: [0.3, 0.24, 0.18] },
+    { key: 'acid', name: 'Acid sea', desc: 'Warm seas of dilute sulfuric acid.', sea: [0.52, 0.5, 0.3] },
+    { key: 'lava', name: 'Lava sea', desc: 'Molten rock. Nothing lives here.', sea: [0.2, 0.1, 0.08] },
+  ];
+  const Z = {}; ZONES.forEach((z, i) => { z.id = i; Z[z.key] = i; });
+  const FRESH = new Set([Z.lake, Z.saltlake, Z.glacial, Z.river]);
+  const PELAGIC = new Set([Z.open, Z.slope, Z.seamount, Z.abyss, Z.trench, Z.vent]);
+  // sea depth (local units) to metres: gentle in the shallows, steep in the deep
+  const depthM = (D) => Math.max(0, 40 * D + 4.8 * D * D);
+  const LAYERS = [[0, 'Sunlit zone', 'epipelagic'], [3.6, 'Twilight zone', 'mesopelagic'], [10.9, 'Midnight zone', 'bathypelagic'], [25, 'Abyssal zone', 'abyssopelagic'], [31.4, 'Hadal zone', 'hadopelagic']];
+  function layer(D) { let L = LAYERS[0]; for (const q of LAYERS) if (D >= q[0]) L = q; return { name: L[1], sci: L[2], i: LAYERS.indexOf(L) }; }
+  // conditions in the water at depth D below a surface of temperature tSurf
+  function tempAt(tSurf, D, o = {}) {
+    if (o.liquid === 'methane') return tSurf - Math.min(4, D * 0.2);
+    if (o.liquid === 'acid') return tSurf - Math.min(tSurf * 0.4, D * 1.5);
+    const deep = o.fresh ? 4 : Math.max(-1.8, Math.min(tSurf, 3));
+    if (D < 0.6) return Math.max(-1.8, tSurf);
+    return deep + (Math.max(-1.8, tSurf) - deep) * Math.exp(-(D - 0.6) / 2.4) + (o.vent || 0) * 30;
+  }
+  const pressureAt = (D, g = 1, surfaceAtm = 1, liquid = 'water') => surfaceAtm + depthM(D) * 0.0991 * g * (liquid === 'methane' ? 0.45 : liquid === 'acid' ? 1.8 : 1.03);
+  // fraction of surface light: clear blue water lets light far down, murky coastal water much less
+  const lightAt = (D, turbid = 0) => Math.exp(-depthM(D) / (38 - 26 * clamp(turbid, 0, 1)));
+  // the zone of one column of water, from its surroundings
+  function classify(e) {
+    const lq = e.liquid;
+    if (lq === 'lava') return Z.lava;
+    if (lq === 'methane') return Z.hydrocarbon;
+    if (lq === 'acid') return Z.acid;
+    if (e.fresh) { if (e.river > 0.25 && e.D < 1.8) return Z.river; if (e.frozen || e.t < -1) return Z.glacial; return e.salt ? Z.saltlake : Z.lake; }
+    if (e.frozen) return Z.underice;
+    if (e.vent > 0.55 && e.D > 5) return Z.vent;
+    if (e.D > 31.4) return Z.trench;
+    if (e.D > 20) return e.seamount ? Z.seamount : Z.abyss;
+    if (e.D > 10.9) return e.seamount ? Z.seamount : e.eN < -0.3 ? Z.open : Z.slope;
+    if (e.t < 1.5) return Z.polar;
+    const shelf = e.eN > -0.2 || e.D < 3.6;
+    if (!shelf) return e.eN < -0.3 ? Z.open : Z.slope;
+    if (e.D > 3.6) return Z.slope;
+    if (e.river > 0.05) return Z.estuary;
+    if (e.D < 1.05 && e.coast) return e.t > 22 && e.complex ? Z.mangrove : Z.marsh;
+    if (e.up > 0.62 && e.t < 24) return Z.upwelling;
+    // (the builders and the forests need light: reefs to ~140 m, kelp to ~110 m, seagrass meadows to ~65 m)
+    if (e.t >= 20 && e.t <= 32 && e.D >= 0.3 && e.D <= 2.6 && e.up < 0.5) {
+      if (e.complex) return e.D < 1.5 && e.calm > 0.6 ? Z.lagoon : Z.reef;
+      if (e.stage >= 3) return Z.stromatolite;
+    }
+    if (e.t >= 2 && e.t < 20 && e.D >= 0.6 && e.D <= 2.2 && (e.up > 0.3 || e.rocky > 0.5) && e.stage >= 5) return Z.kelp;
+    if (e.D < 1.4 && e.t >= 10 && e.calm > 0.5 && e.complex) return Z.seagrass;
+    return Z.shelf;
+  }
+  // the zones of a whole world, sampled across its globe (inland waters are local and listed separately)
+  const statsCache = new WeakMap();
+  function stats(p) {
+    let S = statsCache.get(p);
+    if (S) return S;
+    p.prepare();
+    S = { zones: [], fresh: false, maxDepthM: 0, medium: p.liquid };
+    if (p.isGiant || !p.liquid) { statsCache.set(p, S); return S; }
+    const N = 900, ga = Math.PI * (3 - Math.sqrt(5)), o = {}, cnt = new Float32Array(ZONES.length), n2 = p.noise2;
+    const st = Biosphere.stageAt(p, 0).i, complex = p.life.has || p.terraformed, C = Climate.of(p);
+    let nWater = 0;
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2, rr = Math.sqrt(1 - y * y), th = ga * i, x = Math.cos(th) * rr, z = Math.sin(th) * rr;
+      p.sample(x, y, z, o);
+      if (!BIOMES[o.b].water && o.b !== B.ICESHEET) continue;
+      nWater++;
+      const D = -o.e * 46 * (o.e < -0.82 ? 1.25 : 1), lat = Math.asin(y);
+      const up = clamp(n2.n3(x * 2.3 + 9, y * 2.3, z * 2.3 - 4) * 0.8 + 0.5 * smoothstep(0.9, 0.3, Math.abs(Math.abs(lat) - 0.45) * 3) - 0.2, 0, 1) * (o.e > -0.2 ? 1 : 0.4);
+      const vent = C.volc + C.tidalHeat > 0.04 ? smoothstep(0.55, 0.9, Math.abs(n2.n3(x * 5 - 3, y * 5 + 7, z * 5))) * clamp((C.volc + C.tidalHeat) * 3, 0, 1) : 0;
+      const zi = classify({ liquid: p.liquid, D, t: o.t, eN: o.e, frozen: o.b === B.ICESHEET, vent, up, coast: o.e > -0.03, calm: 0.6, rocky: 0.4, river: 0, stage: st, complex, seamount: D > 11 && n2.n3(x * 7, y * 7, z * 7) > 0.55 });
+      cnt[zi]++; S.maxDepthM = Math.max(S.maxDepthM, depthM(D));
+    }
+    for (let i = 0; i < ZONES.length; i++) if (cnt[i]) S.zones.push({ z: i, f: cnt[i] / Math.max(1, nWater), key: ZONES[i].key, name: ZONES[i].name });
+    S.zones.sort((a, b) => b.f - a.f);
+    S.ocean = nWater / N;
+    // rivers and lakes on land (the surface generator carves them wherever water flows)
+    S.fresh = p.liquid === 'water' && p.type !== 'ocean' && p.biomeStats.some((s) => !BIOMES[s.b].water && s.b !== B.ICESHEET);
+    statsCache.set(p, S);
+    return S;
+  }
+  return { ZONES, Z, FRESH, PELAGIC, depthM, layer, LAYERS, tempAt, pressureAt, lightAt, classify, stats };
 })();
 </script>
 
@@ -2468,6 +3057,18 @@ class Surface {
     this.CS = 32;
     this._f = new Float32Array(6);
     this.lifeK = planet.life.has ? 0.45 + 0.55 * planet.life.bio : 0;
+    // the sea floor: vent fields along spreading ridges, more of them where the crust is active
+    const C = planet.isGiant ? null : Climate.of(planet);
+    this.ventK = this.liquid && this.liquid !== 'lava' && C ? 0.35 + 0.65 * clamp(C.volc * 2 + C.tidalHeat * 3, 0, 1) : 0;
+    this.bio = Biosphere.of(planet);
+    this.complex = !!(planet.life.has || planet.terraformed);
+    this.salty = ty === 'desert' || ty === 'arid';
+  }
+  // what the world's microbes look like now (blooms, mats, vent and spring colours), refreshed now and then
+  microAt(t) {
+    const k = Math.floor((t || 0) / 600);
+    if (!this._micro || this._microK !== k) { this._microK = k; try { this._micro = Microbes.summary(this.planet, t || 0); } catch (e) { console.warn(e); this._micro = { stage: 0 }; } }
+    return this._micro;
   }
   // tangent frame of a site anchored at `dir` (east, up, south)
   static frame(dir) {
@@ -2525,7 +3126,17 @@ class Surface {
     const detail = n.n3(X * 0.09, Y * 0.09, Z * 0.09) * 0.35;
     const mt = smoothstep(0.3, 0.75, eN);
     const ridge = mt > 0 ? (n.ridged3(X * 0.011 + 31, Y * 0.011, Z * 0.011 - 17, 4) - 0.3) * 26 * mt : 0;
-    const base = eN * 46 + hills * (2.5 + 5 * this.rough) + detail + ridge;
+    let base = eN * 46 + hills * (2.5 + 5 * this.rough) + detail + ridge;
+    // the deep sea floor has its own relief: spreading ridges with vent fields, seamounts, and hadal trenches
+    let vent = 0, seamount = 0;
+    if (this.liquid && eN < -0.3) {
+      const deep = smoothstep(-0.3, -0.62, eN);
+      const rg = n.ridged3(X * 0.0045 + 11, Y * 0.0045 - 5, Z * 0.0045 + 3, 3), sm = n.n3(X * 0.009 + 3, Y * 0.009, Z * 0.009 - 8);
+      const tr = eN < -0.55 ? n.ridged3(X * 0.0021 - 40, Y * 0.0021 + 7, Z * 0.0021 + 19, 2) : 0;
+      base += deep * ((rg - 0.5) * 9 + Math.max(0, sm - 0.45) * 30 - smoothstep(0.8, 0.96, tr) * 22 * smoothstep(-0.55, -0.8, eN));
+      vent = deep * smoothstep(0.8, 0.93, rg) * this.ventK;
+      seamount = deep * smoothstep(0.5, 0.75, sm);
+    }
     const st = this.step, tt = base / st, ft = Math.floor(tt);
     const h0 = lerp(base, (ft + smoothstep(0.6, 0.92, tt - ft)) * st, this.terr);
     let h = h0, w = this.liquid ? 0 : -1e9, river = 0;
@@ -2553,21 +3164,57 @@ class Surface {
     else b = this.planet.classify(t, f[2], Math.max(eL, 0.0001));
     const frozen = this.liquid === 'water' && t < -4 ? 1 : 0;
     if (under && frozen) b = B.ICESHEET;
-    o.h = h; o.w = w; o.b = b; o.t = t; o.m = f[2]; o.base = base; o.river = river; o.frozen = frozen;
+    o.h = h; o.w = w; o.b = b; o.t = t; o.m = f[2]; o.base = base; o.river = river; o.frozen = frozen; o.eN = eN; o.vent = vent; o.seamount = seamount;
     return o;
   }
+  // the ocean zone of one wet grid cell of a chunk (255 on dry ground)
+  zoneAt(ch, i, j, stage) {
+    const M = ch.M, k = j * M + i, H = ch.H, W = ch.W;
+    if (!(W[k] > H[k] + 0.02)) return 255;
+    const D = W[k] - H[k], x = ch.x0 + i - 1, z = ch.z0 + j - 1;
+    const i0 = Math.max(0, i - 2), i1 = Math.min(M - 1, i + 2), j0 = Math.max(0, j - 2), j1 = Math.min(M - 1, j + 2);
+    let coast = false;
+    for (const q of [j0 * M + i, j1 * M + i, j * M + i0, j * M + i1]) if (!(W[q] > H[q] + 0.02)) { coast = true; break; }
+    const sl = Math.abs(H[j * M + Math.min(M - 1, i + 1)] - H[j * M + Math.max(0, i - 1)]) + Math.abs(H[Math.min(M - 1, j + 1) * M + i] - H[Math.max(0, j - 1) * M + i]);
+    const eN = ch.E[k], lat = ch.lat, band = smoothstep(0.9, 0.3, Math.abs(Math.abs(lat) - 0.45) * 3);
+    const up = clamp(this.n2.n2(x * 0.004 + 7, z * 0.004 - 3) * 0.8 + 0.5 * band - 0.2, 0, 1) * (eN > -0.2 ? 1 : 0.4);
+    const calm = clamp(0.5 + this.n2.n2(x * 0.011 - 13, z * 0.011 + 5) * 0.9, 0, 1);
+    return Ocean.classify({ liquid: this.liquid, D, fresh: W[k] > 0.3, t: ch.T[k], eN, frozen: !!ch.F[k], vent: ch.V[k], up, coast, calm, rocky: sl > 1.1 ? 1 : 0, river: ch.Rv[k], stage, complex: this.complex, seamount: ch.S[k] > 0.4, salt: this.salty });
+  }
 
+  // a microbial mat on the sea floor here: [colour, strength] (or null)
+  matAt(o, x, z, d) {
+    const mi = this._micro;
+    if (!mi || !mi.stage || mi.stage < 2 || o.frozen) return null;
+    const vent = o.vent || 0;
+    if (vent > 0.25 && mi.ventCol) return [mi.ventCol, 0.35 + 0.4 * vent];
+    if (d > 4 || !mi.matCol || mi.stage < 3) return null;
+    const pn = this.n2.n2(x * 0.13 + 1.7, z * 0.13 - 3.1), strong = this.complex ? 0.22 : 0.55;
+    const zk = o.z != null && o.z !== 255 ? Ocean.ZONES[o.z].key : '';
+    if (zk === 'stromatolite') return [mi.matCol, 0.6];
+    return pn > 0.15 ? [mi.matCol, strong * smoothstep(0.15, 0.5, pn) * (1 - d / 4)] : null;
+  }
   groundColor(o, ny, x, z, cliffTop) {
     const P = this.planet, pal = P.pal;
     let c;
     if (this.giant) c = Color.shade([o.c0, o.c1, o.c2], clamp((o.h - 4) * 0.035, -0.3, 0.2));
-    else if (o.h < o.w - 0.02) { const d = o.w - o.h; c = Color.mix(pal.sand, Color.mul(pal.deep, 0.55), clamp(d / 5, 0, 1)); }
+    else if (o.h < o.w - 0.02) {
+      // the sea floor: its sediment depends on the zone (white reef sand, grey ooze, dark basalt at the vents), and
+      // microbes paint it: coloured mats on sunlit floors, rings of colour around vents
+      const d = o.w - o.h, Zo = o.z != null && o.z !== 255 ? Ocean.ZONES[o.z] : null;
+      c = Color.mix(Zo ? Color.mix(pal.sand, Zo.sea, 0.6) : pal.sand, Color.mul(pal.deep, 0.55), clamp(d / 14, 0, 1) * 0.55);
+      const mc = this.matAt(o, x, z, d);
+      if (mc) c = Color.mix(c, mc[0], mc[1]);
+    }
     else {
       c = pal[o.b];
       if (ny < 0.74) c = Color.mix(pal.cliff, pal.cliffDark, ny < 0.45 ? 0.55 : 0.1);
       else if (cliffTop) c = Color.shade(c, 0.12);
       if (o.w > -1e8 && o.h - o.w < 0.7 && o.b !== B.ICESHEET && ny >= 0.74 && this.liquid !== 'lava') c = Color.mix(c, pal.sand, 0.55);
       if (o.t < -3 && ny > 0.6 && this.liquid !== 'lava') c = Color.mix(c, pal[B.SNOW], smoothstep(-3, -10, o.t));
+      // on a world of microbes alone, damp low ground wears a crust of living film
+      const mi = this._micro;
+      if (!this.complex && mi && mi.soilCol && o.w > -1e8 && o.h - o.w < 2.2 && ny > 0.7 && this.n2.n2(x * 0.09 + 4, z * 0.09) > 0.1) c = Color.mix(c, mi.soilCol, 0.3);
     }
     const v = this.n2.n2(x * 0.07, z * 0.07) * 0.07 + this.n2.n2(x * 0.31, z * 0.31) * 0.035;
     return [c[0] * (1 + v), c[1] * (1 + v), c[2] * (1 + v)];
@@ -2576,19 +3223,28 @@ class Surface {
   buildChunk(cx, cz) {
     const CS = this.CS, N = CS + 1, M = N + 2, x0 = cx * CS, z0 = cz * CS;
     const H = new Float32Array(M * M), W = new Float32Array(M * M), Bm = new Uint8Array(M * M), T = new Float32Array(M * M), F = new Uint8Array(M * M), Rv = new Float32Array(M * M);
+    const E = new Float32Array(M * M), V = new Float32Array(M * M), Sm = new Float32Array(M * M), Zn = new Uint8Array(M * M);
     const GC = this.giant ? new Float32Array(M * M * 3) : null;
     const o = {};
     for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
       this.sample(x0 + i - 1, z0 + j - 1, o);
       const k = j * M + i;
-      H[k] = o.h; W[k] = o.w; Bm[k] = o.b; T[k] = o.t; F[k] = o.frozen; Rv[k] = o.river;
+      H[k] = o.h; W[k] = o.w; Bm[k] = o.b; T[k] = o.t; F[k] = o.frozen; Rv[k] = o.river; E[k] = o.eN || 0; V[k] = o.vent || 0; Sm[k] = o.seamount || 0;
       if (GC) { GC[k * 3] = o.c0; GC[k * 3 + 1] = o.c1; GC[k * 3 + 2] = o.c2; }
     }
-    const ch = { cx, cz, x0, z0, N, M, H, W, B: Bm, T, F, Rv, GC, trees: [], pois: [], hmin: 1e9, hmax: -1e9 };
+    const ch = { cx, cz, x0, z0, N, M, H, W, B: Bm, T, F, Rv, GC, E, V, S: Sm, Z: Zn, trees: [], pois: [], hmin: 1e9, hmax: -1e9 };
+    // the zones of its waters (reef, kelp, abyss, vents, lakes…)
+    if (!this.giant) ch.micro = this.microAt(this.time);
+    if (!this.giant && this.liquid) {
+      const dc = this.dirAt(x0 + CS / 2, z0 + CS / 2), stage = ch.micro.stage || 0;
+      ch.lat = Math.asin(clamp(dc[1], -1, 1));
+      for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) Zn[j * M + i] = this.zoneAt(ch, i, j, stage);
+    } else Zn.fill(255);
     // --- flora & structures (needed before terrain colors for canopy shade) ---
     const mb = new MeshBuilder(4096);
     this.placeFlora(ch, mb);
     this.placePOIs(ch, mb);
+    if (this.liquid && this.liquid !== 'lava') this.placeSeaPOIs(ch, mb);
     // city structures get their own mesh so a chunk's city can be re-baked as buildings are completed
     const cmb = this.cities && this.cities.length ? new MeshBuilder(2048) : null;
     const cityTop = cmb ? CityGen.bake(this, ch, cmb, this.time) : -1e9;
@@ -2608,7 +3264,7 @@ class Surface {
       nrm[v * 3] = nx; nrm[v * 3 + 1] = ny; nrm[v * 3 + 2] = nz;
       ch.hmin = Math.min(ch.hmin, h); ch.hmax = Math.max(ch.hmax, h);
       const mn = Math.min(H[k - 1], H[k + 1], H[k - M], H[k + M]);
-      o.h = h; o.w = W[k]; o.b = Bm[k]; o.t = T[k];
+      o.h = h; o.w = W[k]; o.b = Bm[k]; o.t = T[k]; o.z = ch.Z[k]; o.vent = ch.V[k]; o.frozen = F[k];
       if (GC) { o.c0 = GC[k * 3]; o.c1 = GC[k * 3 + 1]; o.c2 = GC[k * 3 + 2]; }
       let c = this.groundColor(o, ny, x, z, h - mn > 0.8 && ny > 0.8);
       if (this.cities) c = CityGen.paint(this, x, z, c);
@@ -2710,12 +3366,7 @@ class Surface {
       const k = (Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1;
       const b = ch.B[k], t = ch.T[k];
       const slope = Math.abs(ch.H[k + 1] - ch.H[k - 1]) + Math.abs(ch.H[k + ch.M] - ch.H[k - ch.M]);
-      if (h < w - 0.02) {
-        if (life > 0 && w - h < 3 && w - h > 0.6 && this.liquid !== 'lava' && !ch.F[k] && r.chance(0.05 * life)) {
-          for (let q = 0; q < 3; q++) mb.add(CON, mb.mat(x + r.range(-0.4, 0.4), h - 0.1, z + r.range(-0.4, 0.4), r.range(0, 6), r.range(-0.2, 0.2), 0.12, (w - h) * r.range(0.6, 1.1), 0.12), Color.shade(F.leaf2, -0.2), 0, 0.5);
-        }
-        continue;
-      }
+      if (h < w - 0.02) { this.seaFlora(mb, ch, k, x, h, w, z, r); continue; }
       if (slope > 1.6) continue;
       const V = BIOMES[b].v;
       let roll = r.next();
@@ -2859,6 +3510,99 @@ class Surface {
     }
   }
 
+  // life on the sea floor and in the shallows, zone by zone: reefs, kelp forests, seagrass, mangroves and reeds,
+  // sponge gardens, sea lilies and glass sponges in the deep, vent chimneys with tube worms, and on worlds of
+  // microbes alone the stromatolites, mats and first multicellular fronds
+  reefPalette() {
+    if (this._reefPal) return this._reefPal;
+    const r = new RNG.Rand(RNG.hash(this.seed, 'reef')), h0 = this.planet.floraHue;
+    const pal = [];
+    for (let i = 0; i < 6; i++) pal.push(Color.hsv(fract(h0 + r.pick([0.45, 0.55, 0.62, 0.78, 0.9, 0.05, 0.12]) + r.range(-0.04, 0.04)), r.range(0.55, 0.9), r.range(0.7, 1)));
+    return (this._reefPal = pal);
+  }
+  seaFlora(mb, ch, k, x, h, w, z, r) {
+    const zi = ch.Z[k];
+    if (zi == null || zi === 255 || this.liquid === 'lava') return;
+    const zone = Ocean.ZONES[zi].key, D = w - h, cx = this.complex, mi = ch.micro || {}, st = mi.stage || 0, F = this.planet.flora;
+    const SPH = Geo.PRIM.sphereXs, CON = Geo.PRIM.coneLo, CYL = Geo.PRIM.cylXs, BLD = Geo.PRIM.blade, m = (...a) => mb.mat(...a), P = this.reefPalette();
+    if (ch.F[k] && zone !== 'underice' && zone !== 'glacial') return;
+    const col = () => r.pick(P);
+    const seagrass = (n, s) => { for (let q = 0; q < n; q++) mb.add(BLD, m(x + r.range(-0.5, 0.5), h - 0.05, z + r.range(-0.5, 0.5), r.range(0, 6), r.range(-0.2, 0.2), 0.07, Math.min(D * 0.8, r.range(0.5, 1.1) * s), 0.07), q % 2 ? Color.shade(F.leaf2, -0.1) : F.leaf, 0, 0.55); };
+    const reed = (n) => { for (let q = 0; q < n; q++) mb.add(BLD, m(x + r.range(-0.5, 0.5), h - 0.05, z + r.range(-0.5, 0.5), r.range(0, 6), r.range(-0.12, 0.12), 0.06, D + r.range(0.5, 1.4), 0.06), q % 2 ? F.leafLight : Color.shade(F.leaf2, 0.1), 0, 0.45); };
+    const rock = (s) => mb.add(SPH, m(x, h, z, r.range(0, 6), r.range(-0.3, 0.3), s * r.range(0.8, 1.3), s * r.range(0.45, 0.8), s), Color.shade(this.planet.pal[B.MOUNTAIN], r.range(-0.3, -0.05)));
+    const sponge = (c, n, s) => { for (let q = 0; q < n; q++) { const px = x + r.range(-0.4, 0.4), pz = z + r.range(-0.4, 0.4), hh = r.range(0.4, 1.1) * s, rr = r.range(0.1, 0.2) * s; mb.add(CYL, m(px, h - 0.1, pz, 0, r.range(-0.15, 0.15), rr, hh, rr), c, 0, 0.08); mb.add(SPH, m(px, h + hh - 0.1, pz, 0, 0, rr * 0.8, rr * 0.25, rr * 0.8), Color.shade(c, -0.45)); } };
+    const anemone = (c) => { const s = r.range(0.2, 0.45); mb.add(CYL, m(x, h - 0.1, z, 0, 0, s * 0.6, s * 0.9, s * 0.6), Color.shade(c, -0.2)); for (let q = 0; q < 5; q++) { const a = q / 5 * TAU; mb.add(CON, m(x + Math.sin(a) * s * 0.4, h + s * 0.75, z + Math.cos(a) * s * 0.4, a, 0.55, s * 0.12, s * 0.9, s * 0.12), c, 0.3, 0.9, F.alien ? 0.3 : 0); } };
+    const star = (c) => { const s = r.range(0.2, 0.4), yaw = r.range(0, TAU); for (let q = 0; q < 5; q++) mb.add(BLD, m(x, h + 0.02, z, yaw + q / 5 * TAU, Math.PI / 2, s * 0.22, s, s * 0.08), c); };
+    const coral = (c, s) => {
+      const grow = (px, py, pz, yaw, pitch, L, d) => {
+        const rr = 0.09 * s * (1 - d * 0.25);
+        mb.add(CYL, m(px, py, pz, yaw, pitch, rr, L, rr), d % 2 ? c : Color.shade(c, -0.15), d * 0.05, d * 0.05 + 0.06);
+        const ex = px + Math.sin(yaw) * Math.sin(pitch) * L, ey = py + Math.cos(pitch) * L, ez = pz + Math.cos(yaw) * Math.sin(pitch) * L;
+        if (d < 1) for (let q = 0; q < 2; q++) grow(ex, ey, ez, yaw + r.range(-1.6, 1.6), clamp(pitch + r.range(-0.2, 0.6), 0.1, 1.1), L * 0.8, d + 1);
+        else mb.add(SPH, m(ex, ey, ez, 0, 0, rr * 1.8, rr * 1.8, rr * 1.8), Color.shade(c, 0.25), 0.1, 0.1, F.alien ? 0.25 : 0);
+      };
+      grow(x, h - 0.1, z, r.range(0, 6), 0.1, Math.min(D * 0.45, 0.9 * s), 0);
+    };
+    const brain = (c) => { const s = r.range(0.35, 0.8); mb.add(SPH, m(x, h, z, r.range(0, 6), 0, s, s * 0.62, s * r.range(0.8, 1.1)), c); mb.add(SPH, m(x, h + s * 0.2, z, 0, 0, s * 0.72, s * 0.5, s * 0.72), Color.shade(c, 0.18)); };
+    const table = (c) => { const s = r.range(0.5, 1.1); mb.add(CYL, m(x, h - 0.1, z, 0, 0, 0.1, s * 0.6, 0.1), Color.shade(c, -0.2)); mb.add(SPH, m(x, h + s * 0.6, z, r.range(0, 6), r.range(-0.1, 0.1), s, s * 0.12, s * 0.9), c); };
+    const fan = (c) => { const s = r.range(0.4, 0.9), yaw = r.range(0, TAU); mb.add(CYL, m(x, h - 0.1, z, yaw, 0, 0.04, s * 0.4, 0.04), Color.shade(c, -0.3)); mb.add(SPH, m(x, h + s * 0.6, z, yaw, 0, s * 0.62, s * 0.55, 0.04), c, 0.15, 0.45); };
+    const kelp = () => {
+      const top = Math.max(1.4, D - r.range(0.1, 0.6)), segs = Math.max(2, Math.round(top / 0.9)), segL = top / segs, lean = r.range(-0.1, 0.1), yaw = r.range(0, TAU);
+      for (let q = 0; q < segs; q++) {
+        const y0 = h - 0.05 + q * segL, s0 = q / segs * 0.5, s1 = (q + 1) / segs * 0.5;
+        mb.add(CYL, m(x + lean * q * 0.3, y0, z, yaw, lean, 0.05, segL, 0.05), Color.shade(F.bark, 0.1), s0, s1);
+        mb.add(SPH, m(x + lean * q * 0.3 + Math.sin(yaw + q * 2.4) * 0.28, y0 + segL * 0.6, z + Math.cos(yaw + q * 2.4) * 0.28, yaw + q * 2.4, 1.2, 0.08, 0.42, 0.2), q % 2 ? F.leaf2 : Color.mix(F.leaf2, [0.55, 0.45, 0.2], 0.4), s0, s1);
+      }
+    };
+    const strom = () => { const c = mi.matCol || [0.6, 0.55, 0.4], s = r.range(0.35, 0.9); for (let q = 0; q < r.int(2, 4); q++) mb.add(SPH, m(x + r.range(-0.15, 0.15), h - 0.1 + q * s * 0.35, z + r.range(-0.15, 0.15), 0, 0, s * (1 - q * 0.2), s * 0.42, s * (1 - q * 0.2)), q % 2 ? c : Color.mix(c, [0.78, 0.72, 0.6], 0.55)); };
+    const frond = () => { const c = Color.mix(mi.matCol || F.leaf, [0.9, 0.75, 0.6], 0.35), hh = r.range(0.5, 1.4), yaw = r.range(0, TAU); mb.add(CYL, m(x, h - 0.05, z, yaw, 0, 0.03, hh * 0.35, 0.03), c, 0, 0.3); mb.add(SPH, m(x, h + hh * 0.6, z, yaw, r.range(-0.2, 0.2), 0.18, hh * 0.45, 0.05), c, 0.3, 0.7); mb.add(SPH, m(x, h, z, 0, 0, 0.18, 0.04, 0.18), Color.shade(c, -0.2)); };
+    const disc = () => { const c = Color.mix(mi.matCol || [0.7, 0.6, 0.5], [0.9, 0.8, 0.7], 0.4), s = r.range(0.2, 0.5); mb.add(SPH, m(x, h, z, 0, 0, s, 0.05, s), c); mb.add(SPH, m(x, h + 0.03, z, 0, 0, s * 0.55, 0.05, s * 0.55), Color.shade(c, -0.15)); };
+    const algae = () => { const c = Color.mix(mi.matCol || F.leaf, r.chance(0.5) ? [0.25, 0.6, 0.3] : [0.65, 0.2, 0.25], 0.5); for (let q = 0; q < 3; q++) mb.add(SPH, m(x + r.range(-0.3, 0.3), h + 0.2, z + r.range(-0.3, 0.3), r.range(0, 6), r.range(-0.3, 0.3), 0.08, Math.min(D * 0.4, r.range(0.25, 0.5)), 0.16), c, 0.1, 0.6); };
+    const tubeworms = () => { for (let q = 0; q < r.int(4, 9); q++) { const px = x + r.range(-0.5, 0.5), pz = z + r.range(-0.5, 0.5), hh = r.range(0.4, 1.2); mb.add(CYL, m(px, h - 0.1, pz, 0, r.range(-0.1, 0.1), 0.05, hh, 0.05), [0.93, 0.92, 0.86]); mb.add(SPH, m(px, h + hh - 0.05, pz, 0, 0, 0.09, 0.14, 0.09), [0.9, 0.12, 0.15], 0, 0, 0.2); } };
+    const lily = () => { const s = r.range(0.25, 0.5); mb.add(SPH, m(x, w + 0.015, z, r.range(0, 6), 0, s, 0.025, s), F.leaf, 0.1, 0.1); if (r.chance(0.25)) mb.add(SPH, m(x + s * 0.3, w + 0.08, z, 0, 0, 0.1, 0.07, 0.1), r.pick(F.flowers), 0.1, 0.1); };
+    const mangrove = () => {
+      const top = D + r.range(1.2, 2.2), rr = r.range(0.8, 1.3);
+      mb.add(CYL, m(x, h + D * 0.6, z, 0, 0, 0.13, top - D * 0.6, 0.13), F.bark, 0, 0.1);
+      for (let q = 0; q < 5; q++) { const a = q / 5 * TAU + r.range(-0.3, 0.3); mb.add(CYL, m(x + Math.sin(a) * rr * 0.75, h - 0.1, z + Math.cos(a) * rr * 0.75, a + Math.PI, 0.55, 0.05, D * 0.6 / Math.cos(0.55) + 0.15, 0.05), Color.shade(F.bark, -0.1)); }
+      mb.add(SPH, m(x, h + top + 0.35, z, 0, 0, rr * 1.2, rr * 0.7, rr * 1.2), F.leaf, 0.12, 0.28);
+      mb.add(SPH, m(x + 0.4, h + top + 0.7, z - 0.3, 0, 0, rr * 0.7, rr * 0.5, rr * 0.7), F.leafLight, 0.18, 0.3);
+    };
+    const crinoid = (c) => { const hh = r.range(0.6, 1.5); mb.add(CYL, m(x, h - 0.05, z, 0, r.range(-0.1, 0.1), 0.025, hh, 0.025), Color.shade(c, -0.3)); for (let q = 0; q < 6; q++) { const a = q / 6 * TAU; mb.add(CON, m(x, h + hh, z, a, 1.0, 0.04, 0.35, 0.02), c, 0.2, 0.5, 0.15); } };
+    const glass = () => { const hh = r.range(0.8, 1.8); mb.add(CYL, m(x, h - 0.1, z, 0, r.range(-0.08, 0.08), 0.16, hh, 0.16), [0.86, 0.9, 0.92], 0, 0.05, 0.05); mb.add(SPH, m(x, h + hh - 0.1, z, 0, 0, 0.17, 0.05, 0.17), [0.6, 0.66, 0.7]); };
+    const nodules = () => { for (let q = 0; q < r.int(3, 7); q++) mb.add(SPH, m(x + r.range(-0.6, 0.6), h, z + r.range(-0.6, 0.6), 0, 0, 0.07, 0.05, 0.07), [0.14, 0.12, 0.12]); };
+    const holothurian = () => mb.add(SPH, m(x, h + 0.05, z, r.range(0, TAU), 0, 0.09, 0.08, 0.3), Color.hsv(r.pick([0.95, 0.02, 0.08]), 0.35, 0.8), 0, 0, 0.15);
+    const brinicle = () => { const L = Math.min(D - 0.2, r.range(0.5, 1.8)); if (L > 0.3) mb.add(CON, m(x, w - 0.02, z, 0, Math.PI, 0.1, L, 0.1), [0.85, 0.93, 1], 0, 0, 0.1); };
+    // complex worlds: animal reefs and plant meadows; microbial worlds: stromatolites, mats and the first fronds
+    switch (zone) {
+      case 'reef':
+        if (!cx) { if (r.chance(0.3)) strom(); break; }
+        if (r.chance(0.32)) { const q = r.next(), c = col(); if (q < 0.34) coral(c, r.range(0.9, 1.6)); else if (q < 0.52) brain(c); else if (q < 0.64) table(c); else if (q < 0.76) fan(c); else if (q < 0.88) sponge(c, r.int(2, 4), 1); else anemone(c); }
+        break;
+      case 'lagoon': if (cx && r.chance(0.22)) seagrass(r.int(2, 4), 0.8); else if (cx && r.chance(0.08)) brain(col()); break;
+      case 'stromatolite': if (r.chance(0.35)) strom(); else if (st >= 5 && r.chance(0.12)) frond(); break;
+      case 'kelp': if ((cx || st >= 5) && r.chance(0.25)) kelp(); else if (cx && r.chance(0.1)) anemone(col()); else if (r.chance(0.05)) rock(r.range(0.3, 0.8)); break;
+      case 'seagrass': if (cx && r.chance(0.4)) seagrass(r.int(3, 5), 1); else if (cx && r.chance(0.05)) star(col()); break;
+      case 'mangrove': if (r.chance(0.12)) mangrove(); else if (r.chance(0.2)) reed(r.int(1, 3)); break;
+      case 'marsh': case 'estuary': if (D < 1.3 && (cx || st >= 5) && r.chance(0.3)) reed(r.int(2, 4)); else if (cx && r.chance(0.06)) seagrass(3, 0.7); break;
+      case 'upwelling': if ((cx || st >= 5) && r.chance(0.18)) kelp(); else if (cx && r.chance(0.08)) sponge(col(), 2, 0.8); break;
+      case 'shelf': case 'polar': {
+        const q = r.next();
+        if (cx) { if (q < 0.04) rock(r.range(0.3, 0.9)); else if (q < 0.07) star(col()); else if (q < 0.1) sponge(zone === 'polar' ? [0.9, 0.85, 0.8] : col(), r.int(1, 3), 0.8); else if (q < 0.13) anemone(zone === 'polar' ? [0.95, 0.9, 0.85] : col()); else if (q < 0.2 && D < 2.5) seagrass(3, 0.7); }
+        else if (st >= 5 && q < 0.12) (r.chance(0.5) ? frond() : disc()); else if (st >= 5 && q < 0.2) algae(); else if (q < 0.03) rock(r.range(0.3, 0.8));
+        break;
+      }
+      case 'underice': if (r.chance(0.08)) brinicle(); if (cx && r.chance(0.05)) anemone([0.95, 0.92, 0.88]); break;
+      case 'slope': if (cx && r.chance(0.05)) sponge([0.85, 0.75, 0.55], r.int(1, 2), 1); else if (cx && r.chance(0.04)) crinoid(col()); else if (r.chance(0.03)) rock(r.range(0.4, 1)); break;
+      case 'seamount': if (cx && r.chance(0.2)) coral(r.pick([[0.95, 0.94, 0.9], [0.95, 0.55, 0.3], [0.9, 0.35, 0.3]]), r.range(0.9, 1.5)); else if (cx && r.chance(0.08)) sponge([0.9, 0.82, 0.6], 2, 1.2); break;
+      case 'abyss': if (cx && r.chance(0.03)) glass(); else if (cx && r.chance(0.025)) crinoid([0.9, 0.85, 0.7]); else if (r.chance(0.02)) nodules(); else if (cx && r.chance(0.01)) holothurian(); break;
+      case 'trench': if (cx && r.chance(0.012)) holothurian(); else if (r.chance(0.01)) nodules(); break;
+      case 'vent': if ((cx || st >= 2) && ch.V[k] > 0.4 && r.chance(cx ? 0.3 : 0.1)) (cx ? tubeworms() : disc()); break;
+      case 'lake': if (D < 0.9 && (cx || st >= 5) && r.chance(0.35)) reed(r.int(2, 4)); else if (cx && r.chance(0.12)) lily(); else if (cx && r.chance(0.12)) seagrass(3, 0.6); break;
+      case 'river': if (cx && r.chance(0.08)) seagrass(2, 0.6); break;
+      case 'saltlake': if (r.chance(0.04)) mb.add(Geo.PRIM.box, m(x, h, z, r.range(0, 6), 0, 0.12, 0.12, 0.12), [0.97, 0.96, 0.94]); break;
+      case 'acid': case 'hydrocarbon': if (cx && r.chance(0.04)) sponge(Color.hsv(this.planet.floraHue, 0.5, 0.75), 2, 0.8); break;
+    }
+  }
   crystal(mb, x, y, z, s, r, c, em) {
     const CON = Geo.PRIM.coneLo;
     for (let k = 0; k < r.int(3, 6); k++) {
@@ -2869,6 +3613,75 @@ class Surface {
     }
   }
 
+  // places of interest on the sea floor: vent chimneys, whale falls, wrecks off settled coasts, drowned ruins, brine pools
+  placeSeaPOIs(ch, mb) {
+    const P = this.planet, r = new RNG.Rand(RNG.h3(this.seed ^ 0x5ea5ea, ch.cx, ch.cz)), M = ch.M, cx = this.complex;
+    const SPH = Geo.PRIM.sphereLo, CYL = Geo.PRIM.cylLo, CON = Geo.PRIM.coneLo, BOX = Geo.PRIM.box, m = (...a) => mb.mat(...a);
+    const wet = (pred) => {
+      for (let t = 0; t < 8; t++) {
+        const x = ch.x0 + r.range(4, this.CS - 4), z = ch.z0 + r.range(4, this.CS - 4), k = (Math.round(z - ch.z0) + 1) * M + Math.round(x - ch.x0) + 1;
+        const h = ch.H[k], w = ch.W[k];
+        if (!(w > h + 1.2) || ch.F[k] || ch.Z[k] === 255) continue;
+        if (pred && !pred(k, w - h)) continue;
+        return [x, h, z, k, w];
+      }
+      return null;
+    };
+    const add = (poi) => { poi.sea = true; ch.pois.push(poi); };
+    // a vent field: chimneys of sulfide belching black "smoke", and (on living worlds) tube worms and white crabs around them
+    if (this.ventK > 0 && r.chance(0.5)) {
+      const s = wet((k, D) => ch.V[k] > 0.45 && D > 5);
+      if (s) {
+        const [x, y, z] = s, n = r.int(2, 5);
+        for (let i = 0; i < n; i++) {
+          const px = x + r.range(-2.5, 2.5), pz = z + r.range(-2.5, 2.5), hh = r.range(1.2, 3.6), py = this.sample(px, pz, {}).h;
+          for (let q = 0; q < 3; q++) mb.add(CYL, m(px, py - 0.2 + q * hh / 3, pz, r.range(0, 6), r.range(-0.08, 0.08), 0.32 - q * 0.07, hh / 3 + 0.05, 0.32 - q * 0.07), q % 2 ? [0.16, 0.13, 0.12] : [0.26, 0.2, 0.16]);
+          mb.add(CON, m(px, py + hh - 0.1, pz, 0, 0, 0.2, 0.25, 0.2), [0.95, 0.55, 0.15], 0, 0, 0.9);
+        }
+        add({ type: 'vent', name: 'Hydrothermal Vent Field', x, y, z, r: 4, smoker: true, desc: `${n} mineral chimneys vent water at over 350 °C, black with dissolved sulfides. ${cx ? 'Tube worms, blind crabs and bacterial mats live off the chemistry, not the sun.' : 'Microbial mats feed on the chemistry — perhaps where life began here.'}` });
+      }
+    }
+    // a whale fall: the bones of a great sea creature, slowly consumed by a community of its own
+    if (cx && r.chance(0.035)) {
+      const s = wet((k, D) => D > 4);
+      if (s) {
+        const [x, y, z] = s, yaw = r.range(0, TAU), L = r.range(6, 12), bone = [0.9, 0.88, 0.8], dx = Math.sin(yaw), dz = Math.cos(yaw);
+        for (let i = 0; i < 12; i++) mb.add(SPH, m(x + dx * (i - 6) * L / 12, y + 0.35, z + dz * (i - 6) * L / 12, yaw, 0, 0.22, 0.2, 0.36), bone);
+        for (let i = 2; i < 9; i++) for (const sd of [-1, 1]) mb.add(CYL, m(x + dx * (i - 6) * L / 12, y + 0.35, z + dz * (i - 6) * L / 12, yaw + sd * Math.PI / 2, 2.1, 0.07, 1.3 * (1 - Math.abs(i - 5) / 6), 0.07), bone);
+        mb.add(SPH, m(x + dx * L * 0.55, y + 0.5, z + dz * L * 0.55, yaw, 0, 0.8, 0.5, 1.3), bone);
+        add({ type: 'whalefall', name: 'Whale Fall', x, y, z, r: L * 0.6, desc: 'The skeleton of a huge sea creature on the sea floor. Its body fed a whole deep-sea community for decades.' });
+      }
+    }
+    // wrecks off settled coasts, and drowned ruins where precursors once built
+    const cities = this.cities && this.cities.length;
+    if ((cities && r.chance(0.12)) || (P.features.ruins && r.chance(0.03))) {
+      const s = wet((k, D) => D > 1.6 && D < 14);
+      if (s) {
+        const [x, y, z] = s, yaw = r.range(0, TAU), wood = [0.36, 0.26, 0.17];
+        if (cities) {
+          const L = r.range(3, 6);
+          mb.add(BOX, m(x, y + 0.45, z, yaw, r.range(-0.25, 0.25), 0.8, 0.45, L * 0.5), wood);
+          mb.add(BOX, m(x, y + 0.95, z - Math.cos(yaw) * L * 0.3, yaw, 0.2, 0.7, 0.12, L * 0.18), Color.shade(wood, 0.1));
+          mb.add(CYL, m(x, y + 0.6, z, yaw, r.range(0.6, 1.2), 0.06, L * 0.7, 0.06), Color.shade(wood, -0.2));
+          add({ type: 'wreck', name: 'Shipwreck', x, y, z, r: L * 0.6, desc: 'A vessel of the local people, sunk off their coast and slowly becoming a reef.' });
+        } else {
+          const stone = Color.hsv(P.soilHue, 0.12, 0.55), n = r.int(4, 7), rad = r.range(2.5, 4.5);
+          for (let i = 0; i < n; i++) { const a = i / n * TAU, hh = r.range(0.6, 2.4); mb.add(BOX, m(x + Math.cos(a) * rad, y + hh * 0.5 - 0.2, z + Math.sin(a) * rad, a + r.range(-0.3, 0.3), r.range(-0.2, 0.2), 0.3, hh * 0.5 + 0.2, 0.3), stone); }
+          add({ type: 'ruins', name: 'Drowned Ruins', x, y, z, r: rad + 1, desc: 'Precursor pillars standing on the sea floor: the sea rose, or the land sank, long ago.' });
+        }
+      }
+    }
+    // a brine pool: a lake on the sea floor, too salty to mix
+    if (r.chance(0.025)) {
+      const s = wet((k, D) => D > 8 && !ch.V[k]);
+      if (s) {
+        const [x, y, z] = s, rad = r.range(1.5, 3);
+        mb.add(SPH, m(x, y + 0.02, z, 0, 0, rad, 0.05, rad * r.range(0.7, 1)), [0.12, 0.16, 0.24], 0, 0, 0.12);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; mb.add(SPH, m(x + Math.cos(a) * rad, y + 0.05, z + Math.sin(a) * rad, a, 0, 0.25, 0.12, 0.25), cx ? [0.78, 0.72, 0.62] : [0.4, 0.38, 0.36]); }
+        add({ type: 'brine', name: 'Brine Pool', x, y, z, r: rad + 0.5, desc: 'A pool of dense brine lying on the sea floor, with its own shoreline. Deadly to most, a home to a few specialists.' });
+      }
+    }
+  }
   placePOIs(ch, mb) {
     const P = this.planet, f = P.features, r = new RNG.Rand(RNG.h3(this.seed ^ 0xabc123, ch.cx, ch.cz));
     const BOX = Geo.PRIM.box, SPH = Geo.PRIM.sphereLo, CYL = Geo.PRIM.cylLo, CON = Geo.PRIM.coneLo;
@@ -4249,6 +5062,8 @@ const Geo = (() => {
   }
 
   const PRIM = { sphere: sphere(12, 8), sphereLo: sphere(8, 6), cone: cone(8), coneLo: cone(6), cyl: cylinder(8), cylLo: cylinder(6), box: box(), disc: disc(12) };
+  // the cheapest shapes, for the dense decoration of the sea floor (thousands per view)
+  PRIM.sphereXs = sphere(6, 4); PRIM.cylXs = cylinder(4); PRIM.blade = cone(3);
   return { sphere, cone, cylinder, box, disc, ring, cubeSphere, PRIM };
 })();
 
@@ -4311,7 +5126,30 @@ vec3 toon(vec3 base, vec3 n){
   float q = d > 0.45 ? 1.0 : d > 0.1 ? 0.72 : d > -0.2 ? 0.44 : 0.24;
   return base * (uAmb + uLightCol * q);
 }
-vec3 fog(vec3 c, vec3 w){ float d = length((w - uFogC) * uFogMask); return mix(c, uFogCol, smoothstep(uFog.x, uFog.y, d)); }
+// underwater (the observer has dived): sunlight fades with depth, red first; caustics dance over the shallows;
+// the observer's lamp lights what is near; the water itself hides what is far, and the surface glows overhead
+uniform float uUw; uniform float uSeaY; uniform vec3 uUwCol; uniform vec3 uUwAbs; uniform vec4 uLamp; uniform vec2 uUwFog; uniform vec3 uUwSky; uniform float uUwT; uniform float uUwDark;
+vec3 uwLight(vec3 c, vec3 base, vec3 n, vec3 w){
+  if (uUw <= 0.0 || w.y > uSeaY) return c;
+  float dz = uSeaY - w.y;
+  vec3 att = exp(-uUwAbs * dz);
+  float ca = 0.0;
+  if (dz < 5.0) { vec2 q = w.xz * 0.55; ca = pow(abs(sin(q.x + uUwT * 1.3 + sin(q.y * 1.3 + uUwT)) * sin(q.y * 1.1 - uUwT * 1.1 + sin(q.x * 0.9))), 4.0) * (1.0 - dz / 5.0) * max(n.y, 0.0); }
+  float ld = length(w - uLamp.xyz);
+  vec3 lamp = base * vec3(0.95, 0.97, 1.0) * uLamp.w * (1.0 - smoothstep(1.5, 13.0, ld)) * (0.45 + 0.55 * max(dot(n, normalize(uLamp.xyz - w)), 0.0));
+  return mix(c, c * att + base * uLightCol * ca * 0.9 * att + lamp, uUw);
+}
+vec3 fog(vec3 c, vec3 w){
+  float d = length((w - uFogC) * uFogMask);
+  vec3 f = mix(c, uFogCol, smoothstep(uFog.x, uFog.y, d));
+  if (uUw <= 0.0) return f;
+  vec3 wc = uUwCol * exp(-uUwAbs * 0.3 * max(0.0, uSeaY - w.y));
+  vec3 u = mix(c, wc, smoothstep(uUwFog.x, uUwFog.y, length(w - uFogC)));
+  u = mix(u, uUwSky, smoothstep(uSeaY - 0.3, uSeaY + 0.8, w.y));
+  return mix(f, u, uUw);
+}
+// (and from under the water, nothing above the surface shows its outline: it is lost in the glare of the surface)
+float uwEdge(vec3 w){ return 1.0 - uUw * smoothstep(uSeaY - 0.2, uSeaY + 0.5, w.y); }
 `;
   const NOISE = `
 vec3 mod289(vec3 x){ return x - floor(x * (1.0/289.0)) * 289.0; }
@@ -4372,9 +5210,10 @@ void main(){
   vec3 c = toon(base, n);
   // the shadows of passing clouds
   if (uCloud > 0.0) { float cs = vnoise(vW.xz * 0.03 + uCloudOff) * 0.65 + vnoise(vW.xz * 0.07 - uCloudOff * 1.3) * 0.35; if (cs < uCloud * 0.75) c *= 0.74; }
-  c += base * vE.x * (0.5 + uNight * 1.6);
+  c = uwLight(c, base, n, vW);
+  c += base * vE.x * (0.5 + max(uNight, uUwDark) * 1.6);
   oC = vec4(fog(c, vW), 1.0);
-  oI = vec4(encN(normalize(mat3(uView) * n)), vE.y > 0.004 ? 0.0 : uOutline, 1.0);
+  oI = vec4(encN(normalize(mat3(uView) * n)), vE.y > 0.004 ? 0.0 : uOutline * uwEdge(vW), 1.0);
 }`];
 
   // instanced primitives: creatures, shadows
@@ -4407,10 +5246,10 @@ void main(){
   else if (pt == 8) k = step(bayer4(gl_FragCoord.xy), smoothstep(-0.6, 0.8, p.y));
   vec3 base = mix(vCA, vCB, k);
   vec3 n = normalize(vN);
-  vec3 c = uMode == 2 ? base : toon(base, n);
-  c += base * vP.z * (0.7 + uNight * 1.6);
+  vec3 c = uMode == 2 ? base : uwLight(toon(base, n), base, n, vW);
+  c += base * vP.z * (0.7 + max(uNight, uUwDark) * 1.6);
   oC = vec4(fog(c, vW), 1.0);
-  oI = vec4(encN(normalize(mat3(uView) * n)), vP.w, 1.0);
+  oI = vec4(encN(normalize(mat3(uView) * n)), vP.w * uwEdge(vW), 1.0);
 }`];
 
   src.water = [H + `
@@ -4878,6 +5717,8 @@ class Renderer {
       uFogCol: env.fogCol || [0, 0, 0], uFogC: env.fogC || [0, 0, 0], uFogMask: env.fogMask || [1, 1, 1], uFog: env.fog || [1e8, 1e9],
       uTime: env.time || 0, uNight: env.night || 0, uCamPos: cam.pos,
     });
+    const U = env.uw;
+    GFX.setAll(prog, U ? { uUw: U.k, uSeaY: U.seaY, uUwCol: U.col, uUwAbs: U.abs, uLamp: U.lamp, uUwFog: U.fog, uUwSky: U.sky, uUwT: U.t, uUwDark: U.dark } : { uUw: 0, uUwDark: 0 });
     return prog;
   }
   drawBatches(cam, env) {
@@ -5447,11 +6288,149 @@ const Rig = (() => {
     }
   }
 
-  const FN = { quadruped, biped, hexapod, octopod, avian, aquatic, blob, floater };
+  // ---- the seas' body plans
+  // a cetoid: a long spindle driven by an up-and-down stroke of its horizontal flukes; a blowhole on top
+  function cetacean() {
+    const { bodyL, bodyW, bodyH, headS } = P, L = bodyL * 1.25, W = bodyW * 0.9, Hh = bodyH * 0.85;
+    const sw = Math.sin(A.phase * 0.9) * (0.1 + 0.18 * A.walk) * (1 - A.dead);
+    st.push(); st.rotX(sw * 0.15);
+    S(0, 0, L * 0.05, W * 0.55, Hh * 0.5, L * 0.42, P.main, P.belly, 1, 1, P.glow * 0.4);
+    S(0, -Hh * 0.02, L * 0.42, W * 0.46, Hh * 0.42, L * 0.16, P.main, P.belly, 1);
+    if (P.snout > 0.6) S(0, -Hh * 0.12, L * 0.55 + P.snout * headS * 0.3, W * 0.14, Hh * 0.12, headS * P.snout * 0.55, P.main, P.belly, 1);
+    if (P.carn < 0.3 && lod) S(0, -Hh * 0.3, L * 0.3, W * 0.4, Hh * 0.18, L * 0.25, P.belly, P.dark, 6, 4);
+    if (lod) { for (const s of [-1, 1]) S(s * W * 0.43, Hh * 0.02, L * 0.46, headS * 0.08, headS * 0.08, headS * 0.06, P.eye, P.eye, 0, 1, P.glow ? 1 : 0); S(0, Hh * 0.46, L * 0.36, W * 0.08, Hh * 0.03, W * 0.06, P.dark); }
+    for (const s of [-1, 1]) { st.push(); st.translate(s * W * 0.48, -Hh * 0.25, L * 0.22); st.rotZ(-s * (1.25 + Math.sin(A.t * 1.2 + s) * 0.12)); st.rotX(-0.5); S(0, -L * 0.1, 0, W * 0.12, L * 0.14 * (0.7 + P.fins * 0.6), W * 0.3, P.main, P.second); st.pop(); }
+    if (P.fins > 0.3) { st.push(); st.translate(0, Hh * 0.45, -L * 0.12); st.rotX(-0.6); C(0, 0, 0, W * 0.04, Hh * (0.3 + P.fins * 0.6), L * 0.08, P.main, P.dark, 5); st.pop(); }
+    if (P.horns && lod) { st.push(); st.translate(0, 0, L * 0.58); st.rotX(Math.PI / 2 - 0.1); C(0, 0, 0, W * 0.04, P.hornS * 2.2, W * 0.04, [0.93, 0.9, 0.82]); st.pop(); }
+    st.pop();
+    st.push(); st.translate(0, 0, -L * 0.3); st.rotX(sw);
+    S(0, 0, -L * 0.18, W * 0.28, Hh * 0.3, L * 0.22, P.main, P.belly, 1);
+    st.translate(0, 0, -L * 0.36); st.rotX(sw * 1.3);
+    for (const s of [-1, 1]) { st.push(); st.rotY(s * 0.55); S(s * W * 0.25, 0, -L * 0.06, W * 0.34, Hh * 0.05, L * 0.09, P.second, P.dark); st.pop(); }
+    st.pop();
+  }
+  // a marine reptile: a broad body rowed by four long paddles; a long neck and small head, or a short neck and huge jaws
+  function plesio() {
+    const { bodyL, bodyW, bodyH, headS } = P, ph = A.phase * 0.7, stroke = 0.4 + 0.5 * A.walk;
+    S(0, 0, 0, bodyW * 0.7, bodyH * 0.42, bodyL * 0.45, P.main, P.belly, 1, 1, P.glow * 0.4);
+    if (P.armor) S(0, bodyH * 0.2, 0, bodyW * 0.62, bodyH * 0.25, bodyL * 0.38, P.second, P.accent, 3, 4);
+    for (let k = 0; k < 4; k++) {
+      const side = k & 1 ? -1 : 1, front = k < 2, o = front ? 0 : 1.2;
+      st.push(); st.translate(side * bodyW * 0.6, -bodyH * 0.1, (front ? 0.25 : -0.28) * bodyL);
+      st.rotY(side * (0.4 + Math.sin(ph + o) * 0.5 * stroke)); st.rotZ(-side * (0.2 + Math.cos(ph + o) * 0.25 * stroke));
+      S(side * bodyL * 0.22, 0, 0, bodyL * 0.24 * (front ? 1 : 0.85), bodyH * 0.05, bodyW * 0.22, P.main, P.second);
+      st.pop();
+    }
+    st.push(); st.translate(0, bodyH * 0.1, bodyL * 0.42); st.rotY(A.look * 0.4 + Math.sin(A.t * 0.8) * 0.1); st.rotX(-0.1);
+    const long = P.neckL > P.S * 0.3, nl = long ? P.neckL * 1.7 + P.S * 0.2 : P.S * 0.18, ns = Math.max(1, Math.round(nl / (P.S * 0.22)));
+    for (let i = 0; i < ns; i++) { st.rotY(Math.sin(A.t * 1.1 - i * 0.5) * 0.05); S(0, 0, nl / ns * 0.5, bodyW * 0.17 * (1 - (i / ns) * 0.3), bodyW * 0.17, nl / ns * 0.62, P.main, P.belly, 1); st.translate(0, 0, nl / ns); }
+    st.translate(0, 0, headS * 0.35); head(headS * (long ? 0.8 : 1.3));
+    st.pop();
+    st.push(); st.translate(0, 0, -bodyL * 0.45); tail(3, P.tailL * 0.5, bodyW * 0.25); st.pop();
+  }
+  // a ray: a flat disc of body and wings that ripple like a flag, a whip of a tail
+  function ray() {
+    const { bodyL, bodyW, bodyH } = P, span = P.S * lerp(1.1, 1.9, P.fins), ph = A.phase * 0.8, fl = 0.25 + 0.25 * A.walk;
+    S(0, 0, 0, bodyW * 0.5, bodyH * 0.18, bodyL * 0.45, P.main, P.belly, 1, 1, P.glow * 0.5);
+    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { st.push(); st.translate(s * bodyW * 0.35, 0, bodyL * (0.15 - k * 0.15)); st.rotZ(s * Math.sin(ph - k * 0.9) * fl); S(s * span * 0.22, 0, 0, span * 0.24 * (1 - k * 0.22), bodyH * 0.06, bodyL * 0.2, P.main, P.second, P.pattern === 3 ? 3 : 0, P.patScale); st.pop(); }
+    if (P.carn < 0.3 && lod) for (const s of [-1, 1]) { st.push(); st.translate(s * bodyW * 0.22, 0, bodyL * 0.42); st.rotX(Math.PI / 2 - 0.25); C(0, 0, 0, bodyW * 0.08, bodyL * 0.22, bodyW * 0.04, P.second); st.pop(); }
+    if (lod) for (const s of [-1, 1]) S(s * bodyW * 0.18, bodyH * 0.14, bodyL * 0.28, P.headS * 0.1, P.headS * 0.1, P.headS * 0.1, P.eye, P.eye, 0, 1, P.glow ? 1 : 0);
+    st.push(); st.translate(0, 0, -bodyL * 0.4); st.rotY(Math.sin(A.t * 2 + A.seed * 4) * 0.12); st.rotX(-Math.PI / 2);
+    Y(0, 0, 0, bodyW * 0.03, P.tailL * 1.1 + P.S * 0.35, P.dark);
+    if (P.spikes && lod) { st.translate(0, P.tailL * 0.3, 0); C(0, 0, 0, bodyW * 0.04, P.S * 0.2, bodyW * 0.04, P.accent); }
+    st.pop();
+  }
+  // a medusa: a pulsing bell, glowing gonads, oral arms and a curtain of trailing tentacles
+  function jelly() {
+    const R0 = P.S * 0.45, k = 1 + Math.sin(A.t * 2.2 + A.seed * 9) * 0.12;
+    S(0, 0, 0, R0 * k, R0 * 0.62 / k, R0 * k, P.main, P.second, 5, 1, 0.25 + P.glow, 0.6);
+    S(0, -R0 * 0.08, 0, R0 * 0.52, R0 * 0.28, R0 * 0.52, P.accent, P.accent, 0, 1, 0.4 + P.glow * 0.8, 0.3);
+    const n = lod ? 6 + Math.round(P.append * 6) : 5, segs = lod ? 5 : 3, segL = P.S * (0.16 + P.tailL / P.S * 0.12);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU;
+      st.push(); st.translate(Math.cos(a) * R0 * 0.8 * k, -R0 * 0.2, Math.sin(a) * R0 * 0.8 * k);
+      for (let j = 0; j < segs; j++) { st.rotX(Math.sin(A.t * 1.3 + i + j * 0.7) * 0.18); st.rotZ(Math.cos(A.t * 1.1 + i * 2 + j * 0.5) * 0.15); S(0, -segL * 0.5, 0, R0 * 0.035, segL * 0.55, R0 * 0.035, P.second, P.accent, 0, 1, P.glow * 0.6, 0.5); st.translate(0, -segL, 0); }
+      st.pop();
+    }
+    if (lod) for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.4; st.push(); st.translate(Math.cos(a) * R0 * 0.2, -R0 * 0.25, Math.sin(a) * R0 * 0.2); st.rotZ(Math.sin(A.t + i) * 0.2); S(0, -R0 * 0.5, 0, R0 * 0.1, R0 * 0.55, R0 * 0.06, P.accent, P.second, 0, 1, P.glow * 0.5); st.pop(); }
+  }
+  // a cephalopod: a mantle (a squid's torpedo with fins, an octopus's round bag), big eyes, eight arms (and two long tentacles)
+  function cephalo() {
+    const { bodyL, bodyW, bodyH, headS } = P, jet = A.walk, puls = 1 + Math.sin(A.t * 2 + A.seed * 5) * 0.06 * (0.5 + jet), long = P.length > 0.5;
+    st.push(); st.translate(0, bodyH * 0.1, -bodyL * (long ? 0.35 : 0.15)); st.rotX(long ? 0 : -0.5);
+    S(0, 0, 0, bodyW * 0.45 * puls, bodyH * 0.45 * puls, bodyL * (long ? 0.55 : 0.35), P.main, P.second, P.pattern || 3, P.patScale, P.glow * 0.8);
+    if (long && lod) for (const s of [-1, 1]) { st.push(); st.translate(s * bodyW * 0.3, 0, -bodyL * 0.4); st.rotZ(-s * 1.2); S(0, 0, 0, bodyW * 0.3, bodyH * 0.04, bodyL * 0.15, P.second, P.accent); st.pop(); }
+    st.pop();
+    S(0, bodyH * 0.05, bodyL * 0.08, bodyW * 0.4, bodyH * 0.35, bodyL * 0.14, P.main, P.belly, 1);
+    if (lod) for (const s of [-1, 1]) S(s * bodyW * 0.38, bodyH * 0.12, bodyL * 0.1, headS * P.eyeS * 1.6, headS * P.eyeS * 1.6, headS * P.eyeS * 1.2, P.eye, P.eye, 0, 1, P.glow ? 1.2 : 0.2);
+    const n = 8, segs = lod ? 5 : 3, segL = P.S * 0.12 * (1 + P.append * 0.8);
+    for (let i = 0; i < n + (long ? 2 : 0); i++) {
+      const a = ((i % n) / n) * TAU, tent = i >= n, m = tent ? 2 : 1;
+      st.push(); st.translate(Math.cos(a) * bodyW * 0.2, Math.sin(a) * bodyH * 0.2, bodyL * 0.18); st.rotX(Math.sin(a) * 0.3); st.rotY(Math.cos(a) * 0.3);
+      for (let j = 0; j < segs * m; j++) { st.rotX(Math.sin(A.t * 2 + i + j * 0.8) * 0.15 * (1 - jet * 0.6)); st.rotY(Math.cos(A.t * 1.7 + i * 1.3 + j * 0.6) * 0.15 * (1 - jet * 0.6)); const rr = headS * 0.07 * (1 - j / (segs * m + 1)); S(0, 0, segL * 0.5, rr, rr, segL * 0.6, P.main, P.belly, 1, 1, P.glow * 0.4); st.translate(0, 0, segL); }
+      st.pop();
+    }
+  }
+  // a crustacean: a carapace on walking legs, a pair of claws, eyes on stalks, long antennae (and a lobster's tail fan)
+  function crustacean() {
+    const { legL, bodyH, bodyL, bodyW, legT, headS } = P, walk = A.walk, ph = A.phase * 1.4, sl = A.sleep;
+    const bodyY = lerp(legL * 0.45, bodyH * 0.3, sl) + Math.abs(Math.sin(ph * 2)) * 0.015 * walk;
+    st.push(); st.translate(0, bodyY, 0);
+    S(0, 0, bodyL * 0.08, bodyW * 0.55, bodyH * 0.38, bodyL * 0.3, P.main, P.second, P.armor ? 2 : 0, 4, P.glow * 0.6);
+    if (P.length > 0.45) {
+      st.push(); st.translate(0, -bodyH * 0.02, -bodyL * 0.2);
+      for (let i = 0; i < 4; i++) { st.rotX(0.08 + Math.sin(A.t * 1.5) * 0.03); S(0, 0, -bodyL * 0.1, bodyW * (0.36 - i * 0.05), bodyH * 0.22, bodyL * 0.12, P.main, P.second); st.translate(0, 0, -bodyL * 0.18); }
+      for (let k = -1; k <= 1; k++) { st.push(); st.rotY(k * 0.5); S(0, 0, -bodyL * 0.1, bodyW * 0.12, bodyH * 0.04, bodyL * 0.14, P.second, P.accent); st.pop(); }
+      st.pop();
+    }
+    if (lod) for (const s of [-1, 1]) {
+      st.push(); st.translate(s * bodyW * 0.18, bodyH * 0.25, bodyL * 0.35); Y(0, 0, 0, headS * 0.03, headS * 0.35, P.dark); S(0, headS * 0.38, 0, headS * 0.08, headS * 0.08, headS * 0.08, P.eye, P.eye, 0, 1, P.glow ? 1 : 0); st.pop();
+      st.push(); st.translate(s * bodyW * 0.12, bodyH * 0.1, bodyL * 0.38); st.rotY(s * 0.4); st.rotX(1.1 + Math.sin(A.t * 3 + s) * 0.1); Y(0, 0, 0, headS * 0.015, bodyL * (0.5 + P.append), P.accent); st.pop();
+    }
+    const cl = P.S * (0.18 + P.jaw * 0.35);
+    for (const s of [-1, 1]) {
+      st.push(); st.translate(s * bodyW * 0.45, 0, bodyL * 0.3); st.rotY(s * 0.5 - s * A.attack * 0.4); st.rotX(-0.2);
+      S(0, 0, cl * 0.4, legT * 1.2, legT * 1.2, cl * 0.45, P.main, P.second); st.translate(0, 0, cl * 0.8);
+      S(0, 0, cl * 0.35, cl * 0.22, cl * 0.14, cl * 0.4, P.accent, P.main);
+      st.push(); st.rotY(-s * (0.25 + A.jaw * 0.4)); S(s * cl * 0.1, -cl * 0.05, cl * 0.3, cl * 0.08, cl * 0.08, cl * 0.35, P.accent); st.pop();
+      st.pop();
+    }
+    legsArthropod(4, bodyY, legL, legT * 0.7, bodyW, bodyL * 0.6, 0.8, 1.35, ph, walk, sl, 1.2);
+    st.pop();
+  }
+  // an echinoderm: a sea star's arms, an urchin's spines, or a sea cucumber's soft sausage with feeding tentacles
+  function echino() {
+    const R0 = P.S * 0.5, n = P.segs >= 7 ? 7 : 5, slow = Math.sin(A.t * 0.6 + A.seed * 5);
+    if (P.spikes) {
+      S(0, R0 * 0.55, 0, R0 * 0.6, R0 * 0.5, R0 * 0.6, P.main, P.second, 0, 1, P.glow * 0.6);
+      if (lod) for (let i = 0; i < 14; i++) { st.push(); st.translate(0, R0 * 0.55, 0); st.rotY(i * 2.4); st.rotX((i % 3) * 0.5 + 0.3 + slow * 0.05); C(0, R0 * 0.45, 0, R0 * 0.05, R0 * 0.9, R0 * 0.05, P.accent, P.dark); st.pop(); }
+    } else if (P.hunch > 0.6) {
+      S(0, R0 * 0.28, 0, R0 * 0.3, R0 * 0.28, R0 * 0.95 * (1 + slow * 0.05), P.main, P.belly, 3, 3, P.glow * 0.6);
+      if (lod) for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; st.push(); st.translate(Math.cos(a) * R0 * 0.1, R0 * 0.3 + Math.sin(a) * R0 * 0.1, R0 * 0.9); st.rotX(1.2); C(0, 0, 0, R0 * 0.04, R0 * 0.25, R0 * 0.04, P.accent); st.pop(); }
+    } else {
+      S(0, R0 * 0.12, 0, R0 * 0.32, R0 * 0.14, R0 * 0.32, P.main, P.second, 3, 5, P.glow * 0.6);
+      for (let i = 0; i < n; i++) { st.push(); st.rotY((i / n) * TAU); st.translate(0, R0 * 0.08, R0 * 0.2); st.rotX(Math.PI / 2 - 0.05 + Math.sin(A.t * 0.5 + i) * 0.04 * (0.5 + A.walk)); C(0, 0, 0, R0 * 0.18, R0 * 0.85, R0 * 0.07, P.main, P.accent, 3, P.glow * 0.4); st.pop(); }
+    }
+  }
+  // a siphonophore: a colony strung out along a stem, a glowing float, pulsing swimming bells and trailing fishing lines
+  function siphon() {
+    const n = P.segs, r0 = P.S * 0.16, gap = P.S * 0.3;
+    S(0, 0, 0, r0 * 1.2, r0 * 1.2, r0 * 1.2, P.accent, P.accent, 0, 1, 0.5 + P.glow, 0.5);
+    st.push();
+    for (let i = 0; i < n; i++) {
+      st.rotY(Math.sin(A.t * 0.9 - i * 0.6 + A.seed * 7) * 0.12); st.rotX(Math.cos(A.t * 0.7 - i * 0.5) * 0.08); st.translate(0, 0, -gap);
+      const puls = 1 + Math.sin(A.t * 2.5 - i * 0.8) * 0.15;
+      S(0, 0, 0, r0 * puls, (r0 * 0.8) / puls, r0 * 0.9, P.main, P.second, 5, 1, P.glow * 0.7 + 0.1, 0.5);
+      if (lod && i % 2 === 0) { st.push(); for (let j = 0; j < 4; j++) { st.rotX(Math.sin(A.t * 1.2 + i + j) * 0.2); S(0, -gap * 0.5, 0, r0 * 0.08, gap * 0.55, r0 * 0.08, P.second, P.accent, 0, 1, P.glow * 0.5); st.translate(0, -gap, 0); } st.pop(); }
+    }
+    st.pop();
+  }
+
+  const FN = { quadruped, biped, hexapod, octopod, avian, aquatic, blob, floater, cetacean, plesio, ray, jelly, cephalo, crustacean, echino, siphon };
 
   function draw(renderer, a, lodOn = true) {
     R = renderer.batch; P = a.P; A = a.anim; lod = lodOn ? 1 : 0; O = a.outfit || null;
-    if (P.fam === 'serpent') serpent(a);
+    if (P.fam === 'serpent' || P.fam === 'eel') serpent(a);
     else {
       st.reset(); st.translate(a.x, a.y, a.z); st.rotY(a.heading); st.rotX(a.pitch || 0); st.rotZ(a.roll || 0); st.scale(a.grow || 1);
       FN[P.fam]();
@@ -5466,11 +6445,11 @@ const Rig = (() => {
   // neutral pose for sprite portraits
   function portraitAgent(P, seed = 0.3, outfit = null) {
     const a = { outfit, x: 0, y: 0, z: 0, heading: 0, pitch: 0, roll: 0, grow: 1, P, anim: { t: 0.4, phase: 0.8, walk: 0.35, run: 0, eat: 0, jaw: 0.2, look: 0.3, sleep: 0, attack: 0, fly: P.fam === 'avian' ? 1 : 0, flap: 0.35, seed, headBob: 0, dead: 0 } };
-    if (P.fam === 'serpent') {
+    if (P.fam === 'serpent' || P.fam === 'eel') {
       a.trail = []; const segL = P.bodyL * 0.24;
       for (let i = 1; i < P.segs * 3 + 6; i++) a.trail.push([Math.sin(i * 0.22) * segL * 2.2, 0, -i * segL * 0.34]);
     }
-    if (P.fam === 'aquatic' || P.fam === 'floater') a.y = 0;
+    if (FAMILIES[P.fam].hab === 'water' || P.fam === 'floater') a.y = 0;
     return a;
   }
   return { draw, shadow, portraitAgent };
@@ -5512,10 +6491,17 @@ class Ecosystem {
     const W = this.world, G = this.groups;
     if (W.giant) return G.air;
     const gy = W.heightAt(x, z), wl = W.waterAt(x, z), depth = wl - gy;
-    if (depth > 1.4 && !W.frozenAt(x, z)) return G.water.length ? G.water : r.chance(0.3) ? G.air : null;
+    if (depth > 1.4) {
+      // only the swimmers whose waters these are (depth band and zone)
+      const L = G.water.filter((sp) => this.fits(sp, x, z));
+      if (L.length) return L;
+      return r.chance(0.3) ? G.air : null;
+    }
     if (depth > 0.2) return r.chance(0.3) ? G.air : null;
     return r.chance(G.land.length ? 0.14 : 1) && G.air.length ? G.air : G.land;
   }
+  // can this species live at (x, z)?
+  fits(sp, x, z) { return Nav.ok(this.world, { sp, P: sp.pheno }, x, z); }
   // try to spawn a group of a species compatible with the local habitat at a point from `where(r)`
   spawnGroupAt(r, where, tries = 8) {
     const W = this.world;
@@ -5532,13 +6518,15 @@ class Ecosystem {
         const home = sp.home === b ? 1 : BIOMES[b].prod > 0.25 ? 0.5 : 0.2;
         if (!r.chance(home)) continue;
       }
+      // sea creatures gather in their home zone (a reef fish on the reef, a vent crab at the vents)
+      if (sp.marine && W.zoneAt && W.zoneAt(x, z) !== Ocean.Z[sp.marine.zone] && !r.chance(0.45)) continue;
       const big = sp.pheno.S > 2 ? 0.5 : 1, n = sp.pheno.social > 0.55 && sp.diet !== 'carnivore' ? Math.max(1, Math.round(r.int(2, 5) * big)) : sp.pheno.social > 0.35 ? r.int(1, 2) : 1;
       let made = 0;
       for (let i = 0; i < n; i++) {
         const jx = x + r.range(-3, 3), jz = z + r.range(-3, 3);
         if (!W.loaded(jx, jz)) continue;
         if (sp.habitat === 'land' && W.waterAt(jx, jz) - W.heightAt(jx, jz) > 0.3) continue;
-        if (sp.habitat === 'water' && W.waterAt(jx, jz) - W.heightAt(jx, jz) < 1.0) continue;
+        if (sp.habitat === 'water' && !this.fits(sp, jx, jz)) continue;
         this.spawn(sp, jx, jz); made++;
       }
       return made;
@@ -5584,8 +6572,8 @@ class Ecosystem {
       a.alt = sp.fam === 'floater' ? (W.gas ? r.range(3, 16) : r.range(5, 10)) : r.range(8, 14); a.altT = a.alt; a.anim.fly = 1;
       a.y = Math.max(gy, W.waterAt(x, z)) + a.alt;
     }
-    if (sp.habitat === 'water') a.y = this.swimY(a, x, z);
-    if (sp.fam === 'serpent') a.trail = [];
+    if (sp.habitat === 'water') { a.depthK = RNG.unit(RNG.hash(this.seed, 'depth', id)); a.breath = sp.marine && sp.marine.breathes ? 0.25 + 0.75 * RNG.unit(RNG.hash(this.seed, 'breath', id)) : 1; a.y = this.swimY(a, x, z); }
+    if (sp.fam === 'serpent' || sp.fam === 'eel') a.trail = [];
     a.grow = this.growOf(a);
     a.ox = a.x; a.oy = a.y; a.oz = a.z; a.oh = a.heading;
     Nav.state(a);
@@ -5594,10 +6582,19 @@ class Ecosystem {
   }
   growOf(a) { return clamp(0.45 + a.age / (a.P.life * 0.12) * 0.55, 0.45, 1); }
   swimY(a, x, z) {
-    const W = this.world, gy = W.heightAt(x, z), wl = W.waterAt(x, z), floor = gy + a.P.bodyH * 0.8;
-    // feeding just under the surface, or cruising deeper (the deeper the water, the deeper they swim)
-    if (a.rising) return Math.max(floor, wl - 0.3 - a.P.bodyH * 0.25);
-    return Math.max(floor, wl - 0.5 - Math.min(2.2, (wl - gy) * 0.35));
+    const W = this.world, gy = W.heightAt(x, z), wl = W.waterAt(x, z), floor = gy + a.P.bodyH * 0.8, M = a.sp.marine;
+    if (!M) {
+      // feeding just under the surface, or cruising deeper (the deeper the water, the deeper they swim)
+      if (a.rising) return Math.max(floor, wl - 0.3 - a.P.bodyH * 0.25);
+      return Math.max(floor, wl - 0.5 - Math.min(2.2, (wl - gy) * 0.35));
+    }
+    // sea creatures: walking the floor, or cruising at their own depth (an air-breather rises to blow)
+    if (M.benthic && !a.breathe) return gy + (FAMILIES[a.sp.fam].benthic ? 0 : a.P.bodyH * 0.35);
+    if (a.breathe) return wl - 0.1 - a.P.bodyH * 0.15;
+    if (a.rising && M.band[0] < 1.5) return Math.max(floor, wl - 0.3 - a.P.bodyH * 0.25);
+    const lo = M.band[0], hi = Math.min(M.band[1], wl - gy - a.P.bodyH), want = hi > lo ? lo + (hi - lo) * (a.depthK || 0.5) : Math.max(0.3, (wl - gy - a.P.bodyH) * 0.5);
+    const drift = M.drift ? Math.sin(this.t * 0.35 + a.anim.seed * 20) * 0.8 : 0;
+    return clamp(wl - want + drift, floor, wl - 0.25 - a.P.bodyH * 0.3);
   }
   emit(msg, kind, a) { if (this.onEvent) this.onEvent(msg, kind, a); }
   // creature calls: 'attack' when charging or striking, 'flee' when escaping
@@ -5662,19 +6659,19 @@ class Ecosystem {
       const d = Math.hypot(b.x - a.x, b.z - a.z);
       if (b.state === 'dead') {
         // (a bird will not settle on open water to scavenge)
-        if (sp.diet !== 'herbivore' && sp.prey.includes(b.sp) && d < cd && !b.carrier && !(sp.fam === 'avian' && this.wet(b.x, b.z))) { carcass = b; cd = d; }
+        if (sp.diet !== 'herbivore' && (sp.prey.includes(b.sp) || (sp.marine && sp.marine.benthic && b.sp.habitat === 'water')) && d < cd && !b.carrier && !(sp.fam === 'avian' && this.wet(b.x, b.z)) && (sp.habitat !== 'water' || Math.abs(b.y - a.y) < 3 + P.S)) { carcass = b; cd = d; }
         continue;
       }
       // fish only notice a bird that is close overhead and low, or already plunging at them
       if (sp.habitat === 'water' && b.sp.habitat === 'air' && ((b.alt > 3 && !b.stoop) || d > perc * 0.3)) continue;
       if (sp.predators.includes(b.sp) && d < td && (b.state !== 'sleep' || d < perc * 0.3)) { threat = b; td = d; }
       else if (fisher && b.sp.habitat === 'water') { if (sp.prey.includes(b.sp) && d < perc * sight) { const q = this.fishScore(a, b, d); if (q > fs) { fs = q; fish = b; } } }
-      else if (sp.prey.includes(b.sp) && d < pd && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05) { prey = b; pd = d; }
+      else if (sp.prey.includes(b.sp) && d < pd && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05 && (sp.habitat !== 'water' || Math.abs(b.y - a.y) < 3 + P.S)) { prey = b; pd = d; }
       if (b.sp === sp) { cx += b.x; cz += b.z; cn++; if (b.sex !== a.sex && b.grow >= 1 && b.mateCD <= 0 && b.energy > 0.5 && d < md) { mate = b; md = d; } }
     }
     const sleepy = (P.noct ? env.night < 0.4 : env.night > 0.6) && sp.habitat !== 'water';
     const hungry = a.energy < 0.45 || (a.state === 'graze' && a.energy < 0.95) || (a.state === 'hunt' && a.energy < 0.8) || (a.state === 'fish' && a.energy < 0.9);
-    const set = (s, t) => { if (a.state !== s) { if (s === 'flee') this.sound(a, 'flee'); else if (s === 'hunt' || s === 'dive') this.sound(a, 'attack'); a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
+    const set = (s, t) => { if (a.state !== s) { if (s === 'flee') { this.sound(a, 'flee'); if (sp.fam === 'cephalo' && W.onInk) W.onInk(a); } else if (s === 'hunt' || s === 'dive') this.sound(a, 'attack'); a.state = s; a.stateT = 0; } if (t !== undefined) a.target = t; };
     if (threat && td < perc * (a.state === 'sleep' ? 0.35 : 0.8)) { if (a.state === 'carry') this.drop(a); set('flee', threat); return; }
     // a tornado bearing down: run from it
     if (M && M.hazards.length && !a.cit && sp.habitat !== 'water') for (const hz of M.hazards) if (Math.hypot(hz.x - a.x, hz.z - a.z) < hz.r) { if (a.state === 'carry') this.drop(a); set('flee', hz); return; }
@@ -5837,7 +6834,7 @@ class Ecosystem {
       if (p.kids.length > 60) p.kids.splice(0, p.kids.length - 60);
     }
     if (kids.length && this.onBirth) this.onBirth(mom, dad, kids);
-    if (kids.length) { this.stats.births += kids.length; this.emit(`${kids.length > 1 ? kids.length + ' ' : 'A '}${this.label(mom)} ${a.sp.habitat === 'air' ? 'chick' : a.sp.fam === 'aquatic' ? 'fry' : 'young'}${kids.length > 1 ? 's' : ''} born · gen ${kids[0].gen}`, 'birth', kids[0]); }
+    if (kids.length) { this.stats.births += kids.length; this.emit(`${kids.length > 1 ? kids.length + ' ' : 'A '}${this.label(mom)} ${a.sp.habitat === 'air' ? 'chick' : ({ aquatic: 'fry', eel: 'fry', ray: 'pup', cetacean: 'calf', plesio: 'hatchling', jelly: 'polyp', siphon: 'polyp', crustacean: 'larva', echino: 'larva', cephalo: 'hatchling' }[a.sp.fam] || 'young')}${kids.length > 1 ? 's' : ''} born · gen ${kids[0].gen}`, 'birth', kids[0]); }
     return kids;
   }
   // one fixed simulation step (dt seconds of universal time) for every active agent;
@@ -5861,6 +6858,7 @@ class Ecosystem {
         }
         // on a gas giant the dead sink into the depths; elsewhere they fall to the ground
         if (a.sp.habitat === 'air') { a.y = W.gas ? a.y - dt * 4 : Math.max(W.heightAt(a.x, a.z), a.y - dt * 7); a.anim.fly = 0; }
+        else if (a.sp.marine) { a.y = Math.max(W.heightAt(a.x, a.z) + a.P.bodyH * 0.3, a.y - dt * 0.5); if (a.stateT > 20 && a.P.S > 2) a.stateT -= dt * 0.7; }
         a.stateT -= dt; a.dead = Math.min(1, a.dead + dt * 1.5); a.anim.dead = a.dead;
         if (a.stateT < 4) a.y -= dt * 0.25;
         if (a.stateT <= 0) { a.gone = true; removed = true; } else this.animate(a, dt, 0);
@@ -5960,6 +6958,10 @@ class Ecosystem {
       const T = W.tempAt(a.x, a.z), cold = Math.max(a.g[G.cold], P.fur * 0.8), heat = a.g[G.heat];
       const stress = Math.max(0, (-T - 2) / 18) * (1 - cold) + Math.max(0, (T - 32) / 14) * (1 - heat);
       if (stress > 0) a.energy -= dt * 0.003 * Math.min(2, stress);
+    } else if (!a.cit && sp.marine && W.waterTempAt) {
+      // in the sea: the water at its depth (the cold deep, the heat around a vent)
+      const T = W.waterTempAt(a.x, a.z, a.y), stress = Math.max(0, (-T - 1) / 12) * (1 - a.g[G.cold]) + Math.max(0, (T - 30) / 12) * (1 - a.g[G.heat]);
+      if (stress > 0) a.energy -= dt * 0.003 * Math.min(2, stress);
     }
     if (a.state !== 'sleep') a.rest = Math.min(1, a.rest + dt * 0.002);
     if (a.age > P.life) { this.kill(a, 'age'); return; }
@@ -5987,7 +6989,7 @@ class Ecosystem {
       case 'graze':
         eat = sp.habitat === 'land' ? 1 : 0.3; jaw = 0.3 + 0.3 * Math.sin(anim.t * 6);
         // snow and ash bury the forage; after rain it is lush
-        a.energy = Math.min(1, a.energy + dt * 0.05 * (M && sp.habitat === 'land' ? M.forage : 1));
+        a.energy = Math.min(1, a.energy + dt * 0.05 * (M && sp.habitat === 'land' ? M.forage : sp.habitat === 'water' && W.planktonAt ? W.planktonAt(a.x, a.z, a.y) : 1));
         if (sp.habitat !== 'land') { spd = P.speed * 0.25; tx = a.x + Math.sin(a.heading) * 5; tz = a.z + Math.cos(a.heading) * 5; eat = 0; }
         else if (Math.sin(anim.t * 0.7 + anim.seed * 20) > 0.85) { spd = P.speed * 0.15; tx = a.x + Math.sin(a.heading + 0.3) * 3; tz = a.z + Math.cos(a.heading + 0.3) * 3; }
         if (a.energy > 0.97 && !a.cit) a.state = 'wander';
@@ -6182,11 +7184,31 @@ class Ecosystem {
       const pitch = clamp(-Math.atan2(ha - hb, f * 2), -0.5, 0.5);
       a.pitch += (pitch - a.pitch) * damp(8, dt);
     } else if (sp.habitat === 'water') {
+      const Mr = sp.marine, wl = W.waterAt(a.x, a.z);
+      // air-breathers hold their breath, then rise to blow at the surface (and a whale sometimes leaps clear of the water)
+      if (Mr && Mr.breathes) {
+        if (a.y < wl - 0.15 - P.bodyH * 0.25) a.breath = Math.max(0, a.breath - dt / (45 + P.S * 30));
+        else { a.breath = Math.min(1, a.breath + dt * 0.35); if (a.breathe && a.breath > 0.97) { a.breathe = false; if (W.onSpout) W.onSpout(a); if (sp.fam === 'cetacean' && this.rng.next() < 0.25) a.breachT = 1.6; } }
+        if (!a.breathe && a.breath < 0.2) a.breathe = true;
+      }
       // fish drift up to feed just under the surface now and then, and go deep when alarmed
       a.riseT -= dt;
-      if (a.riseT <= 0) { a.rising = !a.rising && this.rng.next() < (a.state === 'graze' ? 0.6 : 0.35); a.riseT = a.rising ? 3 + this.rng.next() * 7 : 6 + this.rng.next() * 16; }
+      if (a.riseT <= 0) { a.rising = !a.rising && (!Mr || Mr.band[0] < 1.5) && this.rng.next() < (a.state === 'graze' ? 0.6 : 0.35); a.riseT = a.rising ? 3 + this.rng.next() * 7 : 6 + this.rng.next() * 16; }
       if (a.state === 'flee') a.rising = false;
-      a.y += (this.swimY(a, a.x, a.z) - a.y) * damp(3, dt);
+      if (a.breachT > 0) {
+        a.breachT -= dt;
+        const k = clamp(1 - a.breachT / 1.6, 0, 1);
+        a.y = wl + Math.sin(k * Math.PI) * P.S * 0.8 - P.bodyH * 0.3; a.pitch = -Math.cos(k * Math.PI) * 0.9;
+        if (a.breachT <= 0 && W.onSplash) W.onSplash(a.x, wl, a.z, P.S * 1.6);
+      } else {
+        const py = a.y;
+        a.y += (this.swimY(a, a.x, a.z) - a.y) * damp(Mr && Mr.benthic ? 8 : 3, dt);
+        // swimmers tilt as they climb and dive; bottom-dwellers follow the slope of the floor
+        if (Mr && Mr.benthic && FAMILIES[sp.fam].benthic) {
+          const f = P.bodyL * 0.5, ha = W.heightAt(a.x + Math.sin(a.heading) * f, a.z + Math.cos(a.heading) * f), hb = W.heightAt(a.x - Math.sin(a.heading) * f, a.z - Math.cos(a.heading) * f);
+          a.pitch += (clamp(-Math.atan2(ha - hb, f * 2), -0.5, 0.5) - a.pitch) * damp(8, dt);
+        } else if (Mr) a.pitch += (clamp(-(a.y - py) / Math.max(dt, 1e-3) * 0.25, -0.6, 0.6) - a.pitch) * damp(4, dt);
+      }
     } else {
       // fliers: take off / land cycles
       const surf = Math.max(gy, W.waterAt(a.x, a.z));
@@ -6212,7 +7234,7 @@ class Ecosystem {
       a.y += (ny - a.y) * damp(a.state === 'dive' ? 8 : 3, dt);
       anim.fly += ((a.alt > 0.6 ? 1 : 0) - anim.fly) * damp(5, dt);
     }
-    if (sp.fam === 'serpent') {
+    if (sp.fam === 'serpent' || sp.fam === 'eel') {
       const hw = Math.sin(anim.phase * 0.9) * 0.45 * anim.walk;
       a.headYaw = a.heading + hw;
       const tr = a.trail, segL = P.bodyL * 0.24 * a.grow;
@@ -6268,7 +7290,17 @@ const Nav = {
     const hab = a.sp.habitat;
     if (hab === 'air') return true;
     const d = W.waterAt(x, z) - W.heightAt(x, z);
-    if (hab === 'water') return d >= 1.0 - slack && !W.frozenAt(x, z);
+    if (hab === 'water') {
+      if (d < 1.0 - slack) return false;
+      // sea creatures keep to their own waters: a depth range and a set of zones (reef fish on the reef, abyssal ones in the deep)
+      const M = a.sp.marine;
+      if (W.frozenAt(x, z) && !(M && M.ice && d > 2)) return false;
+      if (!M) return true;
+      // (and a whale needs water well deeper than its own body: no stranding or scraping along the shallows)
+      if (d < Math.max(M.floor[0], a.P.bodyH * 1.15 + 0.2) - slack || d > M.floor[1] + slack) return false;
+      if (W.zoneAt) { const zi = W.zoneAt(x, z); if (zi !== 255 && !M.zones.has(zi)) return false; }
+      return true;
+    }
     return d <= 0.25 + a.P.legL * 0.4 + slack || !!W.frozenAt(x, z);
   },
   // probe a ray from the creature along heading h
@@ -6448,7 +7480,7 @@ const Nav = {
    every creature outside the view they were frozen in time while unobserved.
    Parent–child links and the favourite creatures are built on this.
    ============================================================================= */
-const DEATH_CAUSE = { age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city', storm: 'a tornado' };
+const DEATH_CAUSE = { age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city', storm: 'a tornado', fished: "fishers' nets" };
 const dirOfLatLon = (ll) => { const la = ll[0] * Math.PI / 180, lo = ll[1] * Math.PI / 180; return [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)]; };
 
 const EcoSave = {
@@ -7395,11 +8427,11 @@ const CivDraw = (() => {
 class CivLife {
   constructor(view) {
     this.view = view; this.spawnT = 0; this.raidT = 20; this.warT = 0; this.expT = 2; this.voyT = 0; this.labT = 0;
-    this.shots = []; this.air = []; this.seen = new Set(); this.voy = []; this.labs = new Map();
+    this.shots = []; this.air = []; this.seen = new Set(); this.voy = []; this.labs = new Map(); this.boatT = 1; this.catchLogT = 0;
     this.setCities(view.surface.cities || []);
   }
   setCities(cities) {
-    this.cities = cities; this.traffic = []; this.flights = []; this.caravans = []; this.labs = new Map();
+    this.cities = cities; this.traffic = []; this.flights = []; this.caravans = []; this.labs = new Map(); this.boats = [];
     for (const c of cities) { c.pop = 0; c.people = c.ruined ? null : Civ.people(c.owner || c.civ); c.cult = (c.owner || c.civ).culture; }
     this.initTraffic();
     this.terra = null;
@@ -7486,6 +8518,69 @@ class CivLife {
     if (this.voyT <= 0) { this.voyT = 1; this.voyages(t); }
     this.stepShots(dt);
     for (let i = this.air.length - 1; i >= 0; i--) if (t > this.air[i].t1 + 5) this.air.splice(i, 1);
+    this.boatT -= dt;
+    if (this.boatT <= 0) { this.boatT = 1; this.fleets(); this.fishing(t); }
+  }
+  // ------------------------------------------------------------------ the sea: fishing boats off coastal settlements
+  // each works a fishing ground (a loop of open water found once the coast is loaded); its course is a pure
+  // function of universal time, and its nets take real fish from the sea around it
+  fleets() {
+    const v = this.view;
+    for (const c of this.cities) {
+      if (c.boatsDone || c.ruined || c.dome || !c.people || !v.loaded(c.x, c.z) || !this.near(c, 40)) continue;
+      c.boatsDone = true;
+      const st = (c.owner || c.civ).stage, r = new RNG.Rand(RNG.hash(c.seed, 'boats')), want = st <= 1 ? 2 : st === 2 ? 3 : 2;
+      const deep = (x, z) => v.loaded(x, z) && v.waterAt(x, z) - v.heightAt(x, z) > 0.8 && !v.frozenAt(x, z) && !(v.planet.liquid === 'lava');
+      for (let k = 0, n = 0; k < 40 && n < want; k++) {
+        const a = r.range(0, TAU), d = c.PR + r.range(3, 28), x = c.x + Math.cos(a) * d, z = c.z + Math.sin(a) * d, rr = r.range(1.6, 4.5);
+        if (!deep(x, z) || v.waterAt(x, z) - v.heightAt(x, z) < 1.3) continue;
+        let ok = true;
+        for (let i = 0; i < 8 && ok; i++) ok = deep(x + Math.cos(i * TAU / 8) * rr, z + Math.sin(i * TAU / 8) * rr);
+        if (!ok) continue;
+        this.boats.push({ c, st, x, z, rr, w: r.range(0.08, 0.2) * r.sign() / Math.sqrt(rr), phase: r.range(0, TAU), bob: r.next() * 10, hull: Color.shade(st >= 3 ? c.cult.metal : [0.55, 0.38, 0.22], r.range(-0.1, 0.1)), sail: Color.mix(c.cult.pal.cloth, [1, 1, 1], 0.35) });
+        n++;
+      }
+    }
+  }
+  boatAt(b, T) {
+    // (it idles now and then, hauling in the nets)
+    const ang = b.phase + T * b.w + Math.sin(T * 0.05 + b.bob) * 0.8, x = b.x + Math.cos(ang) * b.rr, z = b.z + Math.sin(ang) * b.rr;
+    return { x, z, yaw: Math.atan2(-Math.sin(ang) * Math.sign(b.w), Math.cos(ang) * Math.sign(b.w)) };
+  }
+  fishing(t) {
+    const v = this.view, eco = v.eco;
+    if (!this.boats.length || !eco) return;
+    for (const b of this.boats) {
+      if (!this.near(b.c, 40) || eco.rng.next() > 0.12 + b.st * 0.03) continue;
+      const q = this.boatAt(b, t), wl = v.waterAt(q.x, q.z);
+      let best = null, bd = 3.5 + b.st * 0.5;
+      for (const a of eco.agents) {
+        if (!a.active || a.state === 'dead' || a.sp.habitat !== 'water' || a.P.S * (a.grow || 1) > 2.2 || (a.sp.marine && (a.sp.marine.breathes || a.sp.marine.benthic))) continue;
+        const d = Math.hypot(a.x - q.x, a.z - q.z);
+        if (d < bd && wl - a.y < 2.5 + b.st) { bd = d; best = a; }
+      }
+      if (!best) continue;
+      eco.kill(best, 'fished');
+      if (v.app.t - this.catchLogT > 40 && v.visible(q.x, wl, q.z, 4)) { this.catchLogT = v.app.t; v.app.ui.log(`Fishers of ${b.c.name} hauled in ${/^[AEIOU]/.test(best.sp.common) ? 'an' : 'a'} ${best.sp.common}`, 'civ'); }
+    }
+  }
+  drawBoats(R, T, visible) {
+    const v = this.view, D = CivDraw;
+    for (const b of this.boats) {
+      const q = this.boatAt(b, T);
+      if (!v.loaded(q.x, q.z)) continue;
+      const y = v.waterAt(q.x, q.z) + Math.sin(T * 1.7 + b.bob) * 0.06;
+      if (!visible(q.x, y, q.z, 3)) continue;
+      const s = (b.st <= 1 ? 0.7 : b.st === 2 ? 1 : 1.3) * 1.5 * (b.c.K || 1);
+      D.box(R, q.x, y + 0.12 * s, q.z, q.yaw, 0.32 * s, 0.14 * s, 0.9 * s, b.hull);
+      if (b.st <= 2) {
+        D.cyl(R, q.x, y + 0.2 * s, q.z, 0.04 * s, 1.1 * s, [0.35, 0.25, 0.15]);
+        if (b.st === 2) D.box(R, q.x, y + 0.85 * s, q.z, q.yaw, 0.02, 0.5 * s, 0.38 * s, b.sail);
+      } else {
+        D.box(R, q.x - Math.sin(q.yaw) * 0.25 * s, y + 0.45 * s, q.z - Math.cos(q.yaw) * 0.25 * s, q.yaw, 0.22 * s, 0.22 * s, 0.26 * s, Color.mix(b.c.cult.pal.accent, [1, 1, 1], 0.4));
+        D.cyl(R, q.x + Math.sin(q.yaw) * 0.5 * s, y + 0.25 * s, q.z + Math.cos(q.yaw) * 0.5 * s, 0.03 * s, 0.9 * s, b.c.cult.metal);
+      }
+    }
   }
   // battles recorded by the history engine at a settlement in view are fought here, in real time
   battles(t) {
@@ -7835,6 +8930,7 @@ class CivLife {
       for (const E of this.flags(c, T)) this.flag(R, c, E.x, E.z, T, visible);
       if (this.terra && (c.dome || c.colony)) this.drawTerraform(R, c, T, visible);
     }
+    this.drawBoats(R, T, visible);
     this.drawCarried(R, visible);
     this.drawShots(R, visible);
     for (const w of this.air) if (T >= w.t0 && T < w.t1 + 5) this.drawAir(R, w, T, visible);
@@ -8963,8 +10059,59 @@ class SurfaceView {
     this.cam = new Camera({ ortho: true, target: [0, 0, 0], dist: 15, yaw: 0.785, pitch: 0.64, near: 1, far: 1000, edge: 0.8, smooth: 9 });
     this.chunks = new Map(); this.queue = [];
     this.selected = null; this.follow = null; this.poi = null;
+    this.dive = { d: 0, goal: 0, pitch: null };
   }
   get liquid() { return this.surface.liquid; }
+  // ---- diving: the observer can go below the surface of seas and lakes
+  depthAt(x, z) { const w = this.waterAt(x, z), h = this.heightAt(x, z); return w > h ? w - h : 0; }
+  get diving() { return this.dive.d > 0.15; }
+  canDive() {
+    if (this.gas || !this.surface || !this.surface.liquid || this.surface.liquid === 'lava') return false;
+    const tg = this.cam.goal.target;
+    return this.depthAt(tg[0], tg[2]) > 1.1;
+  }
+  diveBy(dd) {
+    const dv = this.dive, tg = this.cam.goal.target;
+    if (dd > 0 && !this.canDive()) { if (dv.goal <= 0 && !this._shallowT) { this._shallowT = 2; this.app.ui.toast(this.surface && this.surface.liquid === 'lava' ? 'Molten rock: no diving here' : 'Too shallow (or no water) to dive here', 'err'); } return false; }
+    if (this.follow && !(this.follow.sp && this.follow.sp.habitat === 'water')) this.follow = null;
+    dv.goal = clamp(dv.goal + dd, 0, Math.max(0, this.depthAt(tg[0], tg[2]) - 0.5));
+    return true;
+  }
+  surfaceUp() { this.dive.goal = 0; if (this.follow && this.follow.sp.habitat === 'water') this.follow = null; }
+  // what the water is like around the observer: zone, depth in metres, pressure, temperature, light
+  waterHere() {
+    const tg = this.cam.cur.target, ch = this.chunkAt(tg[0], tg[2]);
+    if (!ch || ch.air || !ch.Z) return null;
+    const k = (Math.round(tg[2] - ch.z0) + 1) * ch.M + Math.round(tg[0] - ch.x0) + 1, zi = ch.Z[k];
+    if (zi == null || zi === 255) return null;
+    const p = this.planet, sea = this.waterAt(tg[0], tg[2]), floor = this.heightAt(tg[0], tg[2]), D = Math.max(0, sea - floor), d = this.diving ? Math.min(D, this.dive.d) : 0;
+    const zone = Ocean.ZONES[zi], fresh = Ocean.FRESH.has(zi), tS = this.baseTempAt(tg[0], tg[2]) + (this.weather ? this.weather.dT * 0.4 : 0);
+    const W = this.weather, day = this.env ? 1 - this.env.night : 1;
+    const turbid = ['estuary', 'marsh', 'mangrove', 'upwelling', 'river', 'lake', 'polar'].includes(zone.key) ? 0.65 : zone.key === 'kelp' ? 0.35 : 0.12;
+    return { zone, zi, D, d, fresh, depthM: Ocean.depthM(d), floorM: Ocean.depthM(D), layer: Ocean.layer(d), pressure: Ocean.pressureAt(d, p.gravity, p.pressure, p.liquid), temp: Ocean.tempAt(tS, d, { fresh, liquid: p.liquid, vent: ch.V[k] > 0.5 && D - d < 3 ? ch.V[k] : 0 }),
+      light: Ocean.lightAt(d, turbid) * day * (W && W.S ? 1 - 0.45 * (W.S.cloud || 0) : 1), turbid, vent: ch.V[k] };
+  }
+  // the underwater look for this frame (null at the surface)
+  uwEnv(env) {
+    const dv = this.dive;
+    if (dv.d < 0.01) return null;
+    const tg = this.cam.cur.target, p = this.planet, pal = p.pal, lq = p.liquid, day = 1 - env.night, wh = this.waterHere();
+    const turbid = wh ? wh.turbid : 0.2, mi = this.surface._micro || {}, bloom = (mi.bloom || 0) * (this.surface.complex ? 0.5 : 1);
+    const sea = this.waterAt(tg[0], tg[2]) > -1e8 ? this.waterAt(tg[0], tg[2]) : 0, d = dv.d;
+    let water = Color.mix(pal.shallow, pal.deep, 0.35 + 0.35 * turbid);
+    if (mi.bloomCol && bloom > 0.05) water = Color.mix(water, mi.bloomCol, 0.3 * bloom);
+    if (wh && (wh.zone.key === 'estuary' || wh.zone.key === 'marsh' || wh.zone.key === 'mangrove')) water = Color.mix(water, [0.45, 0.4, 0.25], 0.35);
+    const S = this.weather && this.weather.S, sun = (0.08 + 0.92 * day) * (S ? 1 - 0.4 * (S.cloud || 0) - 0.3 * (S.storm || 0) : 1);
+    const abs = lq === 'methane' ? [0.12, 0.22, 0.42] : lq === 'acid' ? [0.28, 0.14, 0.38] : [0.5, 0.2, 0.11];
+    const vis = lerp(24, 8, turbid) * (1 - 0.35 * bloom);
+    return {
+      k: smoothstep(0.02, 0.45, d), seaY: sea, abs, t: this.app.anim,
+      col: Color.mul(water, sun * Math.exp(-d / 5.5) * 0.9 + 0.015),
+      sky: Color.mul(Color.mix(pal.shallow, [1, 1, 1], 0.55), (0.2 + 0.8 * day) * Math.exp(-d / 9)),
+      lamp: [tg[0], tg[1] + 1.6, tg[2], Math.max(smoothstep(2.5, 9, d) * 1.15, env.night * smoothstep(0.15, 0.8, d) * 0.95)],
+      fog: [vis * 0.22, vis], dark: smoothstep(2, 12, d),
+    };
+  }
   enter(p) {
     this.dispose();
     const planet = this.planet = p.planet.prepare();
@@ -8973,6 +10120,7 @@ class SurfaceView {
     let rec = null;
     if (planet.life.has) { try { rec = EcoSave.find(this.siteCode, p.dir, Surface.radiusOf(planet), p.site); } catch (e) { console.warn(e); rec = null; } }
     this.surface = new Surface(planet, rec ? rec.dir : p.dir);
+    this.dive = { d: 0, goal: 0, pitch: null };
     const focus = (rec && this.surface.localOf(p.dir)) || [0, 0];
     this.surface.focus = focus;
     this.siteId = rec ? rec.id : EcoSave.newId();
@@ -9031,7 +10179,7 @@ class SurfaceView {
     }
     this.app.ui.panelFor(this);
   }
-  exit() { this.dispose(); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); this.favMarks(null); this.app.ui.favEdge(null); }
+  exit() { this.dispose(); this.app.ui.diveHud(null); this.app.ui.markers.hide('sel'); this.app.ui.markers.hide('poi'); this.favMarks(null); this.app.ui.favEdge(null); }
   // heart markers over the favourites on screen (one per creature; the unused ones are hidden)
   favMarks(on) {
     const M = this.app.ui.markers, prev = this._favMk || new Set();
@@ -9087,6 +10235,30 @@ class SurfaceView {
     const td = this.weather ? this.weather.tide : 0;
     return td && w > -0.02 && w < 0.02 ? w + td : w;
   }
+  // the ocean zone at a point (255 on dry ground)
+  zoneAt(x, z) { const ch = this.chunkAt(x, z); if (!ch || !ch.Z) return 255; return ch.Z[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
+  // food drifting in the water: plankton, from the microbial bloom and the nutrients of the zone, thinning with depth
+  planktonAt(x, z, y) {
+    const mi = this.surface._micro || {}, zi = this.zoneAt(x, z), zk = zi === 255 ? 'open' : Ocean.ZONES[zi].key, wl = this.waterAt(x, z);
+    const rich = { upwelling: 1.5, polar: 1.3, kelp: 1.2, estuary: 1.3, marsh: 1.1, mangrove: 1.1, reef: 0.9, seagrass: 1, shelf: 1, lake: 1, vent: 1.4, open: 0.7, slope: 0.6, seamount: 0.9, abyss: 0.45, trench: 0.35, underice: 0.8 }[zk] || 0.8;
+    // (below the sunlit water, food is what sinks from it: marine snow)
+    const light = zk === 'vent' ? 1 : Math.max(0.35, Math.exp(-Math.max(0, wl - y) / 6));
+    return clamp((0.75 + (mi.bloom != null ? mi.bloom : 0.3) * 0.4) * (0.6 + 0.4 * rich) * (0.65 + 0.35 * light), 0.45, 1.4);
+  }
+  // the temperature of the water at a point and depth (thermocline, the cold deep, the heat of a vent)
+  waterTempAt(x, z, y) {
+    const ch = this.chunkAt(x, z); if (!ch || !ch.Z) return this.tempAt(x, z);
+    const k = (Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1, wl = this.waterAt(x, z), gy = this.heightAt(x, z), zi = ch.Z[k];
+    return Ocean.tempAt(this.baseTempAt(x, z) + (this.weather ? this.weather.dT * 0.4 : 0), Math.max(0, wl - y), { fresh: zi !== 255 && Ocean.FRESH.has(zi), liquid: this.planet.liquid, vent: y - gy < 3 ? ch.V[k] : 0 });
+  }
+  // a whale blowing at the surface; a squid's ink
+  onSpout(a) {
+    if (!this.weather || !this.visible(a.x, a.y, a.z, 4)) return;
+    const wl = this.waterAt(a.x, a.z);
+    this.weather.spout(a.x, wl, a.z, a.P.S);
+    if (Sound.blow) Sound.blow(this, a.x, wl, a.z, a.P.S);
+  }
+  onInk(a) { if (this.weather && this.visible(a.x, a.y, a.z, 4)) this.weather.ink(a.x, a.y, a.z, a.P.S); }
   // how much higher the sea can still rise with the tide (creatures settling by the shore keep above it)
   tideRise() { const w = this.weather, C = w && w.climate; return C && C.tideAmp ? Math.max(0, C.tideAmp - w.tide) + 0.05 : 0; }
   biomeAt(x, z) { if (this.gas) return B.CLOUDS; const ch = this.chunkAt(x, z); if (!ch) return B.BARREN; return ch.B[(Math.round(z - ch.z0) + 1) * ch.M + Math.round(x - ch.x0) + 1]; }
@@ -9291,9 +10463,20 @@ class SurfaceView {
       else { const f = this.follow, al = this.alpha; this.cam.goal.target = [lerp(f.ox, f.x, al), lerp(f.oy, f.y, al), lerp(f.oz, f.z, al)]; }
     } else {
       const g = this.cam.goal.target;
-      const h = Math.max(this.heightAt(g[0], g[2]), this.waterAt(g[0], g[2]));
-      g[1] += (h - g[1]) * damp(3, dt);
+      const h = this.diving || this.dive.goal > 0 ? this.waterAt(g[0], g[2]) - this.dive.d : Math.max(this.heightAt(g[0], g[2]), this.waterAt(g[0], g[2]));
+      g[1] += (h - g[1]) * damp(this.dive.goal > 0 ? 5 : 3, dt);
     }
+    // diving: ease toward the chosen depth (inside the water column here); following a swimmer takes the view to its depth
+    const dv = this.dive, g0 = this.cam.goal.target;
+    if (this.app.diveHold) this.diveBy(this.app.diveHold * dt * (1.6 + dv.goal * 0.45));
+    this._shallowT = Math.max(0, (this._shallowT || 0) - dt);
+    if (this.follow && this.follow.sp.habitat === 'water' && dv.goal > 0) dv.goal = Math.max(0.2, this.waterAt(this.follow.x, this.follow.z) - this.follow.y);
+    const Dh = this.depthAt(g0[0], g0[2]);
+    if (dv.goal > 0) dv.goal = Dh > 1 ? Math.min(dv.goal, Dh - 0.5) : 0;
+    dv.d += (dv.goal - dv.d) * damp(2.4, dt);
+    if (dv.goal === 0 && dv.d < 0.01) dv.d = 0;
+    if (dv.d > 0.8 && dv.pitch == null) { dv.pitch = this.cam.goal.pitch; this.cam.goal.pitch = Math.min(this.cam.goal.pitch, 0.5); }
+    else if (dv.goal === 0 && dv.d < 0.3 && dv.pitch != null) { this.cam.goal.pitch = dv.pitch; dv.pitch = null; }
     if (this.app.autopilot) {
       this.autoT = (this.autoT || 0) - dt;
       if (this.autoT <= 0 || !this.follow) {
@@ -9331,6 +10514,9 @@ class SurfaceView {
       this.cloudOff[0] += wx.wind[0] * dt * 0.02 * (Clock.paused ? 0 : Math.min(Clock.speed, 30)); this.cloudOff[1] += wx.wind[1] * dt * 0.02 * (Clock.paused ? 0 : Math.min(Clock.speed, 30));
     }
     if (wx.flash) { const k = wx.flash.k * (0.35 + 0.65 * wx.flash.near); env.amb = Color.mix(env.amb, [0.86, 0.9, 1], 0.6 * k); env.fogCol = Color.mix(env.fogCol, [0.7, 0.75, 0.9], 0.35 * k); }
+    // below the surface the water takes over: its colour, its darkness with depth, the lamp
+    env.uw = this.gas ? null : this.uwEnv(env);
+    if (env.uw) env.fogCol = Color.mix(env.fogCol, env.uw.col, env.uw.k);
     this.lifeT = (this.lifeT || 0) + dt;
     if (this.lifeT > 15) {
       this.lifeT = 0;
@@ -9427,8 +10613,8 @@ class SurfaceView {
     env.shadowAlpha = 0.3 * (1 - env.night * 0.5);
     R.drawBatches(cam, env);
     if (gas) gas.renderLightning(R, cam);
-    else {
-      // water
+    else if (!env.uw || env.uw.k < 0.6) {
+      // water (not seen from below: under the surface the water is all around instead)
       R.blend('alpha');
       const P = R.frame(R.P.water, cam, env);
       const pal = this.planet.pal, lq = this.planet.liquid;
@@ -9438,7 +10624,7 @@ class SurfaceView {
       for (const ch of vis) if (ch.gWater) ch.gWater.draw();
       R.blend('none');
     }
-    this.weather.render(R, cam, env);
+    if (env.uw && env.uw.k > 0.3) this.weather.renderUnder(R, cam, env); else this.weather.render(R, cam, env);
     R.end(cam.info());
   }
   pickAgent(x, y) {
@@ -9456,12 +10642,12 @@ class SurfaceView {
   groundRay(x, y) {
     const R = this.app.R, ray = this.cam.ray(x, y, R.cssW, R.cssH);
     if (this.gas) { const k = ray.o[1] / -ray.d[1]; return k > 0 ? [ray.o[0] + ray.d[0] * k, 0, ray.o[2] + ray.d[2] * k] : null; }
-    const top = this.cam.cur.target[1] + 40;
+    const top = this.cam.cur.target[1] + (this.diving ? 20 : 40);
     let t = (ray.o[1] - top) / -ray.d[1];
     if (!(t > 0)) t = 0;
     for (let i = 0; i < 700; i++, t += 0.35) {
       const px = ray.o[0] + ray.d[0] * t, py = ray.o[1] + ray.d[1] * t, pz = ray.o[2] + ray.d[2] * t;
-      const g = Math.max(this.heightAt(px, pz), this.waterAt(px, pz));
+      const g = this.diving ? this.heightAt(px, pz) : Math.max(this.heightAt(px, pz), this.waterAt(px, pz));
       if (py <= g) return [px, g, pz];
     }
     return null;
@@ -9507,6 +10693,7 @@ class SurfaceView {
       away.sort((a, b) => a.d - b.d);
       this.app.ui.favEdge(away.length ? away.slice(0, this.app.mobile ? 2 : 3) : null);
     } else { this.favMarks(null); this.app.ui.favEdge(null); }
+    this.app.ui.diveHud(this);
     if (this.poi) { const p = this.cam.project([this.poi.x, this.poi.y + 2, this.poi.z], R.cssW, R.cssH); this.app.ui.markers.set('poi', p.x, p.y, p.visible, 'arrow'); }
     else this.app.ui.markers.hide('poi');
     for (const c of this.cities) {
@@ -9549,9 +10736,10 @@ class SurfaceView {
     const e = this.env; if (!e) return '';
     const H = Math.floor(e.hour), M = Math.floor((e.hour - H) * 60), w = this.weather;
     const alive = this.eco.agents.filter((a) => a.active && a.state !== 'dead'), cit = alive.filter((a) => a.cit).length;
-    return `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')} ${e.night > 0.5 ? 'night' : e.sunElev < 0.25 ? 'twilight' : 'day'} · ${w.label().toLowerCase()} · ${alive.length - cit} creatures${cit ? ` · ${cit} citizens` : ''}`;
+    const deep = this.diving ? ` · ${fmt.n(Math.round(Ocean.depthM(this.dive.d)))} m deep` : '';
+    return `${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')} ${e.night > 0.5 ? 'night' : e.sunElev < 0.25 ? 'twilight' : 'day'} · ${this.diving ? 'underwater' : w.label().toLowerCase()}${deep} · ${alive.length - cit} creatures${cit ? ` · ${cit} citizens` : ''}`;
   }
-  hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · twist to rotate · tap a creature' : 'Drag to pan · right-drag or Q/E to rotate · scroll to zoom · click a creature'; }
+  hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · twist to rotate · tap a creature · over water, the Dive buttons go below' : 'Drag to pan · right-drag or Q/E to rotate · scroll to zoom · click a creature · Z / X to dive and rise over water'; }
 }
 
 /* =============================================================================
@@ -9569,7 +10757,7 @@ class Weather {
     for (let i = 0; i < this.N; i++) { this.p[i * 4] = r.range(-1, 1); this.p[i * 4 + 1] = r.next(); this.p[i * 4 + 2] = r.range(-1, 1); this.p[i * 4 + 3] = r.next(); }
     this.wind = [0.5, 0.2]; this.kind = null; this.intensity = 0; this.flies = [];
     this.n = new Noise.Simplex(RNG.hash(view.planet.seed, 'weather'));
-    this.puffs = []; this.drops = [];
+    this.puffs = []; this.drops = []; this.mists = []; this.inks = [];
     this.storm = 0; this.hurricane = 0; this.flash = null;
     this.S = null; this.raw = null; this.sampleT = 0; this.lastT = null;
     this.snow = 0; this.wet = 0; this.ash = 0; this.tide = 0; this.dT = 0; this.vis = 1; this.cells = []; this.cellT = 0;
@@ -9636,6 +10824,22 @@ class Weather {
     for (let i = 0; i < n && this.drops.length < 360; i++) {
       const a = Math.random() * TAU, sp = (0.6 + Math.random() * 1.6) * (0.6 + size * 0.4);
       this.drops.push([x, y + 0.1, z, Math.cos(a) * sp, 2.5 + Math.random() * 3.5 * (0.6 + size * 0.4), Math.sin(a) * sp, 0]);
+    }
+  }
+  // a whale's blow: a column of spray and a drifting cloud of mist over the surface
+  spout(x, y, z, size) {
+    const n = Math.min(16, 6 + Math.round(size * 4));
+    for (let i = 0; i < n && this.drops.length < 360; i++) {
+      const a = Math.random() * TAU, sp = Math.random() * 0.5;
+      this.drops.push([x, y + 0.3, z, Math.cos(a) * sp, 4 + Math.random() * 3 * (0.6 + size * 0.3), Math.sin(a) * sp, 0]);
+    }
+    for (let i = 0; i < 6 && this.mists.length < 120; i++) this.mists.push([x + (Math.random() - 0.5) * 0.4, y + 1 + i * 0.5 * (0.6 + size * 0.3), z + (Math.random() - 0.5) * 0.4, 0, 0.8 + size * 0.5]);
+  }
+  // a squid's or cuttlefish's escape: a dark billowing cloud left where it was
+  ink(x, y, z, size) {
+    for (let i = 0; i < 14 && this.inks.length < 160; i++) {
+      const a = Math.random() * TAU, e = (Math.random() - 0.5) * 0.6, sp = 0.3 + Math.random() * 0.8;
+      this.inks.push([x, y, z, Math.cos(a) * sp, e, Math.sin(a) * sp, 0, 0.8 + size * 0.6]);
     }
   }
   updateGiant(dt, v, t, tg) {
@@ -9706,12 +10910,57 @@ class Weather {
     for (let i = this.puffs.length - 1; i >= 0; i--) { const q = this.puffs[i]; q[3] += dt; q[1] += dt * (5 - q[3] * 1.2); q[0] += this.wind[0] * dt; q[2] += this.wind[1] * dt; if (q[3] > 3.5) this.puffs.splice(i, 1); }
     if (this.puffs.length > 600) this.puffs.splice(0, this.puffs.length - 600);
     for (let i = this.drops.length - 1; i >= 0; i--) { const q = this.drops[i]; q[6] += dt; q[0] += q[3] * dt; q[1] += q[4] * dt; q[2] += q[5] * dt; q[4] -= 14 * dt; if (q[6] > 1.1) this.drops.splice(i, 1); }
+    for (let i = this.mists.length - 1; i >= 0; i--) { const q = this.mists[i]; q[3] += dt; q[1] += dt * 0.5; q[0] += this.wind[0] * dt * 0.6; q[2] += this.wind[1] * dt * 0.6; if (q[3] > 2.2) this.mists.splice(i, 1); }
+    for (let i = this.inks.length - 1; i >= 0; i--) { const q = this.inks[i], k = Math.exp(-dt * 1.2); q[6] += dt; q[0] += q[3] * dt; q[1] += q[4] * dt; q[2] += q[5] * dt; q[3] *= k; q[4] *= k; q[5] *= k; if (q[6] > 5) this.inks.splice(i, 1); }
     // fireflies / pollen (not in a downpour or a gale)
     const b = v.biomeAt(tg[0], tg[2]), calm = this.S ? 1 - clamp(this.S.precip * 1.5 + this.S.windstorm, 0, 1) : 1;
     const vegetated = p.life.has && BIOMES[b].prod > 0.4;
     const nf = vegetated ? Math.round((env.night > 0.5 ? 40 : 14) * calm) : 0;
     while (this.flies.length < nf) this.flies.push([Math.random() * TAU, Math.random(), Math.random() * TAU, Math.random()]);
     this.flies.length = nf;
+  }
+  // under the surface: marine snow sinking, plankton in the sunlit water, bioluminescent sparks in the dark,
+  // rising bubbles and black-smoker plumes over the vents
+  renderUnder(R, cam, env) {
+    const v = this.view, tg = v.cam.cur.target, ext = v.viewExtent(), T = v.app.anim, gl = R.gl, dt = Clock.paused ? 0 : this.dt || 0, U = env.uw;
+    const pts = this.pts, lines = this.lines, glow = this.glow || (this.glow = new GFX.Stream(200, gl.POINTS)), q = this.p;
+    pts.reset(); lines.reset(); glow.reset();
+    const sea = U.seaY, floor = v.heightAt(tg[0], tg[2]), span = clamp(sea - floor, 3, 22), d = v.dive.d, day = 1 - env.night;
+    // (glowing sparks need living things: luminous microbes, or the deep-sea animals of a complex biosphere)
+    const mi = v.surface._micro || {}, bloom = mi.bloom || 0, alive = (mi.stage || 0) >= 2, lum = Math.max(mi.lum || 0, v.surface.complex ? smoothstep(5, 14, d) * 0.7 : 0);
+    const pc = mi.bloomCol ? Color.mix(mi.bloomCol, [0.8, 1, 0.9], 0.45) : [0.72, 0.95, 0.85];
+    const n = Math.floor(this.N * (0.6 + 0.35 * bloom)), y0 = Math.max(floor, tg[1] - span * 0.5);
+    for (let i = 0; i < n; i++) {
+      const o = i * 4;
+      q[o + 1] = fract(q[o + 1] - dt * 0.01 * (1 + (i % 5) * 0.25));
+      q[o] = ((q[o] + Math.sin(T * 0.21 + i) * dt * 0.006 + 1) % 2 + 2) % 2 - 1; q[o + 2] = ((q[o + 2] + Math.cos(T * 0.17 + i * 1.3) * dt * 0.006 + 1) % 2 + 2) % 2 - 1;
+      const x = tg[0] + q[o] * ext * 0.9, z = tg[2] + q[o + 2] * ext * 0.9, y = y0 + q[o + 1] * span;
+      if (y > sea - 0.06) continue;
+      const dp = sea - y;
+      if (i % 3 === 0 && dp < 4.5 && bloom > 0.04) pts.push(x, y, z, ...pc, 0.85, 1, 0, 0);
+      else if (lum > 0.05 && i % 6 === 0) { if (glow.n < 190) glow.push(x, y, z, 0.35, 0.85, 1, lum * (0.35 + 0.65 * Math.max(0, Math.sin(T * 2.3 + i * 1.7))), 1.3, 0, 0); }
+      else if (i % 2 === 0) {
+        // marine snow shows where there is light to see it by: near the lamp, or in the sunlit water by day
+        const near = 1 - smoothstep(4, 14, Math.hypot(x - tg[0], y - tg[1], z - tg[2])), vis = Math.max(near * U.lamp[3], day * (1 - smoothstep(1, 6, dp)) * 0.6);
+        if (vis > 0.05) pts.push(x, y, z, 0.86, 0.88, 0.9, 0.55 * vis * (alive ? 1 : 0.4), 1, 0, 0);
+      }
+    }
+    // bubbles streaming up from the vents and around the observer, and the smokers' black plumes
+    for (const ch of v.drawn || []) for (const poi of ch.pois) {
+      if (!poi.smoker || Math.hypot(poi.x - tg[0], poi.z - tg[2]) > ext * 1.3) continue;
+      for (let k = 0; k < 40; k++) { const t = fract(T * 0.12 + k / 40), sx = poi.x + Math.sin(k * 2.3) * 1.8, sz = poi.z + Math.cos(k * 1.7) * 1.8; pts.push(sx + Math.sin(T + k) * t * 1.4, poi.y + 2.6 + t * 7, sz + Math.cos(T * 0.8 + k) * t * 1.4, 0.12, 0.11, 0.1, 0.95 * (1 - t), 2.2 + t * 2.5, 0, 0); }
+      for (let k = 0; k < 10; k++) { const t = fract(T * 0.35 + k / 10); pts.push(poi.x + Math.sin(k * 3.1) * 2, poi.y + 1 + t * 12, poi.z + Math.cos(k * 2.2) * 2, 0.85, 0.95, 1, 0.8 * (1 - t), 1.4, 2, 0); }
+    }
+    for (const qq of this.inks) pts.push(qq[0], qq[1], qq[2], 0.06, 0.05, 0.07, 0.85 * (1 - qq[6] / 5), qq[7] * (1.6 + qq[6] * 1.4), 0, 0);
+    for (let k = 0; k < 8; k++) { const t = fract(T * 0.3 + k / 8); const y = tg[1] - 0.5 + t * Math.min(6, sea - tg[1]); if (y < sea) pts.push(tg[0] + Math.sin(k * 5.1 + T * 0.4) * 2.5, y, tg[2] + Math.cos(k * 3.3) * 2.5, 0.85, 0.95, 1, 0.7 * (1 - t), 1.3, 2, 0); }
+    gl.depthMask(false);
+    const PP = GFX.use(R.P.points);
+    GFX.setAll(PP, { uVP: cam.vp, uScale: 1, uTime: T, uMin: 1, uMax: 7, uMode: 1 });
+    R.blend('alpha');
+    pts.upload(); pts.draw();
+    GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); lines.upload(); lines.draw();
+    R.blend('add'); GFX.use(PP); GFX.set(PP, 'uMode', 0); glow.upload(); glow.draw();
+    R.blend('none'); gl.depthMask(true);
   }
   render(R, cam, env) {
     const v = this.view, tg = v.cam.cur.target, ext = v.viewExtent(), T = v.app.anim, gl = R.gl, dt = this.dt || 0, S = this.S;
@@ -9787,6 +11036,7 @@ class Weather {
     }
     for (const qq of this.puffs) { const g = 0.85 - qq[3] * 0.15; pts.push(qq[0], qq[1], qq[2], g, g, g + 0.05, 1 - qq[3] / 3.5, 1.4 + qq[3] * 1.2, 0, 0); }
     for (const qq of this.drops) pts.push(qq[0], qq[1], qq[2], 0.85, 0.95, 1, 1 - qq[6] / 1.1, 1.2, 0, 0);
+    for (const qq of this.mists) pts.push(qq[0], qq[1], qq[2], 0.92, 0.95, 0.98, 0.5 * (1 - qq[3] / 2.2), qq[4] * (1.5 + qq[3] * 1.5), 0, 0);
     const fl = this.flash;
     if (fl && fl.bolt && fl.k > 0.25) for (let k = 1; k < fl.bolt.length; k++) { const a = fl.bolt[k - 1], b = fl.bolt[k]; lines.push(a[0], a[1], a[2], 0.9, 0.95, 1, fl.k); lines.push(b[0], b[1], b[2], 0.9, 0.95, 1, fl.k); }
     const glowPts = this.glow || (this.glow = new GFX.Stream(200, gl.POINTS)); glowPts.reset();
@@ -10442,6 +11692,30 @@ const Sound = (() => {
       oe.gain.setValueAtTime(0.45, t0); oe.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
       o.connect(oe); oe.connect(out); o.start(t0); o.stop(t0 + 0.2);
     },
+    // a whale's song: long, slow gliding moans with a little vibrato (the bigger the singer, the lower the song)
+    song(pan, vol, size) {
+      const dur = 1.6 + Math.random() * 2.4;
+      if (!this.voice(dur + 0.6)) return; this.count('whale');
+      const t0 = ctx.currentTime + 0.02, f0 = clamp(520 / Math.pow(Math.max(1, size), 0.8), 55, 420) * (0.8 + Math.random() * 0.4), out = this.out(pan, vol);
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), f = ctx.createBiquadFilter(), e = ctx.createGain(), g2 = ctx.createGain();
+      lfo.frequency.value = 4 + Math.random() * 3; lg.gain.value = f0 * 0.02; lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+      o2.type = 'triangle'; g2.gain.value = 0.25;
+      let t = t0; o.frequency.setValueAtTime(f0, t); o2.frequency.setValueAtTime(f0 * 2, t);
+      for (let i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) { t += dur / n; const k = Math.pow(2, (Math.random() * 2 - 1) * 0.9); o.frequency.exponentialRampToValueAtTime(f0 * k, t); o2.frequency.exponentialRampToValueAtTime(f0 * k * 2, t); }
+      f.type = 'lowpass'; f.frequency.value = 900; f.Q.value = 1;
+      e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(1, t0 + 0.35); e.gain.setValueAtTime(1, t0 + dur - 0.3); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.4);
+      o.connect(f); o2.connect(g2); g2.connect(f); f.connect(e); e.connect(out);
+      for (const x of [o, o2, lfo]) { x.start(t0); x.stop(t0 + dur + 0.5); }
+    },
+    // a whale blowing at the surface: a rushing exhalation of spray
+    blow(pan, vol, size) {
+      const dur = 0.7 + size * 0.08;
+      if (!this.voice(dur + 0.2)) return; this.count('blow');
+      const t0 = ctx.currentTime + 0.01, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), e = ctx.createGain(), out = this.out(pan, vol);
+      src.buffer = this.noise.pink; f.type = 'bandpass'; f.frequency.setValueAtTime(1500, t0); f.frequency.exponentialRampToValueAtTime(420, t0 + dur); f.Q.value = 0.6;
+      e.gain.setValueAtTime(0.0001, t0); e.gain.exponentialRampToValueAtTime(1, t0 + 0.06); e.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(f); f.connect(e); e.connect(out); src.start(t0, Math.random()); src.stop(t0 + dur + 0.05);
+    },
     // thunder: sound travels slower than light, so a distant strike rumbles later, lower and softer
     thunder(dist, severity, pan) {
       if (!this.voice(8)) return; this.count('thunder');
@@ -10518,6 +11792,16 @@ const Sound = (() => {
         if (c.kind === 'tornado' && k > s.torn) { s.torn = k; s.tornPan = panOf(c.x, c.z); }
         if (c.kind === 'devil' && k > s.devil) { s.devil = k; s.devilPan = panOf(c.x, c.z); }
       }
+      // under the sea: the nearest black smoker, and the nearest whale or marine reptile (their songs carry far in water)
+      let sm = null, sd = 1e9;
+      for (const ch of v.chunks.values()) for (const q of ch.pois) if (q.smoker) { const d = Math.hypot(q.x - tg[0], q.z - tg[2]); if (d < sd) { sd = d; sm = q; } }
+      s.smoker = sm ? Math.pow(clamp(1 - sd / (ext * 1.4), 0, 1), 1.5) : 0; s.smokerPan = sm ? panOf(sm.x, sm.z) : 0;
+      s.whale = 0; s.whalePan = 0; s.whaleS = 1;
+      if (v.eco && v.dive && v.dive.d > 0.1) for (const a of v.eco.agents) {
+        if (!a.active || a.state === 'dead' || (a.sp.fam !== 'cetacean' && a.sp.fam !== 'plesio')) continue;
+        const k = 1 - smoothstep(ext * 0.3, ext * 2.5, Math.hypot(a.x - tg[0], a.z - tg[2]));
+        if (k > s.whale) { s.whale = k; s.whalePan = panOf(a.x, a.z); s.whaleS = a.P.S * (a.sp.fam === 'plesio' ? 0.6 : 1); }
+      }
       s.temp = v.tempAt(tg[0], tg[2]);
       this.s = s;
     },
@@ -10533,7 +11817,9 @@ const Sound = (() => {
       const s = this.s, w = v.weather, p = v.planet, e = v.env || {}, night = e.night || 0, day = 1 - night, t = ctx.currentTime;
       const gas = !!v.gas, air = gas ? 1 : p.kind === 'rocky' ? clamp(p.pressure / 0.35, 0, 1) : 0;
       // frozen time is silent time; vacuum carries nothing at all
-      const A = air * (Clock.paused ? 0 : 1), zoom = clamp(1.25 - (v.cam.cur.dist - 8) / 55, 0.45, 1.15);
+      // under the water the air's sounds fade to a muffled hint, and the sea's own take over (water carries sound, air or not)
+      const run = Clock.paused ? 0 : 1, dive = v.dive ? v.dive.d : 0, uw = smoothstep(0.15, 1.0, dive);
+      const A = air * run * (1 - uw * 0.92), U = run * uw, zoom = clamp(1.25 - (v.cam.cur.dist - 8) / 55, 0.45, 1.15);
       const windM = Math.hypot(w.wind[0], w.wind[1]), storm = w.storm || 0, hur = w.hurricane || 0, rainI = w.kind === 'rain' ? w.intensity : 0;
       const warm = smoothstep(4, 16, s.temp), lowQ = app.mobile || app.quality === 'low';
       // falling and lying snow and thick fog deaden the world: less high end, fewer distant voices
@@ -10578,6 +11864,12 @@ const Sound = (() => {
       }
       this.set('steam', vent * 0.45, { noise: 'white', type: 'bandpass', f: 2300, q: 0.7, tc: 0.08, pan: s.ventPan * 0.8 });
       this.set('ventLow', vent * 0.4, { noise: 'brown', type: 'lowpass', f: 180, q: 0.8, tc: 0.1, pan: s.ventPan * 0.6 });
+      // the sea around a diver: a deep hum, waves heard from below near the surface, bubbles, vents rumbling, whales singing
+      this.set('deep', U * (0.1 + 0.06 * smoothstep(3, 20, dive)), { noise: 'brown', type: 'lowpass', f: 150 - 60 * smoothstep(3, 20, dive), q: 0.6, tc: 0.6 });
+      this.set('swash', U * (1 - smoothstep(1, 6, dive)) * (0.05 + 0.12 * swell) * (0.7 + 0.35 * windM + storm * 0.6), { noise: 'brown', type: 'lowpass', f: 260 + 200 * swell, q: 0.5, tc: 0.3 });
+      this.set('smoker', U * s.smoker * 0.35, { noise: 'brown', type: 'lowpass', f: 110, q: 0.9, tc: 0.4, pan: s.smokerPan * 0.7 });
+      if (ev0(U * (1.2 + s.smoker * 4) * (lowQ ? 0.6 : 1))) this.blup(rp0(), 0.035 + 0.04 * s.smoker, 260 + Math.random() * 420);
+      if (s.whale > 0.02 && ev0(U * s.whale * 0.22)) this.song(s.whalePan * 0.8, 0.2 * s.whale, s.whaleS);
       // biome voices
       this.crickets(A * s.veg * night * warm * (1 - rainI * 0.7) * (1 - storm) * quiet * 0.035 * zoom);
       const ev = ev0, rp = rp0, busy = lowQ ? 0.6 : 1;
@@ -10609,6 +11901,14 @@ const Sound = (() => {
     nature.splash(clamp(((x - tg[0]) * Math.cos(yaw) - (z - tg[2]) * Math.sin(yaw)) / ext, -0.8, 0.8), vol, size);
   }
 
+  function blow(v, x, y, z, size) {
+    if (!unlocked || !ctx || !nature.noise || hidden || Clock.paused || v.planet.pressure < 0.05) return;
+    const tg = v.cam.cur.target, yaw = v.cam.cur.yaw, ext = v.viewExtent(), d = Math.hypot(x - tg[0], z - tg[2]);
+    const vol = 0.3 * (1 - smoothstep(ext * 0.2, ext * 1.2, d)) * clamp(22 / v.cam.cur.dist, 0.35, 1) * (v.dive ? 1 - smoothstep(0.3, 1.5, v.dive.d) * 0.8 : 1);
+    if (vol < 0.02) return;
+    nature.blow(clamp(((x - tg[0]) * Math.cos(yaw) - (z - tg[2]) * Math.sin(yaw)) / ext, -0.8, 0.8), vol, size);
+  }
+
   // ------------------------------------------------------------------ per frame
   function update(dt, app) {
     if (!unlocked || !app.view) return;
@@ -10627,7 +11927,7 @@ const Sound = (() => {
   }
   function setMuted(m) { const s = Store.d.settings; s.audio = Object.assign({}, DEF, s.audio || {}, { muted: m }); Store.save(); settingsChanged(); }
   return {
-    init, update, play, creature, voiceOf, settingsChanged, setMuted, cfg, DEF, BREAKS, thunder, splash,
+    init, update, play, creature, voiceOf, settingsChanged, setMuted, cfg, DEF, BREAKS, thunder, splash, blow,
     get muted() { return cfg().muted; }, get unlocked() { return unlocked; },
     get nowPlaying() { return music.state === 'play' && music.track ? music.track.name : null; },
     _int: { music, rain, nature, bus, get ctx() { return ctx; }, stats: () => ({ activeCreatures, lastCreature }) },
@@ -11073,6 +12373,42 @@ const UI = {
       if (e._t !== o.name) { e.lastChild.textContent = o.name; e._t = o.name; }
     }
   },
+  // the dive gauge: where the observer is under the water, and buttons to go down and up (hold to keep going)
+  diveHud(v) {
+    let e = this.diveEl;
+    const show = !!v && v.name === 'surface' && !v.gas && (v.diving || v.dive.goal > 0 || v.canDive());
+    if (!show) { if (e && !e.hidden) { e.hidden = true; this.app.diveHold = 0; } return; }
+    if (!e) {
+      const hold = (dir, label, ic, title) => {
+        const b = h('button', { class: 'ib dv-b', title, 'aria-label': title }, icon(ic), h('span', null, label));
+        const on = (ev) => { ev.preventDefault(); ev.stopPropagation(); this.app.diveHold = dir; const view = this.app.view; if (view.diveBy) view.diveBy(dir * 0.25); };
+        const off = () => { this.app.diveHold = 0; };
+        b.addEventListener('pointerdown', on); for (const k of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(k, off);
+        return b;
+      };
+      e = this.diveEl = h('div', { id: 'dive' },
+        h('div', { class: 'dv-read' }, h('b', { class: 'dv-t' }), h('small', { class: 'dv-z' }), h('small', { class: 'dv-c' })),
+        h('div', { class: 'dv-btns' }, hold(1, 'Dive', 'down', 'Dive deeper (hold · Z)'), hold(-1, 'Rise', 'up', 'Rise (hold · X)'),
+          h('button', { class: 'ib dv-b dv-s', title: 'Back to the surface', 'aria-label': 'Back to the surface', onclick: (ev) => { ev.stopPropagation(); const view = this.app.view; if (view.surfaceUp) view.surfaceUp(); } }, icon('up'), h('span', null, 'Surface'))));
+      for (const k of ['pointerdown', 'pointermove', 'wheel']) e.addEventListener(k, (ev) => ev.stopPropagation());
+      document.body.append(e);
+    }
+    e.hidden = false;
+    e.classList.toggle('under', v.diving);
+    this._dvT = (this._dvT || 0) - 1;
+    if (this._dvT > 0) return;
+    this._dvT = 12;
+    const w = v.waterHere(), T = e.querySelector('.dv-t'), Zt = e.querySelector('.dv-z'), Ct = e.querySelector('.dv-c');
+    if (!v.diving || !w) {
+      T.textContent = w ? `${w.zone.name}` : 'Water below';
+      Zt.textContent = w ? `${fmt.n(Math.round(w.floorM))} m to the ${w.fresh ? 'bottom' : 'sea floor'} · dive to explore` : 'dive to explore';
+      Ct.textContent = '';
+      return;
+    }
+    T.textContent = `${fmt.n(Math.round(w.depthM))} m · ${w.layer.name}`;
+    Zt.textContent = `${w.zone.name} · floor at ${fmt.n(Math.round(w.floorM))} m`;
+    Ct.textContent = `${fmt.sig(w.pressure)} atm · ${fmt.temp(w.temp)} · light ${w.light > 0.01 ? fmt.pct(w.light) : w.light > 0.0001 ? '<1%' : 'none'}`;
+  },
   hint(t) { this.hintEl.textContent = t || ''; this.hintEl.classList.remove('fade'); clearTimeout(this._ht); this._ht = setTimeout(() => this.hintEl.classList.add('fade'), 9000); },
   toast(msg, kind = '') {
     const t = h('div', { class: 'toast ' + kind }, msg);
@@ -11308,11 +12644,13 @@ function planetPanel(p, app, o) {
     { id: 'env', label: 'Environment', render: () => h('div', null,
       p.isGiant ? section('Cloud bands', h('p', { class: 'muted' }, `${Math.round(p.gas.bands)} major bands${p.gas.storm ? ', with a persistent storm vortex' : ''}. Winds shear at every latitude.`)) :
       section('Biomes', p.biomeStats.slice(0, 8).map((s) => bar(BIOMES[s.b].name, s.f, Color.hex(p.pal[s.b] || [0.5, 0.5, 0.5])))),
+      p.isGiant ? null : oceansSection(p),
       section('Resources', p.resources.map((r) => bar(r.name, r.amt / 100, r.col, `${r.amt}%`))),
       section('Surface features', h('div', { class: 'gases' }, Object.entries(p.features).filter(([, v]) => v).map(([k]) => chip({ ruins: 'Precursor ruins', monolith: 'Monoliths', geysers: 'Geothermal vents', fossils: 'Fossil beds', nests: 'Nesting grounds', arches: 'Rock arches' }[k]))))) },
   ];
   tabs.push({ id: 'climate', label: 'Climate', render: (live) => climateBody(p, app, view, live) });
   if (p.life.has) tabs.push({ id: 'life', label: 'Life', render: (live) => lifeTab(p, app, live) });
+  { const S = Biosphere.stageAt(p, t); if (S.B.medium || S.i > 0) tabs.push({ id: 'bio', label: 'Biosphere', render: (live) => bioTab(p, app, live) }); if (!p.life.has && S.i >= 2) badges.push(chip(S.i >= 5 ? 'multicellular life' : 'microbial life', 'c-life')); }
   let civI = null;
   try { civI = p.isGiant ? null : Civ.atBody(p.original || p, t); } catch (e) { civI = null; }
   if (civI && (civI.natives.length || civI.colonies.length || civI.terraformed || civI.project)) {
@@ -11339,16 +12677,113 @@ function planetPanel(p, app, o) {
 }
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
+/* ---- the biosphere: the origin of life, its geological stages and the microbes; the oceans' zones */
+// a microbe as a tiny pixel sprite drawn from its genome: cell shape, colour, colonies, flagellum, glow
+function cellIcon(g, size = 36) {
+  const N = 12, c = h('canvas', { width: N, height: N, class: 'thumb', style: { width: size + 'px', height: size + 'px', borderRadius: '4px' } }), x = c.getContext('2d');
+  const M = Microbes.M, col = Microbes.colorOf(g), sh = Microbes.shapeOf(g), body = Color.hex(col), edge = Color.hex(Color.shade(col, -0.45)), hi = Color.hex(Color.mix(col, [1, 1, 1], 0.5));
+  x.fillStyle = '#0e1646'; x.fillRect(0, 0, N, N);
+  const px = (i, j, st) => { if (i >= 0 && j >= 0 && i < N && j < N) { x.fillStyle = st; x.fillRect(i, j, 1, 1); } };
+  const cells = [];
+  const disk = (cx, cy, r) => { for (let j = -r - 1; j <= r + 1; j++) for (let i = -r - 1; i <= r + 1; i++) { const d = Math.hypot(i, j); if (d <= r + 0.35) cells.push([cx + i, cy + j]); } };
+  if (g[M.lum] > 0.7) for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if ((i + j) % 2 === 0 && Math.hypot(i - 5.5, j - 5.5) < 5.8) px(i, j, Color.hex(Color.mix(col, [0.3, 0.9, 1], 0.5).map((v) => v * 0.35)));
+  if (sh === 0) disk(6, 6, 3);
+  else if (sh === 1) { for (let i = 2; i <= 9; i++) for (let j = 4; j <= 7; j++) if (!((i === 2 || i === 9) && (j === 4 || j === 7))) cells.push([i, j]); }
+  else if (sh === 2) { for (let t = 0; t <= 1; t += 0.05) { const a = Math.PI * (0.15 + 0.8 * t), X = Math.round(6 + Math.cos(a) * 4.5), Y = Math.round(8 - Math.sin(a) * 4.5); cells.push([X, Y], [X, Y + 1], [X + 1, Y]); } }
+  else if (sh === 3) { for (let i = 1; i <= 10; i++) { const Y = Math.round(6 + Math.sin(i * 1.1) * 2.4); cells.push([i, Y], [i, Y + 1]); } }
+  else if (sh === 4) { for (let k = 0; k < 4; k++) for (let i = 0; i < 2; i++) for (let j = 5; j <= 6; j++) cells.push([1 + k * 3 + i, j]); }
+  else { disk(4, 4, 1); disk(8, 5, 1); disk(5, 8, 1); disk(8, 8, 1); }
+  // colonies: a second cell alongside
+  if (g[M.multi] > 0.6 && sh !== 5 && sh !== 4) { const n = cells.length; for (let k = 0; k < n; k++) { const [i, j] = cells[k]; if (i < 7 && j < 7) cells.push([i + 4, j + 4]); } }
+  const set = new Set(cells.map(([i, j]) => i + ',' + j));
+  for (const [i, j] of cells) px(i, j, [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([a, b]) => set.has((i + a) + ',' + (j + b))) ? body : edge);
+  const top = cells.slice().sort((a, b) => a[1] - b[1] || a[0] - b[0])[0];
+  if (top) px(top[0] + 1, top[1] + 1, hi);
+  // a flagellum trailing from a swimmer
+  if (g[M.motile] > 0.6 && cells.length) { const L = cells.slice().sort((a, b) => a[0] - b[0])[0]; for (let k = 1; k <= 3; k++) px(L[0] - k, L[1] + (k % 2), edge); }
+  return c;
+}
+const MEDIUM_NAME = { water: 'Water', acid: 'Sulfuric acid', methane: 'Liquid methane', clouds: 'Cloud droplets', silicate: 'Silicate melt', exotic: 'Exotic solvent' };
+const FACTOR_NAME = { solvent: 'A liquid solvent', temperature: 'Temperature', chemistry: 'Chemistry', energy: 'Energy', shelter: 'Shelter from radiation', time: 'Time' };
+const fmtGyr = (g) => (g >= 1 ? `${fmt.sig(g)} billion years` : `${fmt.n(Math.max(1, Math.round(g * 1000)))} million years`);
+const fmtGy = (g) => (g >= 1 ? `${fmt.sig(g)} Gyr` : `${fmt.n(Math.max(1, Math.round(g * 1000)))} Myr`);
+const STAGE_SHORT_NAME = ['Sterile', 'Prebiotic', 'First cells', 'Mats', 'Complex cells', 'Multicell', 'Ecosystem'];
+function stageLadder(S) {
+  return h('div', { class: 'ladder' }, Biosphere.STAGES.slice(1).map((q, k) => {
+    const i = k + 1, on = i <= S.i, cur = i === S.i, out = S.B.emerged ? i > S.B.cap : i > 1;
+    return h('div', { class: 'rung' + (on ? ' on' : '') + (cur ? ' cur' : '') + (out ? ' out' : ''), title: q.desc }, h('span', { class: 'rung-n' }, String(i)), h('span', { class: 'rung-l' }, STAGE_SHORT_NAME[i]));
+  }));
+}
+function bioTab(p, app, live) {
+  const wrap = h('div', null);
+  let lastKey = null;
+  const draw = () => {
+    const t = app.t, S = Biosphere.stageAt(p, t), B = S.B, era = Math.floor(t / Microbes.ERA), key = S.i + ':' + era;
+    if (key === lastKey) return;
+    lastKey = key; wrap.innerHTML = '';
+    const st = Biosphere.STAGES[S.i], F = B.factors;
+    wrap.append(h('p', { class: 'desc' }, h('b', null, st.name), ' — ', st.desc));
+    wrap.append(stageLadder(S));
+    wrap.append(h('div', { class: 'grid' },
+      stat('World age', `${fmt.sig(S.age)} Gyr`),
+      stat('Life', !B.emerged ? (S.i === 1 ? 'not yet' : 'none') : S.since >= 0 ? `for ${fmtGy(S.since)}` : `in ~${fmtGy(-S.since)}`),
+      stat('Medium', B.medium ? MEDIUM_NAME[B.medium] : 'none'),
+      stat('Habitat', B.habitat === 'subsurface' ? 'Under the ice' : B.habitat === 'clouds' ? 'Cloud decks' : 'Surface'),
+      stat('Next stage', S.next ? Biosphere.STAGES[S.next.i].name : '—'),
+      stat('Arrives in', S.next ? fmt.dur(S.next.t - t) : '—')));
+    if (S.next) wrap.append(h('p', { class: 'muted small' }, `${Biosphere.STAGES[S.next.i].name} is about ${fmtGyr(S.next.gyr)} of this world's history away.`));
+    wrap.append(h('p', { class: 'muted small' }, `Geological time runs about ${fmtGyr(3600 / GEO_S)} to the hour of universal time: every world ages, and its life with it, even while you are away.`));
+    // what made life possible here (or not)
+    const verdict = B.emerged ? (S.i >= 2 ? 'Life has arisen here.' : 'Everything is in place; life has not quite begun.') : B.potential < 0.05 ? `No life can arise: ${FACTOR_NAME[B.limit].toLowerCase()} is missing.` : `Life could have arisen here, but it has not — the odds were ${fmt.pct(B.potential * 0.92)}, and the dice fell the other way. The weakest link: ${FACTOR_NAME[B.limit].toLowerCase()}.`;
+    wrap.append(section(`Conditions for life · potential ${fmt.pct(B.potential)}`,
+      ...Object.entries(F).map(([k, f]) => h('div', null, bar(FACTOR_NAME[k], f.k, f.k > 0.6 ? '#5cf2c6' : f.k > 0.3 ? '#ffd166' : '#ff7e6b'), h('p', { class: 'muted small', style: { margin: '-2px 0 6px' } }, f.text))),
+      h('p', { class: 'small' }, verdict), B.notes.length ? h('p', { class: 'muted small' }, cap(B.notes.join('; ')) + '.') : null));
+    // the microbes themselves
+    const MS = Microbes.state(p, t);
+    if (MS.strains.length) {
+      const list = MS.strains.slice().sort((a, b) => b.x - a.x);
+      const tot = list.reduce((q, s) => q + s.x, 0) || 1;
+      wrap.append(section(`Microbial strains · ${list.length}`,
+        h('p', { class: 'muted small' }, `Every strain carries a ${Microbes.GENE.length}-gene genome that mutates each era (${fmt.dur(Microbes.ERA)}); strains compete for their niches, split into new lineages, colonize empty habitats and die out. ${MS.born} lineages born, ${MS.lost} lost since this record began.`),
+        h('div', { class: 'gases' }, [['photo', 'Photosynthesis'], ['complex', 'Complex cells'], ['multi', 'Multicellularity']].filter(([k]) => MS.innov[k] != null).map(([, l]) => chip(l, 'c-life'))),
+        ...list.map((s) => {
+          const d = Microbes.describe(s);
+          return h('div', { class: 'srow micro' }, cellIcon(s.g, 40), h('div', { class: 'srow-main' }, h('i', null, s.name), h('small', null, `${d.shape} ${d.metab} · ${d.therm} (${d.T} °C) · ${d.multi}${d.aerobic ? ' · breathes oxygen' : ''}${d.lum ? ' · bioluminescent' : ''}`), h('div', { class: 'srow-tags' }, chip(s.niche.name), chip(fmt.pct(s.x / tot), 'c-pop'))));
+        })));
+      if (MS.events.length) wrap.append(section('Recent evolution', h('ul', { class: 'adapt' }, MS.events.slice(-8).reverse().map((e) => h('li', null, h('b', null, e.txt), h('small', null, `${fmt.dur(Math.max(0, t - e.era * Microbes.ERA))} ago`))))));
+    } else if (S.i >= 2) wrap.append(h('p', { class: 'muted small' }, 'The microbial record begins with the next era.'));
+    if (p.life.has) wrap.append(h('p', { class: 'muted small' }, 'Every animal and plant here rests on this microbial foundation: the plankton in the water is the food of filter feeders and grazers at sea.'));
+  };
+  draw(); if (live) live(draw);
+  return wrap;
+}
+function oceansSection(p) {
+  const S = Ocean.stats(p);
+  if (!S.zones.length) return null;
+  return section(`Oceans · ${fmt.pct(S.ocean)} of the surface · deepest ${fmt.n(Math.round(S.maxDepthM / 10) * 10)} m`,
+    ...S.zones.slice(0, 10).map((z) => bar(z.name, z.f, Color.hex(Color.mix(Ocean.ZONES[z.z].sea, [0.2, 0.5, 0.9], 0.45)))),
+    S.fresh ? h('p', { class: 'muted small' }, 'Rivers and lakes run across the land as well.') : null);
+}
+// where a sea creature lives: its home zone, the waters it ranges through, and its depth band
+function marineHabitat(sp) {
+  const M = sp.marine; if (!M) return null;
+  const hi = M.band[1] >= 90 ? 'the deepest floor' : `${fmt.n(Math.round(Ocean.depthM(M.band[1]) / 10) * 10)} m`;
+  return { home: Ocean.ZONES[Ocean.Z[M.zone]].name, depth: `${fmt.n(Math.round(Ocean.depthM(M.band[0])))} m – ${hi}`, zones: [...M.zones].map((z) => Ocean.ZONES[z].name), life: M.benthic ? 'Lives on the sea floor' : M.drift ? 'Drifts with the currents' : M.breathes ? 'Swims; surfaces to breathe' : 'Swims in open water' };
+}
 function lifeTab(p, app, live) {
   const t = app.t, list = Ecology.community(p, t);
   const wrap = h('div', null);
   if (!list.length) { wrap.append(h('p', { class: 'muted' }, 'Every niche is momentarily empty — an extinction interval. New lineages will arise.')); return wrap; }
   wrap.append(h('p', { class: 'muted small' }, `${list.length} extant species. Lineages evolve every few hours of universal time, even while you are away.`));
-  for (const sp of list) {
-    const pop = Ecology.population(sp, t);
-    wrap.append(h('div', { class: 'srow', onclick: () => Modals.species(app, sp) },
-      Portraits.el(sp.code, sp.pheno, 56),
-      h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`~${fmt.n(pop)}`, 'c-pop')))));
+  const groups = [['land', 'On land'], ['air', 'In the air'], ['water', 'In the waters']].map(([k, l]) => [l, list.filter((sp) => sp.habitat === k)]).filter(([, L]) => L.length);
+  for (const [label, L] of groups) {
+    if (groups.length > 1) wrap.append(h('h4', { class: 'grp' }, `${label} · ${L.length}`));
+    for (const sp of L) {
+      const pop = Ecology.population(sp, t), mh = marineHabitat(sp);
+      wrap.append(h('div', { class: 'srow', onclick: () => Modals.species(app, sp) },
+        Portraits.el(sp.code, sp.pheno, 56),
+        h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), mh ? chip(mh.home) : null, chip(`~${fmt.n(pop)}`, 'c-pop')))));
+    }
   }
   return wrap;
 }
@@ -11382,8 +12817,10 @@ function locationPanel(v, app) {
         fill(); live(fill);
         return h('div', null, g,
           h('p', { class: 'small muted' }, `${v.weather.label()} · `, h('a', { class: 'kinlink', onclick: () => { UI.panel.tab = 'weather'; UI.panel.render(); } }, 'weather & forecast')),
+          (() => { const w = v.waterHere(); if (!w) return null; return section(`Waters · ${w.zone.name}`, h('p', { class: 'small' }, w.zone.desc), h('p', { class: 'muted small' }, `Sea floor ${fmt.n(Math.round(w.floorM))} m · ${Ocean.layer(w.D).name.toLowerCase()} at the bottom${w.fresh ? ' · fresh water' : ''}${v.canDive && v.canDive() ? ' · press Dive (Z) to go below' : ''}`)); })(),
+          (() => { const m = v.surface._micro; if (!m || m.stage < 2 || p.life.has) return null; return section('Microbial life', h('p', { class: 'small' }, `${Biosphere.STAGES[m.stage].name}: ${m.strains} strains in the waters, sediments and rocks here${m.stromatolites ? ', building stromatolites in the shallows' : ''}.`), h('a', { class: 'kinlink', onclick: () => app.openPlanet(p) }, 'Biosphere of this world')); })(),
           probe ? section('Probe', h('p', { class: 'muted small' }, `${BIOMES[v.biomeAt(probe[0], probe[2])].name} · elevation ${Math.round(probe[1] * 190)} m · ${fmt.temp(v.tempAt(probe[0], probe[2]))}`)) : null,
-          section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.active && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : 'This world is lifeless. Only wind and stone.')));
+          section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.active && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : (v.surface._micro && v.surface._micro.stage >= 2) ? 'No animals have evolved here: this world belongs to its microbes.' : 'This world is lifeless. Only wind and stone.')));
       } },
       { id: 'weather', label: 'Weather', render: (live) => weatherView(v, app, live) },
     ],
@@ -11621,10 +13058,11 @@ function speciesBody(sp, app) {
   const E = sp;
   return h('div', null,
     h('div', { class: 'sphead' }, Portraits.el(sp.code, sp.pheno, 96, 'big'), h('div', null, h('h3', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.cls), chip(sp.role, 'c-' + sp.diet), chip(sp.habitat)))),
-    h('div', { class: 'grid' }, stat('Population', `~${fmt.n(pop)}`), stat('Habitat', sp.habitat === 'water' ? 'Aquatic' : sp.habitat === 'air' ? 'Aerial' : BIOMES[sp.home].name), stat('Diet', cap(sp.diet)), stat('Size', `${sp.pheno.lengthM} m · ${fmt.sig(sp.pheno.massKg)} kg`), stat('Lifespan', fmt.dur(sp.pheno.life)), stat('Activity', sp.pheno.noct ? 'Nocturnal' : 'Diurnal')),
+    h('div', { class: 'grid' }, stat('Population', `~${fmt.n(pop)}`), stat('Habitat', sp.marine ? marineHabitat(sp).home : sp.habitat === 'water' ? 'Aquatic' : sp.habitat === 'air' ? 'Aerial' : BIOMES[sp.home].name), stat('Diet', cap(sp.diet)), stat('Size', `${sp.pheno.lengthM} m · ${fmt.sig(sp.pheno.massKg)} kg`), stat('Lifespan', fmt.dur(sp.pheno.life)), stat('Activity', sp.pheno.noct ? 'Nocturnal' : 'Diurnal')),
     section(`Population · last ${fmt.dur(span)}`, sparkline(hist, sp.diet === 'carnivore' ? '#ff7e6b' : '#5cf2c6')),
+    sp.marine ? (() => { const mh = marineHabitat(sp); return section('Waters', h('div', { class: 'grid' }, stat('Depth', mh.depth), stat('Way of life', mh.life)), h('p', { class: 'small' }, h('b', null, 'Ranges through: '), mh.zones.join(', '))); })() : null,
     section('Adaptations', h('ul', { class: 'adapt' }, sp.adaptations.map(([a, why]) => h('li', null, h('b', null, a), h('small', null, why))))),
-    section('Food web', h('div', null, sp.prey.length ? h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.prey.map((x) => x.common).join(', ')) : h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.fam === 'floater' ? 'airborne plankton & light' : sp.habitat === 'water' ? 'algae & plankton' : 'vegetation'), sp.predators.length ? h('p', { class: 'small' }, h('b', null, 'Hunted by: '), sp.predators.map((x) => x.common).join(', ')) : h('p', { class: 'small muted' }, 'No natural predators.'))),
+    section('Food web', h('div', null, sp.prey.length ? h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.prey.map((x) => x.common).join(', ')) : h('p', { class: 'small' }, h('b', null, 'Eats: '), sp.fam === 'floater' ? 'airborne plankton & light' : sp.marine && sp.marine.vent ? 'vent microbes (chemosynthesis)' : sp.marine && sp.marine.band[0] > 3.5 ? 'marine snow: food sinking from the sunlit water' : sp.habitat === 'water' ? 'algae & plankton' : 'vegetation'), sp.predators.length ? h('p', { class: 'small' }, h('b', null, 'Hunted by: '), sp.predators.map((x) => x.common).join(', ')) : h('p', { class: 'small muted' }, 'No natural predators.'))),
     section('Evolutionary lineage', lineageStrip(sp, t)),
     section('Evolution', h('p', { class: 'small' }, `Lineage era ${E.gen + 1} of ${Ecology.LINEAGE - 1}. This form arose ${fmt.dur(t - E.eraStart)} ago and will persist for roughly ${fmt.dur(E.eraEnd - t)} more.`), E.ancestor ? h('p', { class: 'small' }, h('b', null, 'Descended from: '), `${E.ancestor.common} (${E.ancestor.name})`) : h('p', { class: 'small muted' }, 'Founder of a new lineage.')),
     section('Species code', codeRow(sp.code)));
@@ -11991,9 +13429,11 @@ const Modals = {
         h('li', null, h('b', null, 'System · '), 'planets move along real orbits. Tap to inspect, double-tap to observe.'),
         h('li', null, h('b', null, 'Planet · '), 'drag to spin the globe, tap to pick a landing site, double-tap to descend.'),
         h('li', null, h('b', null, 'Surface · '), 'drag to pan, twist / right-drag / Q·E to rotate, tap a creature to study its genome and offspring.'))),
-      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface'], ['F', 'follow selected'], ['L', 'next favourite here · all favourites'], ['Shift + F', 'fullscreen']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
-      section('Life', h('p', null, 'Creatures belong to nine body-plan families (quadrupeds, bipeds, hexapods, octopods, serpents, avians, swimmers, gastropods, aerostats). A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
-      section('Sound', h('p', null, 'Besides music and creature calls, nature is synthesized live: wind and gusts, rain, rivers and streams, surf, geysers, lava, thunder, storms and hurricanes, birdsong by day and insects and frogs at night. It follows the terrain within earshot, the weather, the hour and the zoom — and thin air carries little sound, vacuum none.')),
+      section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Z / X', 'dive / rise (water)'], ['PgDn / PgUp', 'dive / rise a step'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface'], ['F', 'follow selected'], ['L', 'next favourite here · all favourites'], ['Shift + F', 'fullscreen']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
+      section('Life', h('p', null, 'Creatures belong to eighteen body-plan families: on land and in the air quadrupeds, bipeds, hexapods, octopods, serpents, avians, gastropods and aerostats; in the water fish-like swimmers, whale-like cetoids, long-necked marine reptiles, rays, eels, jellies, cephalopods, crustaceans, echinoderms and siphonophore chains. A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
+      section('Origin of life', h('p', null, 'Not every world is alive. Each has a potential for life from its liquid solvent (water, acid, methane — or an ocean under the ice), temperatures that keep it liquid, raw chemistry, energy (starlight or internal heat) and shelter from radiation; given that, the seed decides whether life ever starts and when. Worlds then age in geological time (about 60 million years to the hour): prebiotic chemistry, first cells, microbial mats and stromatolites, complex cells, the first multicellular life, and — on some — complex ecosystems. Microbial strains carry their own genomes that mutate, compete for their niches (sunlit water, deep water, sediments, vents, hot springs, sea ice, land), split, colonize and die out; their blooms tint the seas, their mats colour the shallows, and they are the plankton that feeds the filter feeders. See the ', h('b', null, 'Biosphere'), ' tab of any planet.')),
+      section('Oceans & diving', h('p', null, 'Seas are divided into zones by depth, temperature, light, currents, nutrients and the shape of the floor: coral reefs and lagoons, kelp forests, seagrass meadows, mangroves, marshes and estuaries, upwellings, continental shelves and slopes, the open ocean, seamounts, abyssal plains, hadal trenches, hydrothermal vent fields, polar seas and waters under the ice, lakes and rivers — and acid or hydrocarbon seas elsewhere. Every sea creature belongs to a zone and a depth band, and its genome adapts to them (light-gathering or lost eyes, bioluminescence, pressure proofing, antifreeze, blubber, gigantism). Over water, press ', h('b', null, 'Dive'), ' (Z or Page Down; X or Page Up to rise, or Shift + wheel): light fades and reddens with depth, pressure and cold rise, and below the sunlit zone a lamp lights your way. Whales surface to blow and sometimes breach, squid ink when chased, and fishers of coastal settlements take their catch from the same seas.')),
+      section('Sound', h('p', null, 'Besides music and creature calls, nature is synthesized live: wind and gusts, rain, rivers and streams, surf, geysers, lava, thunder, storms and hurricanes, birdsong by day and insects and frogs at night. It follows the terrain within earshot, the weather, the hour and the zoom — and thin air carries little sound, vacuum none. Under water the air falls silent: waves heard from below, a deep hum, bubbles, the rumble of vents and the songs of whales carry through the sea, and at the surface whales blow.')),
       section('Civilizations', h('p', null, 'On some living worlds a species becomes sapient and founds tribes. Each people has its own procedurally generated culture — values, palette, architecture, city layout, clothing, weapons, vehicles, spacecraft, emblem and language. Hidden progress (growth, discoveries, trade, war, exploration) carries them from ', h('b', null, 'tribes'), ' to ', h('b', null, 'nations'), ' with international trade, to ', h('b', null, 'colonizing their star system'), ' (domed cities on hostile worlds), and finally to ', h('b', null, 'intergalactic'), ' powers that terraform worlds, settle neighbouring stars, trade, ally, conquer or exterminate. History runs per galactic region in ages; look for the Civilization tab on planets, city lights on night sides, trade routes in systems and territories on the galaxy map, then land on a settlement to watch its citizens.')),
       section('Seeds', h('p', null, 'Codes like ', h('code', null, 'ORIGIN:3,-2:1:2'), ' mean universe : sector : star : planet : moon. Share them, bookmark them, or type any words to create a pocket system. Civilization codes add ', h('code', null, '$age.index'), '.'))), { icon: 'help', wide: true });
   },
@@ -12032,7 +13472,8 @@ const Modals = {
         h('li', null, h('b', null, 'Terrain'), p.isGiant ? ` · banded simplex turbulence, ${Math.round(p.gas.bands)} bands, turbulence ${p.gas.turb.toFixed(2)}` : ` · 3D simplex fBm: freq ${T.freq.toFixed(2)}, ${T.oct} octaves, gain ${T.gain.toFixed(2)}, domain warp ${T.warp.toFixed(2)}, ridged ${T.ridge.toFixed(2)}${T.craters ? `, craters ${T.craters.toFixed(2)}` : ''}; sea level = ${fmt.pct(p.coverage)} quantile`),
         h('li', null, h('b', null, 'Surface'), ` · planet-anchored 3D simplex hills + ridges, terraces every ${T.step.toFixed(2)} m (strength ${fmt.pct(T.terr)}), domain-warped river channels & lake basins`),
         h('li', null, h('b', null, 'Biomes'), ' · Whittaker-style lookup of temperature × moisture × elevation, adjusted per world type'),
-        h('li', null, h('b', null, 'Life'), p.life.has ? ` · ${p.life.count} niche slots; lineages of ${Ecology.LINEAGE} eras seeded by (planet, slot, era); genomes mutate each era` : ' · none'))),
+        h('li', null, h('b', null, 'Biosphere'), (() => { const S = Biosphere.stageAt(p, app.t), B = S.B; return ` · potential ${fmt.pct(B.potential)} (limited by ${B.limit || '—'}); ${B.emerged ? `life arose ${fmt.sig(B.originGyr)} Gyr into the world's history, pace ×${B.rateK.toFixed(2)}` : 'no life'} → stage ${S.i}: ${Biosphere.STAGES[S.i].name}`; })()),
+        h('li', null, h('b', null, 'Life'), p.life.has ? ` · ${p.life.count} niche slots${Ecology.marineCount(p) ? ` + ${Ecology.marineCount(p)} marine lineages (slots ${Ecology.MARINE0}+, bound to ocean zones and depth bands)` : ''}; lineages of ${Ecology.LINEAGE} eras seeded by (planet, slot, era); genomes mutate each era` : ' · none'))),
       section('Noise maps (equirectangular)', h('div', { class: 'maps' }, [['Elevation', 'elev'], ['Temperature', 'temp'], ['Moisture', 'moist'], ['Biomes', 'biome']].map(([l, k]) => h('figure', null, maps[k], h('figcaption', null, l))))),
       p.isGiant ? null : section('Biome distribution', p.biomeStats.map((b) => bar(BIOMES[b.b].name, b.f, Color.hex(p.pal[b.b] || [0.5, 0.5, 0.5])))),
       list.length ? section('Niche slots', h('div', { class: 'plist' }, list.map((sp) => h('div', { class: 'prow', onclick: () => Modals.species(app, sp) }, Portraits.el(sp.code, sp.pheno, 40), h('div', null, h('b', null, `Slot ${sp.slot} · ${sp.common}`), h('small', null, `${sp.family.name} · era ${sp.era} · gen ${sp.gen + 1} · genome ${Genetics.toHex(sp.g).slice(0, 10)}…`)))))) : null), { icon: 'dna', wide: true });
@@ -12047,7 +13488,7 @@ function resolveSpecies(code) {
   if (Universe.name !== prevU) Universe.setSeed(prevU);
   if (!res || !res.planet) return null;
   const p = res.planet.prepare(), slot = +m[2], era = +m[3];
-  if (slot >= p.life.count) return null;
+  if (!Ecology.validSlot(p, slot)) return null;
   const E = Ecology.slotEra(p, slot, 0), L = E.L, off = mod(-E.start, L);
   const sp = Ecology.speciesAt(p, slot, era * L - off + 1);
   if (sp && !sp.prey) { sp.prey = []; sp.predators = []; }
@@ -12114,6 +13555,8 @@ const Input = {
   wheel(e) {
     e.preventDefault();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    // Shift + wheel dives (many browsers turn a shifted wheel into a horizontal scroll)
+    if (e.shiftKey && this.app.view.diveBy) { const q = d || e.deltaX * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1); this.app.view.diveBy(clamp(q, -250, 250) * 0.012); this.app.userActive(); return; }
     this.app.view.zoom(Math.exp(clamp(d, -250, 250) * (e.ctrlKey ? 0.01 : 0.0016)), e.clientX, e.clientY);
     this.app.userActive();
   },
@@ -12142,6 +13585,8 @@ const Input = {
       case 'enter': app.primary(); break;
       case 'f': if (e.shiftKey) app.toggleFullscreen(); else if (app.view.name === 'surface' && app.view.selected) { app.view.follow = app.view.follow ? null : app.view.selected; } break;
       case 'l': Favorite.next(app); break;
+      case 'pagedown': if (app.view.diveBy) { e.preventDefault(); app.view.diveBy(1.5); } break;
+      case 'pageup': if (app.view.surfaceUp) { e.preventDefault(); app.view.diveBy(-1.5); } break;
     }
   },
   tick(dt) {
@@ -12153,6 +13598,8 @@ const Input = {
     if (K.has('w') || K.has('arrowup')) dy += s; if (K.has('s') || K.has('arrowdown')) dy -= s;
     if (dx || dy) { if (v.name === 'planet') v.rotate(-dx, -dy); else v.pan(dx, dy); }
     if (K.has('q')) v.rotate(-300 * dt, 0); if (K.has('e')) v.rotate(300 * dt, 0);
+    // Z dives, X rises (faster the deeper you are)
+    if (v.diveBy && (K.has('z') || K.has('x'))) v.diveBy((K.has('z') ? 1 : -1) * dt * (1.6 + v.dive.goal * 0.45));
     if (K.has('r')) v.rotate(0, 200 * dt); if (K.has('f') && v.name !== 'surface') v.rotate(0, -200 * dt);
     if (K.has('+') || K.has('=')) v.zoom(Math.exp(-1.6 * dt)); if (K.has('-') || K.has('_')) v.zoom(Math.exp(1.6 * dt));
   },
