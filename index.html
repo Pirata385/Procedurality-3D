@@ -77,6 +77,10 @@ code, kbd { font-family: var(--mono); }
 .lbl-sel { color: var(--gold); font-size: 12px; }
 .lbl-hover { color: #fff; }
 .lbl-book { color: #ffe39a; opacity: 0.85; }
+.lbl-gal { color: #cfd8ff; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.8; }
+.lbl-core { color: #ffcf9a; font-size: 10px; letter-spacing: 0.06em; opacity: 0.9; }
+.lbl-neb { color: #ffb7d8; font-size: 10px; opacity: 0.85; font-style: italic; }
+.lbl-star { color: #ffe2b0; font-size: 10px; opacity: 0.9; }
 .lbl-book::before { content: '★ '; }
 .lbl-life { color: #9dffcf; }
 .lbl-moon { color: #aab4e8; font-size: 10px; opacity: 0.85; }
@@ -149,6 +153,11 @@ body.compact .fc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .chip.c-life { background: #10483a; color: #8fffd6; box-shadow: inset 0 0 0 1px #1f8e70; }
 .chip.c-type { background: #3a2a10; color: #ffd98a; box-shadow: inset 0 0 0 1px #8a6420; }
 .chip.c-star { background: #3a1f3f; color: #ffc2ec; box-shadow: inset 0 0 0 1px #8a3f80; }
+.chip.c-multi { background: #2d2a52; color: #d6ccff; box-shadow: inset 0 0 0 1px #6a5fc2; }
+.chip.c-core { background: #3b2a14; color: #ffd39a; box-shadow: inset 0 0 0 1px #9a6a2a; }
+.chip.c-gal { background: #16264f; color: #b8ccff; box-shadow: inset 0 0 0 1px #3f5fb0; }
+.chip.c-neb { background: #3f1630; color: #ffb3d6; box-shadow: inset 0 0 0 1px #a04a7a; }
+.chip.c-exo { background: #103a3f; color: #9ff5ff; box-shadow: inset 0 0 0 1px #2f98a4; }
 .chip.c-carnivore { background: #4a1616; color: #ffab9a; box-shadow: inset 0 0 0 1px #9a3434; }
 .chip.c-herbivore { background: #173d1a; color: #a8f5a0; box-shadow: inset 0 0 0 1px #2f7a36; }
 .chip.c-omnivore { background: #3d3514; color: #f5e39a; box-shadow: inset 0 0 0 1px #7a6a2a; }
@@ -880,55 +889,83 @@ const Universe = (() => {
     return clamp(0.1 + 0.3 * (a * 0.5 + 0.5) + 0.5 * w * w * w + 0.12 * b, 0.03, 1);
   };
 
-  function makeStar(sx, sz, i) {
+  // a star keeps its identity (seed, class, and so its planets and life) by its sector and index; where it sits
+  // depends on what the sector holds: a galaxy places it by its population, a scattered field keeps it where it was
+  // (base: one of the stars the sector held before galaxies — the rest are the galaxy's own)
+  function makeStar(sx, sz, i, reg, base) {
     const s = RNG.hash(seed, sx, sz, i);
     const r = new RNG.Rand(s);
     const px = (sx + r.next()) * SECTOR, pz = (sz + r.next()) * SECTOR;
     const py = clamp(r.gauss() * 12, -40, 40);
     const cls = r.weighted(STAR_W);
-    return makeStarRecord(s, cls, { sx, sz, i, pos: [px, py, pz], id: `${sx},${sz},${i}`, universe: name });
+    const extra = { sx, sz, i, pos: [px, py, pz], id: `${sx},${sz},${i}`, universe: name, region: reg.type, galaxy: reg.galaxy, base };
+    if (reg.galaxy) { const q = Cosmos.placeStar(reg.galaxy, s, cls); extra.pos = q.pos; extra.gcomp = q.comp; extra.gdist = q.dist; }
+    const star = makeStarRecord(s, cls, extra);
+    star.multi = Cosmos.multiplicity(star);
+    if (star.multi) for (const c of star.multi.comps) c.star.id = `${star.id}/${c.letter}`;
+    return star;
   }
 
+  U.regionOf = (sx, sz) => Cosmos.regionOf(sx, sz);
   U.sector = (sx, sz) => {
     const key = sx + ',' + sz;
     let sec = cache.get(key);
     if (sec) return sec;
     const r = new RNG.Rand(RNG.hash(seed, sx, sz, 'sector'));
-    const d = U.density(sx, sz);
-    const n = Math.floor(d * 11 + r.next() * 2.2);
+    const d = U.density(sx, sz), reg = Cosmos.regionOf(sx, sz);
+    // (the field count is drawn for every sector, so scattered fields keep exactly the stars they always had)
+    const field = Math.floor(d * 11 + r.next() * 2.2);
+    const n = reg.type === 'empty' ? 0 : reg.galaxy ? Math.max(field, reg.galaxy.nStars) : field;
     const stars = [];
-    for (let i = 0; i < n; i++) stars.push(makeStar(sx, sz, i));
-    sec = { sx, sz, stars, density: d };
-    if (cache.size > 900) { const first = cache.keys().next().value; cache.delete(first); }
+    for (let i = 0; i < n; i++) stars.push(makeStar(sx, sz, i, reg, i < field));
+    sec = { sx, sz, stars, density: d, region: reg, galaxy: reg.galaxy };
+    if (cache.size > 420) { const first = cache.keys().next().value; cache.delete(first); }
     cache.set(key, sec);
     return sec;
   };
   U.star = (sx, sz, i) => { const s = U.sector(sx, sz); return s.stars[i] || null; };
 
-  // nebulae live on a coarse 5x5-sector lattice
+  // nebulae and other cosmic structures around a range of sectors (see Cosmos)
   U.nebulae = (cx0, cz0, cx1, cz1) => {
     const out = [];
-    for (let x = Math.floor(cx0 / 5); x <= Math.floor(cx1 / 5); x++) for (let z = Math.floor(cz0 / 5); z <= Math.floor(cz1 / 5); z++) {
-      const r = new RNG.Rand(RNG.hash(seed, x, z, 'nebula'));
-      if (!r.chance(0.42)) continue;
-      const hue = fract(U.palette.hue + r.range(-0.18, 0.35));
-      out.push({ pos: [(x * 5 + r.range(0.5, 4.5)) * SECTOR, r.range(-20, 20), (z * 5 + r.range(0.5, 4.5)) * SECTOR], radius: r.range(70, 190), color: Color.hsv(hue, 0.7, 0.9), color2: Color.hsv(hue + 0.12, 0.6, 0.8), seed: r.next() * 100, name: Names.word(r, 2, 3) + ' Nebula' });
-    }
+    for (let x = cx0; x <= cx1; x++) for (let z = cz0; z <= cz1; z++) out.push(...Cosmos.structuresIn(x, z));
     return out;
   };
+  // the structure (or galaxy) around a point, as the colours of its sky
   U.nebulaAt = (pos) => {
-    const sx = Math.floor(pos[0] / SECTOR), sz = Math.floor(pos[2] / SECTOR);
-    const list = U.nebulae(sx - 5, sz - 5, sx + 5, sz + 5);
+    const q = Cosmos.structureAt(pos, 1.15);
+    return q ? { neb: { color: Color.mix(q.s.cols[0], [0, 0, 0], 0.15), color2: q.s.cols[1] || q.s.cols[0], name: q.s.name }, k: q.k, s: q.s } : null;
+  };
+  // what a star's sky shows of its galaxy: the band of the disk from inside, a distant smudge from outside
+  U.skyOf = (star) => {
+    if (!star || star.pocket || !star.pos) return null;
+    const pos = star.pos, inside = star.galaxy ? Cosmos.galaxyAt(pos) : null;
+    if (inside) {
+      const G = inside.G, toC = V3.sub(G.c, pos), dc = V3.len(toC);
+      return { band: clamp(1.15 - inside.k * 0.55, 0.25, 1) * (G.type === 'elliptical' ? 0.55 : 1), n: G.type === 'elliptical' ? V3.norm(toC) : G.n, c: dc > 0.01 ? V3.scale(toC, 1 / dc) : G.n, col: Color.mix(G.col.disk, G.col.bulge, 0.4), bulge: G.type === 'elliptical' ? 1 : clamp(1.4 - dc / G.R, 0.3, 1.2), ell: G.type === 'elliptical' };
+    }
+    // nearest galaxy seen from outside
     let best = null;
-    for (const n of list) { const d = V3.dist(n.pos, pos); if (d < n.radius && (!best || d / n.radius < best.k)) best = { neb: n, k: d / n.radius }; }
-    return best;
+    const sx = Math.floor(pos[0] / SECTOR), sz = Math.floor(pos[2] / SECTOR);
+    for (let x = sx - 2; x <= sx + 2; x++) for (let z = sz - 2; z <= sz + 2; z++) {
+      const G = Cosmos.galaxyOf(x, z);
+      if (!G) continue;
+      const d = V3.dist(G.c, pos);
+      if (!best || d < best.d) best = { G, d };
+    }
+    if (!best) return { band: 0 };
+    const G = best.G, dir = V3.norm(V3.sub(G.c, pos));
+    return { band: 0, far: dir, size: clamp(Math.atan(G.R / best.d), 0.04, 0.6), col: Color.mix(G.col.disk, G.col.bulge, 0.5), galaxy: G };
   };
 
   U.pocketStar = (text) => {
     const clean = String(text).replace(/[:~]/g, '').trim().slice(0, 40) || 'seed';
     const s = RNG.strHash('pocket:' + clean);
     const r = new RNG.Rand(s);
-    return makeStarRecord(s, r.weighted(POCKET_W), { pocket: clean, pos: [0, 0, 0], id: 'pocket:' + clean, universe: name });
+    const star = makeStarRecord(s, r.weighted(POCKET_W), { pocket: clean, pos: [0, 0, 0], id: 'pocket:' + clean, universe: name });
+    star.multi = Cosmos.multiplicity(star);
+    if (star.multi) for (const c of star.multi.comps) c.star.id = `${star.id}/${c.letter}`;
+    return star;
   };
   U.setSeed('ORIGIN');
   return U;
@@ -1206,7 +1243,10 @@ const PlanetGen = (() => {
     const p = new Planet();
     p.seed = seed; p.index = index; p.star = star; p.a = ctx.a; p.system = ctx.system || null;
     p.isMoon = !!ctx.parent; p.parent = ctx.parent || null; p.moonIndex = ctx.parent ? ctx.moonIndex : -1;
-    const L = Math.max(star.lum, 0), frost = ctx.frost || 2.7 * Math.sqrt(Math.max(L, 1e-4));
+    // (the light and mass it orbits: its star's, or a close pair's together)
+    const L = Math.max(ctx.lum != null ? ctx.lum : star.lum, 0), frost = ctx.frost || 2.7 * Math.sqrt(Math.max(L, 1e-4));
+    const hostMass = ctx.mass != null ? ctx.mass : star.mass;
+    p.hostLum = L; p.hostMass = hostMass;
 
     // --- body class ---
     let kind = 'rocky';
@@ -1277,7 +1317,7 @@ const PlanetGen = (() => {
     p.moistBias = { jungle: 0.25, arid: -0.22, desert: -0.45, ocean: 0.1, tundra: -0.05, fungal: 0.2, toxic: 0.1 }[type] || 0;
 
     // --- rotation / orbit ---
-    p.period = Math.max(60, 480 * Math.pow(p.a, 1.5) / Math.sqrt(Math.max(0.15, star.mass)));
+    p.period = Math.max(60, 480 * Math.pow(p.a, 1.5) / Math.sqrt(Math.max(0.15, hostMass)));
     p.phase = r.range(0, TAU);
     p.tidalLock = !p.isMoon && kind === 'rocky' && p.a < 0.12 && r.chance(0.6);
     p.dayLength = kind === 'rocky' ? r.range(150, 900) : r.range(80, 260);
@@ -1370,7 +1410,7 @@ const PlanetGen = (() => {
     p.moons = [];
     if (!p.isMoon) {
       const nm = kind === 'gas' ? r.int(0, 5) : kind === 'icegiant' ? r.int(0, 4) : p.radius > 0.7 ? r.int(0, 2) : r.int(0, 1);
-      for (let k = 0; k < nm; k++) p.moons.push(create({ seed: RNG.hash(seed, 'moon', k), index, star, a: p.a, frost, parent: p, moonIndex: k, system: ctx.system }));
+      for (let k = 0; k < nm; k++) p.moons.push(create(Object.assign({ seed: RNG.hash(seed, 'moon', k), index, star, a: p.a, frost, parent: p, moonIndex: k, system: ctx.system }, ctx.lum != null ? { lum: ctx.lum, mass: ctx.mass } : null)));
     }
     return p;
   }
@@ -1478,7 +1518,10 @@ const SystemGen = (() => {
     const key = star.universe + '|' + star.id;
     if (cache.has(key)) return cache.get(key);
     const r = new RNG.Rand(RNG.hash(star.seed, 'system'));
-    const L = Math.max(star.lum, 0.0004);
+    // companions shape the disk: a close pair lights (and holds) its planets together from outside its own
+    // orbit; a distant companion truncates the disk around the primary (a single star: everything as always)
+    const Z = star.multi ? star.multi.zone : null;
+    const L = Math.max(Z ? Z.lum : star.lum, 0.0004), Mh = Z ? Z.mass : star.mass;
     const hzIn = Math.sqrt(L / 1.1), hzOut = Math.sqrt(L / 0.53), frost = 2.7 * Math.sqrt(L);
     let n;
     switch (star.cls) {
@@ -1486,7 +1529,7 @@ const SystemGen = (() => {
       case 'RG': n = r.int(1, 6); break; case 'O': case 'B': n = r.int(1, 7); break; default: n = r.int(2, 9);
     }
     if (star.pocket) n = Math.max(n, 3);
-    const orbits = [];
+    let orbits = [];
     let a = r.range(0.22, 0.45) * Math.pow(L, 0.32);
     a = Math.max(a, star.radius * 0.00465 * 4 + 0.02);
     for (let i = 0; i < n; i++) { orbits.push(a); a *= r.range(1.45, 2.05); }
@@ -1495,12 +1538,22 @@ const SystemGen = (() => {
       const k = r.range(hzIn * 1.02, hzOut * 0.9) / orbits[hzSlot];
       for (let i = 0; i < n; i++) orbits[i] *= k;
     }
-    const sys = { star, planets: [], belts: [], hzIn, hzOut, frost, key };
-    for (let i = 0; i < n; i++) sys.planets.push(PlanetGen.create({ seed: RNG.hash(star.seed, 'planet', i), index: i, star, a: orbits[i], frost, system: sys }));
+    let lost = 0;
+    if (Z) {
+      // inside the critical distance of a close pair the orbits are chaotic: the whole family forms further out
+      if (orbits.length && orbits[0] < Z.aMin * 1.12) { const k = Z.aMin * 1.12 / orbits[0]; orbits = orbits.map((q) => q * k); }
+      // beyond the reach of a companion nothing survives
+      const keep = orbits.filter((q) => q <= Z.aMax);
+      lost = orbits.length - keep.length; orbits = keep; n = orbits.length;
+    }
+    const sys = { star, planets: [], belts: [], hzIn, hzOut, frost, key, multi: star.multi || null, lost };
+    for (let i = 0; i < n; i++) sys.planets.push(PlanetGen.create(Object.assign({ seed: RNG.hash(star.seed, 'planet', i), index: i, star, a: orbits[i], frost, system: sys }, Z ? { lum: L, mass: Mh } : null)));
+    const inZone = (q) => !Z || (q > Z.aMin && q < Z.aMax);
     if (n > 1 && r.chance(0.55)) {
       const j = r.int(0, n - 2);
       sys.belts.push({ a: Math.sqrt(orbits[j] * orbits[j + 1]), width: r.range(0.08, 0.2), count: r.int(220, 520), seed: r.next() * 1000 });
-    } else if (r.chance(0.3)) sys.belts.push({ a: (orbits[n - 1] || 1) * 1.6, width: r.range(0.1, 0.25), count: r.int(300, 600), seed: r.next() * 1000 });
+    } else if (r.chance(0.3)) sys.belts.push({ a: (orbits[n - 1] || Math.max(1, Z ? Z.aMin * 1.3 : 1)) * 1.6, width: r.range(0.1, 0.25), count: r.int(300, 600), seed: r.next() * 1000 });
+    sys.belts = sys.belts.filter((b) => inZone(b.a));
     sys.comets = [];
     for (let c = 0, nc = r.int(0, 2); c < nc; c++) sys.comets.push({ a: (orbits[n - 1] || 2) * r.range(0.6, 1.2), e: r.range(0.7, 0.9), phase: r.next(), w: r.range(0, TAU), period: r.range(300, 900) });
     // system level stats
@@ -1556,6 +1609,796 @@ const Codes = {
 };
 </script>
 
+<!-- ===== Cosmos · galaxies, sector regions, cosmic structures, multiple stars ===== -->
+<script>
+'use strict';
+/* =============================================================================
+   COSMOS · the large-scale structure of a universe. Every sector holds a galaxy,
+   a field of scattered star systems, or an empty void. Galaxies have their own
+   type, scale, orientation and supermassive core, and place their stars by
+   population (young stars in the arms, old ones in the bulge and halo). Nebulae,
+   clouds, stellar nurseries, remnants and stranger formations fill (and float
+   between) them. Some stars come in pairs or triples, and their companions shape
+   where planets can form. All of it is a pure function of the universe seed.
+   ============================================================================= */
+const Cosmos = (() => {
+  const regions = new Map(), structs = new Map(), lights = new Map(), parts = new Map();
+  let noise = null, noiseSeed = -1;
+  const N3 = () => { if (noiseSeed !== Universe.seed) { noise = new Noise.Simplex(Universe.seed ^ 0x3c05ca); noiseSeed = Universe.seed; } return noise; };
+  const K = (sx, sz, tag) => Universe.seed + ':' + sx + ',' + sz + (tag ? ':' + tag : '');
+  const trim = (m, max) => { while (m.size > max) m.delete(m.keys().next().value); };
+  // one universe unit is about two thousand light-years at galactic scale
+  const KLY = 2;
+  const randDir = (r) => { const z = r.range(-1, 1), a = r.range(0, TAU), q = Math.sqrt(1 - z * z); return [q * Math.cos(a), z, q * Math.sin(a)]; };
+  const inBall = (r) => { const d = randDir(r), k = Math.cbrt(r.next()); return [d[0] * k, d[1] * k, d[2] * k]; };
+  function basis(n) {
+    const t = Math.abs(n[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0];
+    const u = V3.norm(V3.cross(t, n)), v = V3.cross(n, u);
+    return { u, v, n };
+  }
+  const hueShift = (c, dh) => { const h = Color.toHsv(c); return Color.hsv(h[0] + dh, h[1], h[2]); };
+
+  /* ---------------------------------------------------------------- regions */
+  const REGIONS = {
+    galaxy: { name: 'Galaxy', desc: 'A galaxy: many star systems bound around a supermassive core.' },
+    scattered: { name: 'Scattered systems', desc: 'Intergalactic field: independent star systems scattered far from any galaxy.' },
+    empty: { name: 'Empty void', desc: 'A cosmic void: no significant stars or structures, only the thinnest intergalactic gas.' },
+  };
+  // what a sector holds: galaxies are common, scattered fields less so, voids rare (and likelier where the cosmic web is thin)
+  function regionOf(sx, sz) {
+    const key = K(sx, sz);
+    let R = regions.get(key);
+    if (R) return R;
+    const d = Universe.density(sx, sz), r = new RNG.Rand(RNG.hash(Universe.seed, sx, sz, 'region'));
+    const pEmpty = 0.03 + 0.11 * (1 - d) * (1 - d), pScat = 0.12 + 0.17 * (1 - d), u = r.next();
+    const type = u < pEmpty ? 'empty' : u < pEmpty + pScat ? 'scattered' : 'galaxy';
+    R = { sx, sz, type, d, key, info: REGIONS[type], galaxy: null };
+    if (type === 'galaxy') R.galaxy = makeGalaxy(sx, sz, d);
+    regions.set(key, R); trim(regions, 8000);
+    return R;
+  }
+
+  /* ---------------------------------------------------------------- galaxies */
+  const GTYPES = {
+    spiral: { name: 'Spiral galaxy', short: 'spiral', desc: 'A rotating disk of stars, gas and dust wound into bright spiral arms around a central bulge. Young blue stars and stellar nurseries crowd the arms; older stars fill the bulge.' },
+    barred: { name: 'Barred spiral galaxy', short: 'barred spiral', desc: 'A spiral galaxy whose arms spring from the ends of a straight bar of old stars across its core; the bar funnels gas toward the centre.' },
+    disk: { name: 'Disk galaxy', short: 'disk', desc: 'A smooth, flattened disk of stars around a prominent bulge, with little gas left to make new stars and no spiral arms (a lenticular galaxy).' },
+    elliptical: { name: 'Elliptical galaxy', short: 'elliptical', desc: 'A vast, smooth swarm of old red and yellow stars on random orbits, shaped like a squashed ball. Almost no gas, very few young stars.' },
+    irregular: { name: 'Irregular galaxy', short: 'irregular', desc: 'A small, shapeless galaxy of bright star-forming knots and scattered clouds, rich in gas and busy making new stars.' },
+    ring: { name: 'Ring galaxy', short: 'ring', desc: 'A collision punched through this galaxy: a ring of newborn stars expands around a compact core like a ripple on a pond.' },
+  };
+  const CORES = {
+    smbh: { name: 'Supermassive black hole', short: 'black hole', m: [6, 9.4], l: [3.5, 7], col: [1, 0.62, 0.3], glow: 0.55, desc: 'A quiet supermassive black hole. Stars race around an invisible centre; only a faint ring of hot gas marks the edge of the darkness.' },
+    seyfert: { name: 'Active galactic nucleus', short: 'active nucleus', m: [6.5, 8.6], l: [9, 11.2], col: [0.85, 0.8, 1], glow: 1.1, desc: 'A black hole feeding steadily on its disk of gas: a bright, flickering nucleus wrapped in glowing ionised clouds (a Seyfert galaxy).' },
+    quasar: { name: 'Quasar', short: 'quasar', m: [8.3, 10.2], l: [12, 13.9], col: [0.7, 0.85, 1], glow: 2.1, jets: [0.8, 1.35], desc: 'A supermassive black hole swallowing gas at a furious rate. Its accretion disk outshines every star in the galaxy, and twin relativistic jets pierce far beyond the disk.' },
+    blazar: { name: 'Blazar', short: 'blazar', m: [8.5, 10], l: [12.5, 14.2], col: [0.78, 0.72, 1], glow: 2.4, jets: [0.5, 0.9], flicker: 1, desc: 'A quasar with a jet aimed almost along our line of sight: violently variable, flaring from hour to hour.' },
+    radio: { name: 'Radio galaxy nucleus', short: 'radio core', m: [8.4, 9.9], l: [10.5, 12.2], col: [0.9, 0.75, 1], glow: 1.2, jets: [1.3, 2.1], lobes: true, desc: 'Jets from the central black hole run far outside the galaxy and balloon into vast lobes of magnetised plasma.' },
+    binary: { name: 'Binary supermassive black hole', short: 'binary black hole', m: [7, 9.2], l: [8, 10.8], col: [1, 0.7, 0.4], glow: 0.8, desc: 'Two supermassive black holes, left behind by a merger of galaxies, circling each other ever closer; one day they will collide in a burst of gravitational waves.' },
+    cluster: { name: 'Nuclear star cluster', short: 'nuclear cluster', m: [6.3, 7.8], l: [6.8, 8.3], col: [1, 0.9, 0.75], glow: 0.9, desc: 'Millions of stars packed into a few light-years around a modest black hole: the densest stellar city in the galaxy.' },
+    imbh: { name: 'Intermediate-mass black hole', short: 'black hole', m: [3.6, 5.6], l: [2.5, 5.5], col: [1, 0.66, 0.36], glow: 0.4, desc: 'A black hole of thousands of suns, the seed of a supermassive one, anchoring this small galaxy.' },
+  };
+  const CORE_W = {
+    spiral: [['smbh', 52], ['seyfert', 24], ['binary', 6], ['quasar', 7], ['cluster', 5], ['radio', 3], ['blazar', 3]],
+    barred: [['smbh', 48], ['seyfert', 28], ['binary', 6], ['quasar', 8], ['cluster', 5], ['radio', 2], ['blazar', 3]],
+    disk: [['smbh', 60], ['seyfert', 16], ['binary', 8], ['quasar', 6], ['cluster', 6], ['radio', 2], ['blazar', 2]],
+    elliptical: [['smbh', 34], ['quasar', 22], ['radio', 18], ['blazar', 10], ['binary', 12], ['seyfert', 4]],
+    irregular: [['cluster', 45], ['imbh', 38], ['smbh', 12], ['seyfert', 5]],
+    ring: [['smbh', 55], ['seyfert', 20], ['cluster', 15], ['quasar', 5], ['binary', 5]],
+  };
+  const GAS = { spiral: 0.8, barred: 0.75, disk: 0.25, elliptical: 0.07, irregular: 1, ring: 0.85 };
+  function makeGalaxy(sx, sz, d) {
+    const SEC = Universe.SECTOR, seed = RNG.hash(Universe.seed, sx, sz, 'galaxy'), r = new RNG.Rand(seed);
+    const type = r.weighted([['spiral', 34], ['barred', 20], ['disk', 19], ['elliptical', 12 * (0.55 + d)], ['irregular', 11 * (1.25 - d * 0.6)], ['ring', 4]]);
+    const R = type === 'irregular' ? r.range(8, 15) : type === 'elliptical' ? r.range(12, 25) : r.range(15, 27) * (0.88 + 0.2 * d);
+    const m = Math.min(SEC / 2 - 1, R * 1.12 + 2);
+    const c = [sx * SEC + r.range(m, SEC - m), r.range(-12, 12), sz * SEC + r.range(m, SEC - m)];
+    // (mostly seen near face-on across the plane of sectors, a few steeply tilted)
+    const inc = Math.acos(1 - 0.58 * Math.pow(r.next(), 1.5)), pa = r.range(0, TAU);
+    const n = [Math.sin(inc) * Math.cos(pa), Math.cos(inc), Math.sin(inc) * Math.sin(pa)], B = basis(n);
+    const G = { seed, sx, sz, id: `${sx},${sz}`, type, T: GTYPES[type], R, c, inc, pa, n, u: B.u, v: B.v, d };
+    G.root = Names.word(r, 2, 3);
+    G.phase = r.range(0, TAU); G.twist = r.sign();
+    G.arms = type === 'spiral' || type === 'barred' ? r.weighted([[2, 50], [3, 24], [4, 15], [5, 6], [6, 3]]) : 0;
+    // (arm pitch: many-armed spirals open wider, so their arms do not wind into rings)
+    G.pitch = r.range(0.24, 0.52) + (G.arms > 3 ? 0.1 : 0); G.armW = r.range(0.16, 0.34);
+    G.bulge = R * (type === 'disk' ? r.range(0.2, 0.32) : type === 'elliptical' ? 0.35 : type === 'irregular' ? r.range(0.05, 0.1) : r.range(0.1, 0.2));
+    G.h = R * r.range(0.26, 0.38); G.thick = R * (type === 'irregular' ? r.range(0.08, 0.14) : r.range(0.035, 0.07));
+    G.bar = type === 'barred' ? R * r.range(0.24, 0.42) : 0;
+    G.ring = type === 'ring' ? { r: R * r.range(0.58, 0.82), w: R * r.range(0.06, 0.12) } : null;
+    G.axes = type === 'elliptical' ? [1, r.range(0.55, 1), r.range(0.42, 0.95)] : null;
+    G.clumps = type === 'irregular' ? Array.from({ length: r.int(3, 6) }, () => ({ x: r.gauss() * R * 0.42, z: r.gauss() * R * 0.42, y: r.gauss() * R * 0.05, s: R * r.range(0.14, 0.34), w: r.range(0.5, 1.5) })) : null;
+    G.gas = clamp(GAS[type] * r.range(0.7, 1.25), 0.02, 1.2);
+    const hs = r.range(-0.05, 0.05);
+    G.col = { bulge: hueShift([1, 0.8, 0.56], hs), disk: hueShift([0.95, 0.9, 0.86], hs), arm: hueShift([0.55, 0.7, 1], hs), hii: hueShift([1, 0.4, 0.6], hs * 0.5), dust: [0.05, 0.035, 0.03] };
+    if (type === 'elliptical') { G.col.disk = G.col.bulge; G.col.arm = hueShift([1, 0.86, 0.68], hs); }
+    if (type === 'irregular') G.col.disk = hueShift([0.7, 0.8, 1], hs);
+    const nb = { spiral: [55, 120], barred: [55, 120], disk: [45, 100], elliptical: [40, 110], irregular: [22, 55], ring: [40, 85] }[type];
+    G.nStars = Math.round(lerp(nb[0], nb[1], clamp((R - (type === 'irregular' ? 8 : 12)) / 14, 0, 1) * 0.75 + r.next() * 0.25));
+    const suffix = { spiral: r.pick([' Galaxy', ' Galaxy', ' Spiral', ' Whirl']), barred: r.pick([' Galaxy', ' Galaxy', ' Spiral']), disk: r.pick([' Galaxy', ' Galaxy', ' Lens']), elliptical: ' Galaxy', irregular: r.pick([' Cloud', ' Galaxy', ' Drift']), ring: r.pick([' Ring', ' Wheel', ' Galaxy']) }[type];
+    G.name = G.root + suffix;
+    G.catalog = `${['NGC', 'PGC', 'UGC', 'ESO'][RNG.hash(seed, 'cat') % 4]} ${1000 + (RNG.hash(seed, 'num') % 9000)}`;
+    G.core = makeCore(G, r);
+    return G;
+  }
+  function makeCore(G, r) {
+    const key = r.weighted(CORE_W[G.type]), C = CORES[key], k = clamp(G.R / 20, 0.5, 1.4);
+    const core = { key, C, name: C.name, short: C.short, G, pos: G.c, mass: Math.pow(10, r.range(C.m[0], C.m[1])) * k, lum: Math.pow(10, r.range(C.l[0], C.l[1])), spin: r.range(0.3, 0.998) };
+    core.title = `${G.root} ${key === 'quasar' || key === 'blazar' ? 'Q' : key === 'cluster' ? 'Nucleus' : 'A*'}`;
+    core.hole = G.R * 0.035 + 0.6;
+    if (C.jets) {
+      const tilt = r.range(0, 0.4), az = r.range(0, TAU), b = basis(G.n);
+      core.jet = V3.norm(V3.add(V3.scale(G.n, Math.cos(tilt)), V3.add(V3.scale(b.u, Math.sin(tilt) * Math.cos(az)), V3.scale(b.v, Math.sin(tilt) * Math.sin(az)))));
+      core.jetLen = G.R * r.range(C.jets[0], C.jets[1]);
+      // (the jets stay inside the sector)
+      const lim = Universe.SECTOR * 0.45; core.jetLen = Math.min(core.jetLen, lim);
+    }
+    if (key === 'binary') { core.mass2 = core.mass * r.range(0.2, 0.9); core.sepPc = r.range(0.01, 3); core.period = r.range(2, 400); }
+    if (key === 'cluster') core.stars = Math.pow(10, r.range(6.3, 7.8));
+    return core;
+  }
+  // population of a stellar class: where in a galaxy such stars live
+  const POP = { O: 'young', B: 'young', A: 'young', F: 'mid', G: 'mid', K: 'common', M: 'common', D: 'old', RG: 'old', NS: 'old', BH: 'old' };
+  const COMP = {
+    spiral: { young: [['arm', 86], ['disk', 11], ['bulge', 3]], mid: [['arm', 46], ['disk', 38], ['bulge', 14], ['halo', 2]], common: [['arm', 38], ['disk', 40], ['bulge', 18], ['halo', 4]], old: [['arm', 10], ['disk', 28], ['bulge', 50], ['halo', 12]] },
+    barred: { young: [['arm', 82], ['disk', 10], ['bar', 5], ['bulge', 3]], mid: [['arm', 42], ['disk', 32], ['bar', 12], ['bulge', 12], ['halo', 2]], common: [['arm', 34], ['disk', 34], ['bar', 12], ['bulge', 16], ['halo', 4]], old: [['arm', 8], ['disk', 24], ['bar', 18], ['bulge', 40], ['halo', 10]] },
+    disk: { young: [['disk', 80], ['ring', 12], ['bulge', 8]], mid: [['disk', 65], ['bulge', 32], ['halo', 3]], common: [['disk', 62], ['bulge', 32], ['halo', 6]], old: [['disk', 35], ['bulge', 52], ['halo', 13]] },
+    elliptical: { young: [['ell', 95], ['halo', 5]], mid: [['ell', 93], ['halo', 7]], common: [['ell', 92], ['halo', 8]], old: [['ell', 88], ['halo', 12]] },
+    irregular: { young: [['clump', 92], ['diffuse', 8]], mid: [['clump', 70], ['diffuse', 30]], common: [['clump', 66], ['diffuse', 34]], old: [['clump', 50], ['diffuse', 50]] },
+    ring: { young: [['ring', 92], ['diffuse', 8]], mid: [['ring', 55], ['nucleus', 25], ['diffuse', 20]], common: [['ring', 50], ['nucleus', 30], ['diffuse', 20]], old: [['ring', 20], ['nucleus', 60], ['diffuse', 20]] },
+  };
+  const COMP_NAME = { arm: 'a spiral arm', disk: 'the galactic disk', bulge: 'the central bulge', bar: 'the central bar', halo: 'the stellar halo', ell: 'the body of the galaxy', clump: 'a star-forming knot', diffuse: 'the outskirts', ring: 'the ring of star formation', nucleus: 'the nucleus' };
+  const expo = (r) => -Math.log(1 - r.next() * 0.985) * 0.9;
+  // a point of a galaxy in its own frame: x and z in the disk plane, y along the rotation axis
+  function sampleLocal(G, r, comp, young, out) {
+    const R = G.R;
+    let x = 0, y = 0, z = 0;
+    switch (comp) {
+      case 'bulge': case 'nucleus': { const s = G.bulge * (comp === 'nucleus' ? 0.7 : 0.62); x = r.gauss() * s; y = r.gauss() * s * 0.72; z = r.gauss() * s; break; }
+      case 'bar': { const L = G.bar || G.bulge, a = G.phase, t = r.range(-1, 1) * L, w = r.gauss() * L * 0.16; x = Math.cos(a) * t - Math.sin(a) * w; z = Math.sin(a) * t + Math.cos(a) * w; y = r.gauss() * G.thick; break; }
+      case 'arm': {
+        const r0 = Math.max(G.bar || 0, G.bulge * 0.9), rho = clamp(r0 + expo(r) * G.h, r0 * 0.9, R);
+        const k = r.int(0, Math.max(1, G.arms) - 1), spread = G.armW * (young ? 0.55 : 1.1) * (0.6 + 0.4 * r0 / Math.max(rho, 1e-3));
+        const th = G.phase + k * TAU / Math.max(1, G.arms) + G.twist * Math.log(Math.max(rho, r0) / Math.max(r0, 0.5)) / Math.tan(G.pitch) + r.gauss() * spread;
+        x = Math.cos(th) * rho; z = Math.sin(th) * rho; y = r.gauss() * G.thick * (young ? 0.55 : 1);
+        break;
+      }
+      case 'ring': { const rg = G.ring || { r: R * 0.7, w: R * 0.1 }, rho = rg.r + r.gauss() * rg.w, th = r.range(0, TAU); x = Math.cos(th) * rho; z = Math.sin(th) * rho; y = r.gauss() * G.thick; break; }
+      case 'halo': { const dd = R * Math.cbrt(r.next()) * 1.05, p = randDir(r); x = p[0] * dd; y = p[1] * dd * 0.8; z = p[2] * dd; break; }
+      case 'ell': { const a = G.axes || [1, 1, 1], s = R * 0.42; x = r.gauss() * s * a[0]; y = r.gauss() * s * a[2]; z = r.gauss() * s * a[1]; break; }
+      case 'clump': { const cl = G.clumps ? r.weighted(G.clumps.map((q) => [q, q.w])) : { x: 0, z: 0, y: 0, s: R * 0.3 }; x = cl.x + r.gauss() * cl.s; z = cl.z + r.gauss() * cl.s; y = cl.y + r.gauss() * G.thick; break; }
+      case 'diffuse': { const dd = R * 0.85 * Math.sqrt(r.next()), th = r.range(0, TAU); x = Math.cos(th) * dd; z = Math.sin(th) * dd; y = r.gauss() * G.thick * 1.6; break; }
+      default: { const rho = clamp(G.bulge * 0.5 + expo(r) * G.h, 0, R * 1.02), th = r.range(0, TAU); x = Math.cos(th) * rho; z = Math.sin(th) * rho; y = r.gauss() * G.thick * 1.3; }
+    }
+    // nothing sits on top of the central object, and the galaxy keeps inside its sector
+    let l = Math.hypot(x, y, z);
+    const hole = G.core ? G.core.hole : 1;
+    if (l < hole) { if (l < 1e-4) { x = hole; l = hole; } else { const k = hole / l; x *= k; y *= k; z *= k; l = hole; } }
+    const lim = R * 1.12;
+    if (l > lim) { const k = lim / l; x *= k; y *= k; z *= k; }
+    out[0] = x; out[1] = y; out[2] = z;
+    return out;
+  }
+  function toWorld(G, x, y, z, out = [0, 0, 0]) {
+    const u = G.u, v = G.v, n = G.n, c = G.c;
+    out[0] = c[0] + u[0] * x + v[0] * z + n[0] * y; out[1] = c[1] + u[1] * x + v[1] * z + n[1] * y; out[2] = c[2] + u[2] * x + v[2] * z + n[2] * y;
+    return out;
+  }
+  // where a star of a given class lives in its galaxy (its own hash stream: the star itself is unchanged)
+  function placeStar(G, seed, cls) {
+    const r = new RNG.Rand(RNG.hash(seed, 'galactic-orbit')), pop = POP[cls] || 'common', tab = COMP[G.type];
+    const comp = r.weighted(tab[pop] || tab.common), p = sampleLocal(G, r, comp, pop === 'young', [0, 0, 0]);
+    return { pos: toWorld(G, p[0], p[1], p[2]), comp, rho: Math.hypot(p[0], p[2]), h: p[1], dist: Math.hypot(p[0], p[1], p[2]) };
+  }
+  // the unresolved light of a galaxy: a cloud of glow points (and dark dust) following its structure
+  const LIGHT_N = [1500, 600, 200, 70];
+  // what that light is made of (a spiral's arms carry most of it)
+  const LIGHT_COMP = {
+    spiral: [['arm', 58], ['disk', 20], ['bulge', 16], ['halo', 6]],
+    barred: [['arm', 50], ['disk', 16], ['bar', 16], ['bulge', 12], ['halo', 6]],
+    disk: [['disk', 68], ['bulge', 24], ['ring', 2], ['halo', 6]],
+    elliptical: [['ell', 92], ['halo', 8]],
+    irregular: [['clump', 70], ['diffuse', 30]],
+    ring: [['ring', 70], ['nucleus', 20], ['diffuse', 10]],
+  };
+  function lightOf(G, lod) {
+    const key = G.seed + ':' + lod;
+    let L = lights.get(key);
+    if (L) return L;
+    const fac = { irregular: 0.6, elliptical: 0.85, disk: 0.9, ring: 0.8 }[G.type] || 1, n = Math.round(LIGHT_N[lod] * fac);
+    const r = new RNG.Rand(RNG.hash(G.seed, 'light', lod)), p = [0, 0, 0], w = [0, 0, 0], Gl = { ...G, armW: G.armW * 0.62 };
+    const k = Math.sqrt(LIGHT_N[0] / Math.max(1, LIGHT_N[lod])), pts = new Float32Array(n * 8);
+    for (let i = 0; i < n; i++) {
+      const comp = r.weighted(LIGHT_COMP[G.type]), starry = comp === 'arm' || comp === 'ring' || comp === 'clump', young = starry && r.chance(0.55);
+      sampleLocal(Gl, r, comp, young, p); toWorld(G, p[0], p[1], p[2], w);
+      let col = starry ? (young ? G.col.arm : Color.mix(G.col.disk, G.col.arm, 0.35)) : comp === 'disk' || comp === 'diffuse' ? G.col.disk : G.col.bulge;
+      if (young && r.chance(0.14)) col = G.col.hii;
+      // (the crowded centre is drawn with fewer, fainter, larger points so it glows instead of burning out)
+      const core = comp === 'bulge' || comp === 'nucleus' || comp === 'ell' || comp === 'bar', dc = Math.hypot(p[0], p[1], p[2]) / Math.max(1, G.bulge);
+      const a = (core ? (comp === 'ell' ? 0.2 : 0.13) * clamp(0.35 + dc * 0.5, 0.35, 1) : comp === 'halo' ? 0.07 : comp === 'disk' || comp === 'diffuse' ? 0.13 : 0.3) * r.range(0.6, 1.2);
+      const j = i * 8;
+      pts[j] = w[0]; pts[j + 1] = w[1]; pts[j + 2] = w[2]; pts[j + 3] = col[0]; pts[j + 4] = col[1]; pts[j + 5] = col[2];
+      pts[j + 6] = Math.min(1, a * Math.min(k, 2.2)); pts[j + 7] = (core ? 1.35 : 1) * r.range(0.9, 1.5) * Math.pow(k, 0.55);
+    }
+    // dust lanes along the inner edges of the arms, a lane across disk galaxies, patches in irregulars
+    const dustN = G.type === 'elliptical' ? 0 : Math.round(n * (G.type === 'disk' ? 0.12 : G.type === 'irregular' ? 0.14 : 0.24) * Math.min(1.2, G.gas + 0.3));
+    const dust = new Float32Array(dustN * 8), gd = { ...G, armW: G.armW * 0.45, phase: G.phase - G.twist * 0.16 };
+    for (let i = 0; i < dustN; i++) {
+      if (G.arms) sampleLocal(gd, r, 'arm', true, p);
+      else if (G.type === 'ring') sampleLocal(G, r, 'ring', true, p);
+      else if (G.type === 'irregular') sampleLocal(G, r, 'clump', true, p);
+      else { const rho = G.R * r.range(0.35, 0.62), th = r.range(0, TAU); p[0] = Math.cos(th) * rho; p[2] = Math.sin(th) * rho; p[1] = r.gauss() * G.thick * 0.3; }
+      toWorld(G, p[0], p[1], p[2], w);
+      const j = i * 8;
+      dust[j] = w[0]; dust[j + 1] = w[1]; dust[j + 2] = w[2]; dust[j + 3] = G.col.dust[0]; dust[j + 4] = G.col.dust[1]; dust[j + 5] = G.col.dust[2];
+      dust[j + 6] = 0.5 * r.range(0.6, 1); dust[j + 7] = r.range(1.2, 2.2) * Math.pow(k, 0.55);
+    }
+    L = { pts, dust, n, dustN };
+    lights.set(key, L); trim(lights, 700);
+    return L;
+  }
+  // a galaxy containing a point (with how deep inside it is: 0 at the core, 1 at the edge)
+  function galaxyAt(pos) {
+    const S = Universe.SECTOR, sx = Math.floor(pos[0] / S), sz = Math.floor(pos[2] / S);
+    const R = regionOf(sx, sz);
+    if (!R.galaxy) return null;
+    const G = R.galaxy, d = V3.sub(pos, G.c), h = V3.dot(d, G.n), rho = Math.hypot(V3.dot(d, G.u), V3.dot(d, G.v));
+    const k = Math.hypot(rho / G.R, h / (G.type === 'elliptical' ? G.R : G.R * 0.35));
+    return k < 1.35 ? { G, k, rho, h } : null;
+  }
+
+  /* ---------------------------------------------------------------- cosmic structures */
+  const SKINDS = {
+    emission: { name: 'Emission nebula', size: [2, 5], count: 1, gal: true, morphs: [['blob', 3], ['cavity', 2.5], ['pillars', 1.5], ['filaments', 1.4], ['eye', 0.3], ['spiral', 0.3]], desc: 'Hydrogen lit up by the ultraviolet light of hot young stars glows red and pink; oxygen adds teal.' },
+    nursery: { name: 'Stellar nursery', size: [2.2, 5.5], count: 1.2, gal: true, morphs: [['pillars', 4], ['blob', 2], ['cavity', 1.5], ['crown', 0.6]], desc: 'A cold, dense molecular cloud collapsing into new stars. Their light carves the dust into pillars and bright rims.' },
+    reflection: { name: 'Reflection nebula', size: [1.2, 3], count: 0.7, gal: true, morphs: [['fan', 2], ['veil', 2], ['blob', 1]], desc: 'Dust scattering the blue light of nearby stars, like a sunlit haze.' },
+    dark: { name: 'Dark nebula', size: [1.2, 3.5], count: 0.8, gal: true, morphs: [['globule', 2], ['lane', 2], ['pillars', 1], ['comet', 1]], desc: 'A cloud of cold dust so thick it blots out the light behind it; only its edges glow.' },
+    planetary: { name: 'Planetary nebula', size: [0.7, 1.8], count: 0.8, gal: true, morphs: [['ring', 3], ['eye', 3], ['hourglass', 2.5], ['shell', 2], ['helix', 1.5], ['lens', 0.6], ['spiral', 0.5]], desc: 'The outer layers of a dying sun-like star, cast off into glowing shells around the white dwarf left at its heart.' },
+    remnant: { name: 'Supernova remnant', size: [1.2, 3.2], count: 0.9, gal: true, morphs: [['shell', 3], ['filaments', 3], ['veil', 2], ['crab', 1.5]], desc: 'The debris of an exploded star: filaments of shocked gas racing outward at thousands of kilometres per second.' },
+    cloud: { name: 'Gas and dust cloud', size: [3, 7], count: 1, gal: true, morphs: [['blob', 3], ['filaments', 2], ['sheet', 1.5], ['stream', 1]], desc: 'A drifting cloud of cold gas and dust, the raw material of future stars.' },
+    cavity: { name: 'Superbubble', size: [3, 7], count: 1, gal: true, morphs: [['cavity', 1]], desc: 'A vast cavity blown clear by the winds and supernovae of a whole cluster of massive stars, rimmed with compressed gas.' },
+    globular: { name: 'Globular cluster', size: [0.8, 1.6], count: 0.8, gal: true, morphs: [['globular', 1]], desc: 'A tight ball of hundreds of thousands of ancient stars orbiting in the halo, as old as the galaxy itself.' },
+    open: { name: 'Open star cluster', size: [0.8, 2], count: 0.6, gal: true, morphs: [['open', 1]], desc: 'A loose family of young stars born together from one cloud, slowly drifting apart.' },
+    intergalactic: { name: 'Intergalactic gas cloud', size: [8, 18], count: 1.4, gal: false, morphs: [['blob', 2], ['sheet', 2], ['filaments', 1.5], ['stream', 1]], desc: 'Tenuous, million-degree gas adrift between the galaxies, part of the cosmic web.' },
+    filament: { name: 'Cosmic filament', size: [12, 26], count: 1.4, gal: false, morphs: [['stream', 3], ['filaments', 2]], desc: 'A thread of the cosmic web: gas and dark matter strung between the galaxies.' },
+    void: { name: 'Intergalactic cavity', size: [8, 16], count: 1.2, gal: false, morphs: [['cavity', 1]], desc: 'A bubble in the intergalactic gas, hollowed out by an ancient outflow and rimmed by denser gas.' },
+    tidal: { name: 'Tidal stream', size: [10, 30], count: 1.4, gal: false, morphs: [['stream', 1]], desc: 'Stars and gas torn out of two galaxies as they passed close to each other, drawn into a long bridge.' },
+    exotic: { name: 'Anomalous formation', size: [1.5, 5], count: 1.1, gal: true, morphs: [['lattice', 1], ['knot', 1], ['crown', 1], ['jellyfish', 1], ['tendrils', 1], ['torus', 0.8], ['lens', 0.6], ['spiral', 0.6], ['composite', 3]], desc: 'A formation that follows no known pattern. Its shape and glow defy easy explanation.' },
+  };
+  const MORPH = {
+    blob: 'Diffuse cloud', cavity: 'Bubble cavity', pillars: 'Pillars', filaments: 'Filaments', eye: 'Eye', spiral: 'Whirl', crown: 'Crown', fan: 'Fan', veil: 'Veil', globule: 'Globule', lane: 'Dust lane', comet: 'Cometary globule',
+    ring: 'Ring', hourglass: 'Hourglass (bipolar)', shell: 'Shell', helix: 'Helix', lens: 'Lens', crab: 'Filamentary cloud', sheet: 'Sheet', stream: 'Stream', globular: 'Dense sphere', open: 'Loose group',
+    lattice: 'Lattice', knot: 'Knot', jellyfish: 'Jellyfish', tendrils: 'Tendrils', torus: 'Torus', composite: 'Composite',
+  };
+  const HA = [1, 0.3, 0.42], OIII = [0.3, 0.95, 0.85], SII = [0.88, 0.2, 0.24], REFL = [0.42, 0.6, 1], DUSTG = [0.8, 0.45, 0.28], COLDG = [0.5, 0.56, 0.95], IGM = [0.52, 0.44, 0.95];
+  function palette(kind, r) {
+    switch (kind) {
+      case 'emission': return [HA, r.chance(0.5) ? OIII : SII, [1, 0.78, 0.82]];
+      case 'nursery': return [HA, DUSTG, [1, 0.86, 0.72]];
+      case 'reflection': return [REFL, [0.62, 0.76, 1], [0.92, 0.96, 1]];
+      case 'dark': return [[0.45, 0.22, 0.15], DUSTG, [1, 0.62, 0.42]];
+      case 'planetary': return r.chance(0.7) ? [HA, OIII, [0.75, 0.85, 1]] : [OIII, [0.5, 0.6, 1], [1, 0.5, 0.6]];
+      case 'remnant': return [SII, OIII, [0.62, 0.5, 1]];
+      case 'cloud': return r.chance(0.5) ? [DUSTG, [0.6, 0.32, 0.22], [1, 0.72, 0.5]] : [COLDG, [0.45, 0.7, 0.95], [0.82, 0.86, 1]];
+      case 'cavity': return [HA, OIII, [1, 0.82, 0.86]];
+      case 'globular': return [[1, 0.86, 0.64], [1, 0.72, 0.5], [1, 0.95, 0.85]];
+      case 'open': return [[0.6, 0.75, 1], [0.8, 0.88, 1], [1, 1, 1]];
+      case 'intergalactic': case 'filament': case 'void': return [IGM, [0.36, 0.6, 0.95], [0.76, 0.62, 1]];
+      case 'tidal': return [[0.78, 0.76, 0.95], [0.55, 0.65, 1], [1, 0.9, 0.8]];
+      default: { const h = r.next(); return [Color.hsv(h, 0.72, 1), Color.hsv(h + r.range(0.15, 0.45), 0.66, 1), Color.hsv(h + 0.5, 0.4, 1)]; }
+    }
+  }
+  const EXO_ADJ = ['Twisted', 'Broken', 'Split', 'Coiled', 'Hollow', 'Braided', 'Spined', 'Folded', 'Shattered', 'Mirrored', 'Knotted', 'Weeping', 'Burning', 'Silent', 'Inverted'];
+  const EXO_NOUN = ['Crown', 'Lattice', 'Shell', 'Veil', 'Spiral', 'Web', 'Bloom', 'Lantern', 'Spindle', 'Chalice', 'Wheel', 'Cradle', 'Harp', 'Lotus', 'Spire'];
+  function nameOf(S, r) {
+    const w = Names.word(r, 2, 3), m = S.morph;
+    switch (S.kind) {
+      case 'emission': return m === 'pillars' ? `Pillars of ${w}` : m === 'cavity' ? `${w} Bubble` : m === 'eye' ? `${w} Eye` : m === 'spiral' ? `${w} Whirl Nebula` : `${w} Nebula`;
+      case 'nursery': return m === 'pillars' ? `Pillars of ${w}` : m === 'crown' ? `${w} Crown` : `${w} Nursery`;
+      case 'reflection': return m === 'veil' ? `${w} Veil` : `${w} Reflection Nebula`;
+      case 'dark': return m === 'globule' ? `${w} Globule` : m === 'lane' ? `${w} Dark Lane` : m === 'comet' ? `${w} Cometary Globule` : `${w} Horn`;
+      case 'planetary': return m === 'ring' ? `${w} Ring` : m === 'eye' ? `${w} Eye` : m === 'hourglass' ? `${w} Hourglass` : m === 'helix' ? `${w} Helix` : m === 'lens' ? `${w} Lens` : m === 'spiral' ? `${w} Spiral` : `${w} Shell`;
+      case 'remnant': return m === 'veil' ? `${w} Veil` : m === 'crab' ? `${w} Remnant` : m === 'shell' ? `${w} Shell Remnant` : `${w} Filaments`;
+      case 'cloud': return `${w} Cloud`;
+      case 'cavity': return `${w} Superbubble`;
+      case 'globular': return `${w} Globular`;
+      case 'open': return `${w} Cluster`;
+      case 'intergalactic': return `${w} Intergalactic Cloud`;
+      case 'filament': return `${w} Filament`;
+      case 'void': return `${w} Cavity`;
+      case 'tidal': return `${w} Tidal Stream`;
+      default: return r.chance(0.5) ? `The ${r.pick(EXO_ADJ)} ${r.pick(EXO_NOUN)}` : `${w} ${r.pick(EXO_NOUN)}`;
+    }
+  }
+  // physical properties for the inspector (typical values for each kind)
+  // (L: true diameter in light-years of the structures inside galaxies, which are drawn enlarged)
+  const PHYS = {
+    emission: { T: [7000, 12000], n: [100, 5000], m: [2, 5], L: [30, 400] }, nursery: { T: [10, 40], n: [1000, 1e5], m: [3.5, 6], L: [20, 250] }, reflection: { T: [20, 80], n: [100, 3000], m: [1, 3], L: [3, 40] },
+    dark: { T: [8, 20], n: [1e4, 1e6], m: [1, 4], L: [1, 60] }, planetary: { T: [8000, 20000], n: [100, 1e4], m: [-1, -0.3], L: [0.3, 3] }, remnant: { T: [1e6, 1e7], n: [1, 20], m: [0.5, 2], L: [15, 160] },
+    cloud: { T: [15, 100], n: [50, 2000], m: [3, 5.5], L: [40, 600] }, cavity: { T: [1e5, 1e6], n: [0.001, 0.05], m: [4, 6], L: [300, 2500] }, globular: { T: [4000, 6000], n: [1e3, 1e5], m: [4.8, 6.2], L: [60, 300] }, open: { T: [6000, 20000], n: [10, 1000], m: [2, 3.5], L: [8, 50] },
+    intergalactic: { T: [1e5, 1e7], n: [1e-5, 1e-3], m: [8, 11] }, filament: { T: [1e5, 1e7], n: [1e-6, 1e-4], m: [11, 13] }, void: { T: [1e6, 1e7], n: [1e-7, 1e-5], m: [9, 11] },
+    tidal: { T: [3000, 8000], n: [0.01, 1], m: [8, 10] }, exotic: { T: [50, 5e5], n: [1e-3, 1e4], m: [1, 6], L: [2, 900] },
+  };
+  function makeStructure(seed, kind, pos, env, G, extra) {
+    const r = new RNG.Rand(seed), SK = SKINDS[kind];
+    const S = { seed, kind, K: SK, pos, env, G: G || null, sx: Math.floor(pos[0] / Universe.SECTOR), sz: Math.floor(pos[2] / Universe.SECTOR) };
+    S.morph = r.weighted(SK.morphs);
+    S.radius = r.range(SK.size[0], SK.size[1]) * (env.scale || 1);
+    const axis = kind === 'lane' && G ? G.n : randDir(r), B = basis(axis);
+    S.n = B.n; S.u = B.u; S.v = B.v;
+    let cols = palette(kind, r);
+    // hot, ionising light near an active nucleus turns gas teal and violet; metal-poor gas far out is bluer
+    if (env.ionised) cols = cols.map((q, i) => Color.mix(q, i === 0 ? [0.58, 0.46, 1] : OIII, 0.45));
+    if (env.outer) cols = cols.map((q) => Color.mix(q, [0.6, 0.7, 1], 0.2));
+    S.cols = cols;
+    S.dens = clamp(r.range(0.55, 1.1) * (env.dense || 1), 0.15, 1.3);
+    S.warp = kind === 'exotic' || r.chance(0.22) ? { kind: r.pick(['twist', 'bend', 'squash']), k: r.range(0.6, 2.2) * r.sign() } : null;
+    if (S.morph === 'composite') {
+      const pool = ['shell', 'ring', 'spiral', 'filaments', 'crown', 'lattice', 'knot', 'tendrils', 'hourglass', 'cavity', 'lens', 'jellyfish', 'torus', 'helix'];
+      // (two or three different forms, fused)
+      const ms = pool.slice();
+      for (let i = 0; i < 3; i++) { const j = r.int(i, ms.length - 1), q = ms[i]; ms[i] = ms[j]; ms[j] = q; }
+      S.parts = Array.from({ length: r.int(2, 3) }, (_, i) => ({ m: ms[i], s: i ? r.range(0.35, 0.8) : 1, off: i ? V3.scale(randDir(r), r.range(0, 0.45)) : [0, 0, 0], B: basis(randDir(r)), f: i ? r.range(0.25, 0.5) : 1 }));
+      S.label = `${r.pick(EXO_ADJ)} ${MORPH[S.parts[0].m].toLowerCase()} and ${MORPH[S.parts[1].m].toLowerCase()}`;
+    }
+    if (extra) Object.assign(S, extra);
+    S.name = nameOf(S, r);
+    const P = PHYS[kind] || PHYS.exotic;
+    S.temp = Math.exp(r.range(Math.log(P.T[0]), Math.log(P.T[1])));
+    S.density = Math.exp(r.range(Math.log(P.n[0]), Math.log(P.n[1])));
+    S.mass = Math.pow(10, r.range(P.m[0], P.m[1]));
+    // its true size: the formations between the galaxies are drawn to scale, those inside them enlarged
+    S.toScale = !SK.gal || env.comp === 'intergalactic';
+    const t = clamp((S.radius / (env.scale || 1) - SK.size[0]) / (SK.size[1] - SK.size[0]), 0, 1);
+    S.ly = S.toScale || !P.L ? (S.ends ? V3.dist(S.ends[0], S.ends[1]) : S.radius * 2) * KLY * 1000 : Math.exp(lerp(Math.log(P.L[0]), Math.log(P.L[1]), t));
+    S.id = `${kind}:${seed}`;
+    return S;
+  }
+  // a galaxy's own structures, placed by the population they belong to
+  function galaxyStructures(G) {
+    const r = new RNG.Rand(RNG.hash(G.seed, 'structures')), out = [], p = [0, 0, 0], active = ['quasar', 'blazar', 'radio', 'seyfert'].includes(G.core.key);
+    const n = Math.round(G.gas * 5 + r.range(0.6, 2.4) + (G.type === 'elliptical' ? 0.8 : 0));
+    const gas = G.gas;
+    const W = [['emission', 3 * gas], ['nursery', 2.4 * gas], ['reflection', 1.1 * gas], ['dark', 1.4 * gas], ['planetary', 1.5], ['remnant', 0.9 * (0.4 + gas)], ['cloud', 1 * gas], ['cavity', 0.7 * gas], ['globular', G.type === 'irregular' ? 0.2 : 1], ['open', 0.8 * gas], ['exotic', 0.35]];
+    for (let i = 0; i < n; i++) {
+      const kind = r.weighted(W), sr = new RNG.Rand(RNG.hash(G.seed, 'structure', i));
+      const young = ['emission', 'nursery', 'reflection', 'dark', 'cloud', 'cavity', 'open'].includes(kind);
+      const pop = young ? 'young' : kind === 'globular' ? 'old' : kind === 'planetary' ? 'common' : sr.pick(['young', 'common', 'mid']);
+      const tab = COMP[G.type], comp = kind === 'globular' ? 'halo' : sr.weighted(tab[pop] || tab.common);
+      sampleLocal(G, sr, comp, young, p);
+      const dist = Math.hypot(p[0], p[1], p[2]), pos = toWorld(G, p[0], p[1], p[2]);
+      const env = { where: COMP_NAME[comp] || 'the galaxy', comp, ionised: active && dist < G.R * 0.4, outer: dist > G.R * 0.75, dense: comp === 'arm' || comp === 'clump' || comp === 'ring' ? 1.1 : comp === 'halo' ? 0.6 : 0.85, scale: G.R / 22 * 0.4 + 0.6 };
+      out.push(makeStructure(RNG.hash(G.seed, 'structure', i, 'body'), kind, pos, env, G));
+    }
+    return out;
+  }
+  // everything in a sector: the galaxy's structures, field structures, and intergalactic ones (none in a void)
+  function structuresIn(sx, sz) {
+    const key = K(sx, sz, 'st');
+    let L = structs.get(key);
+    if (L) return L;
+    const R = regionOf(sx, sz), SEC = Universe.SECTOR;
+    L = [];
+    if (R.type !== 'empty') {
+      if (R.galaxy) L.push(...galaxyStructures(R.galaxy));
+      else {
+        const r = new RNG.Rand(RNG.hash(Universe.seed, sx, sz, 'field-structures'));
+        for (let i = 0, n = r.weighted([[0, 3], [1, 4], [2, 2]]); i < n; i++) {
+          const kind = r.weighted([['planetary', 3], ['remnant', 2], ['dark', 1.5], ['cloud', 2], ['globular', 0.6], ['exotic', 0.5]]);
+          const pos = [(sx + r.range(0.1, 0.9)) * SEC, r.range(-18, 18), (sz + r.range(0.1, 0.9)) * SEC];
+          L.push(makeStructure(RNG.hash(Universe.seed, sx, sz, 'field', i), kind, pos, { where: 'intergalactic space', comp: 'field', outer: true, dense: 0.7, scale: 1 }, null));
+        }
+      }
+      // between the galaxies: great clouds, filaments of the cosmic web, cavities, and the odd anomaly
+      const r = new RNG.Rand(RNG.hash(Universe.seed, sx, sz, 'intergalactic'));
+      if (r.chance(R.galaxy ? 0.07 : 0.15)) {
+        const kind = r.weighted([['intergalactic', 3], ['filament', 2], ['void', 1.2], ['exotic', 0.45]]);
+        const size = SKINDS[kind].size[1];
+        for (let tries = 0; tries < 10; tries++) {
+          const pos = [(sx + r.range(0.12, 0.88)) * SEC, r.range(-22, 22), (sz + r.range(0.12, 0.88)) * SEC];
+          if (R.galaxy && V3.dist(pos, R.galaxy.c) < R.galaxy.R * 1.35 + size * 0.45) continue;
+          L.push(makeStructure(RNG.hash(Universe.seed, sx, sz, 'ig-body'), kind, pos, { where: 'intergalactic space', comp: 'intergalactic', outer: true, dense: 0.45, scale: kind === 'exotic' ? 2.2 : 1 }, null));
+          break;
+        }
+      }
+      // tidal bridges between neighbouring galaxies that passed close to each other
+      if (R.galaxy) for (const [dx, dz, tag] of [[1, 0, 'tidal-x'], [0, 1, 'tidal-z']]) {
+        const R2 = regionOf(sx + dx, sz + dz);
+        if (!R2.galaxy || !new RNG.Rand(RNG.hash(Universe.seed, sx, sz, tag)).chance(0.075)) continue;
+        const a = R.galaxy.c, b = R2.galaxy.c, mid = V3.lerp(a, b, 0.5), len = V3.dist(a, b);
+        const tr = new RNG.Rand(RNG.hash(Universe.seed, sx, sz, tag, 'body'));
+        L.push(makeStructure(RNG.hash(Universe.seed, sx, sz, tag, 'st'), 'tidal', mid, { where: 'between two galaxies', comp: 'intergalactic', outer: true, dense: 0.5, scale: 1 }, null,
+          { radius: len / 2, ends: [a, b], bow: V3.scale(randDir(tr), len * tr.range(0.12, 0.3)), G2: R2.galaxy }));
+      }
+    }
+    structs.set(key, L); trim(structs, 1600);
+    return L;
+  }
+  // (a structure passed as `extra` may fix its own radius; makeStructure's own radius is then replaced)
+  // the structure enveloping a point, if any (the nearest by relative depth)
+  function structureAt(pos, pad = 1) {
+    const S = Universe.SECTOR, sx = Math.floor(pos[0] / S), sz = Math.floor(pos[2] / S);
+    let best = null;
+    for (let x = sx - 1; x <= sx + 1; x++) for (let z = sz - 1; z <= sz + 1; z++) for (const q of structuresIn(x, z)) {
+      if (q.kind === 'tidal' || q.kind === 'globular' || q.kind === 'open') continue;
+      const k = V3.dist(q.pos, pos) / (q.radius * pad);
+      if (k < 1 && (!best || k < best.k)) best = { s: q, k };
+    }
+    return best;
+  }
+
+  /* ---- particle morphologies: points in the unit ball (y is the structure's own axis) ---- */
+  function genMorph(m, n, r, S, emit) {
+    const nz = N3(), ox = (S.seed % 1000) * 0.37, fb = (x, y, z, s = 1.9) => nz.fbm3(x * s + ox, y * s - ox * 0.7, z * s + ox * 0.3, 3);
+    const star = (x, y, z) => emit(x, y, z, 1.4, 3, 0.8, false);
+    switch (m) {
+      case 'blob': case 'crab': {
+        for (let t = 0, c = 0; t < n * 5 && c < n; t++) {
+          const p = inBall(r), f = fb(p[0], p[1], p[2]), dens = f * 0.95 + 0.62 - Math.hypot(p[0], p[1], p[2]) * 0.8;
+          if (r.next() > dens) continue;
+          c++; emit(p[0], p[1], p[2], 0.45 + 0.55 * clamp(dens, 0, 1), f > 0.12 ? 1 : 0, 1, false);
+        }
+        if (m === 'crab') { genMorph('filaments', Math.round(n * 0.45), r, S, emit); star(0, 0, 0); }
+        break;
+      }
+      case 'cavity': {
+        const open = randDir(r);
+        for (let i = 0; i < n; i++) {
+          const d = randDir(r);
+          if (V3.dot(d, open) > 0.55) continue;
+          const f = fb(d[0], d[1], d[2], 2.6), rr = 0.8 + r.gauss() * 0.06 + f * 0.12;
+          emit(d[0] * rr, d[1] * rr, d[2] * rr, 0.35 + 0.65 * clamp(f + 0.5, 0, 1), f > 0.2 ? 2 : r.chance(0.3) ? 1 : 0, 1, false);
+        }
+        for (let i = 0, k = r.int(5, 12); i < k; i++) { const p = inBall(r); star(p[0] * 0.3, p[1] * 0.3, p[2] * 0.3); }
+        break;
+      }
+      case 'pillars': {
+        const L = V3.norm([r.range(-0.5, 0.5), 1, r.range(-0.5, 0.5)]), k = r.int(2, 5);
+        // the cloud they rise from, and the glow of the gas beyond
+        for (let i = 0; i < n * 0.22; i++) { const p = inBall(r); emit(p[0], -0.72 + p[1] * 0.22, p[2], 0.6, 1, 1.1, true); }
+        for (let i = 0; i < n * 0.18; i++) { const p = inBall(r); emit(p[0] * 1.1, 0.25 + p[1] * 0.6, p[2] * 1.1, 0.28, 0, 1.3, false); }
+        const per = Math.round(n * 0.6 / k);
+        for (let j = 0; j < k; j++) {
+          const b = [r.gauss() * 0.42, -0.6, r.gauss() * 0.42], h = r.range(0.8, 1.5), tp = [b[0] + r.gauss() * 0.16, b[1] + h, b[2] + r.gauss() * 0.16], r0 = r.range(0.1, 0.2);
+          for (let i = 0; i < per; i++) {
+            const s = Math.pow(r.next(), 0.8), c = V3.lerp(b, tp, s), rad = r0 * (1 - 0.45 * s) * (s > 0.86 ? 1.35 : 1);
+            const a = r.range(0, TAU), off = [Math.cos(a), r.range(-0.3, 0.3), Math.sin(a)], rr = rad * Math.sqrt(r.next());
+            const lit = V3.dot(off, L) > 0.2 || s > 0.93;
+            emit(c[0] + off[0] * rr, c[1] + off[1] * rr, c[2] + off[2] * rr, lit ? 0.95 : 0.55, lit ? 2 : 1, lit ? 0.8 : 1, !lit);
+          }
+          if (r.chance(0.7)) star(tp[0], tp[1] + 0.05, tp[2]);
+        }
+        break;
+      }
+      case 'filaments': case 'tendrils': {
+        const strands = m === 'tendrils' ? r.int(12, 22) : r.int(5, 10), per = Math.max(4, Math.round(n / strands));
+        for (let s = 0; s < strands; s++) {
+          let p = m === 'tendrils' ? [0, 0, 0] : V3.scale(inBall(r), 0.35), d = randDir(r);
+          for (let i = 0; i < per; i++) {
+            p = V3.add(p, V3.scale(d, m === 'tendrils' ? 0.05 : 0.07)); d = V3.norm(V3.add(d, V3.scale(randDir(r), m === 'tendrils' ? 0.18 : 0.35)));
+            if (V3.len(p) > 1) break;
+            const j = V3.scale(randDir(r), 0.025);
+            emit(p[0] + j[0], p[1] + j[1], p[2] + j[2], 0.9 * (1 - i / per) + 0.2, (s + (i > per / 2 ? 1 : 0)) % 3 === 2 ? 2 : s % 2, 0.8, false);
+          }
+        }
+        if (m === 'tendrils') for (let i = 0; i < n * 0.08; i++) { const p = V3.scale(inBall(r), 0.12); emit(p[0], p[1], p[2], 1, 2, 1, false); }
+        break;
+      }
+      case 'shell': case 'veil': {
+        const cap = randDir(r);
+        for (let t = 0, c = 0; t < n * 4 && c < n; t++) {
+          const d = randDir(r);
+          if (m === 'veil' && V3.dot(d, cap) < 0.25) continue;
+          const f = nz.ridged3(d[0] * 3 + ox, d[1] * 3, d[2] * 3 - ox, 3), w = m === 'veil' ? 0.5 + 0.5 * Math.sin(d[1] * 18 + f * 5) : f;
+          if (r.next() > w * 1.2) continue;
+          c++; const rr = 1 + r.gauss() * 0.03;
+          emit(d[0] * rr, d[1] * rr, d[2] * rr, 0.35 + 0.65 * w, w > 0.7 ? 1 : 0, 0.9, false);
+        }
+        if (S.kind === 'remnant' && r.chance(0.5)) star(0, 0, 0);
+        break;
+      }
+      case 'ring': case 'torus': {
+        const maj = m === 'torus' ? 0.62 : 0.72, min = m === 'torus' ? 0.3 : 0.13;
+        for (let i = 0; i < n * 0.85; i++) {
+          const a = r.range(0, TAU), b = r.range(0, TAU), q = min * (1 + 0.4 * fb(Math.cos(a), 0, Math.sin(a), 2.2)) * Math.sqrt(r.next());
+          const x = (maj + q * Math.cos(b)) * Math.cos(a), z = (maj + q * Math.cos(b)) * Math.sin(a), y = q * Math.sin(b);
+          emit(x, y, z, 0.6 + 0.4 * r.next(), Math.cos(b) < 0 ? 1 : 0, 1, false);
+        }
+        for (let i = 0; i < n * 0.15; i++) { const d = randDir(r), rr = r.range(0.85, 1.05); emit(d[0] * rr, d[1] * rr * 0.6, d[2] * rr, 0.22, 0, 1.2, false); }
+        if (S.kind === 'planetary') star(0, 0, 0);
+        break;
+      }
+      case 'eye': {
+        // an almond outline, an iris ring, a pupil and a bright central star, framed by faint halo arcs
+        for (let i = 0; i < n * 0.34; i++) { const x = r.range(-1, 1), z = 0.52 * Math.pow(1 - x * x, 1.2) * r.sign() + r.gauss() * 0.03; emit(x, r.gauss() * 0.05, z, 0.8, 0, 0.9, false); }
+        for (let i = 0; i < n * 0.22; i++) { const a = r.range(0, TAU), q = 0.36 + r.gauss() * 0.03; emit(Math.cos(a) * q, r.gauss() * 0.04, Math.sin(a) * q * 0.9, 1, 1, 0.8, false); }
+        for (let i = 0; i < n * 0.08; i++) { const a = r.range(0, TAU), q = 0.12 + r.gauss() * 0.02; emit(Math.cos(a) * q, 0, Math.sin(a) * q, 1, 2, 0.7, false); }
+        for (let i = 0; i < n * 0.16; i++) { const x = r.range(-0.9, 0.9), lim = 0.5 * Math.pow(1 - x * x, 1.2), z = r.range(-lim, lim); emit(x, r.gauss() * 0.04, z, 0.25, 1, 1.1, false); }
+        for (let i = 0; i < n * 0.2; i++) { const a = r.range(-0.9, 0.9) + (r.chance(0.5) ? 0 : Math.PI), q = r.range(1.1, 1.45); emit(Math.cos(a) * q, r.gauss() * 0.06, Math.sin(a) * q * 0.75, 0.3, 0, 1, false); }
+        star(0, 0, 0);
+        break;
+      }
+      case 'hourglass': {
+        for (let i = 0; i < n * 0.84; i++) {
+          const sgn = r.sign(), d = randDir(r), q = 1 + r.gauss() * 0.05;
+          const x = d[0] * 0.42 * q, y = sgn * 0.55 + d[1] * 0.55 * q, z = d[2] * 0.42 * q;
+          if (Math.abs(y) < 0.08) continue;
+          emit(x, y, z, 0.35 + 0.65 * Math.abs(y), Math.abs(y) > 0.7 ? 0 : 1, 0.9, false);
+        }
+        for (let i = 0; i < n * 0.16; i++) { const a = r.range(0, TAU), q = 0.22 + r.gauss() * 0.02; emit(Math.cos(a) * q, r.gauss() * 0.03, Math.sin(a) * q, 1, 2, 0.8, false); }
+        star(0, 0, 0);
+        break;
+      }
+      case 'helix': {
+        const rot = (p, ax, ang) => (ax === 'x' ? V3.rotX(p, ang) : V3.rotY(V3.rotX(V3.rotY(p, 1.57), ang), -1.57));
+        for (let i = 0; i < n * 0.4; i++) { const a = r.range(0, TAU), q = 0.8 + r.gauss() * 0.06; const p = rot([Math.cos(a) * q, r.gauss() * 0.04, Math.sin(a) * q], 'x', 0.32); emit(p[0], p[1], p[2], 0.7, 0, 1, false); }
+        for (let i = 0; i < n * 0.34; i++) { const a = r.range(0, TAU), q = 0.55 + r.gauss() * 0.05; const p = rot([Math.cos(a) * q, r.gauss() * 0.04, Math.sin(a) * q], 'z', -0.28); emit(p[0], p[1], p[2], 0.8, 1, 0.9, false); }
+        for (let s = 0; s < 26; s++) { const a = r.range(0, TAU); for (let i = 0; i < 4; i++) { const q = 0.62 + i * 0.035; emit(Math.cos(a) * q, 0, Math.sin(a) * q, 0.9, 2, 0.7, false); } }
+        star(0, 0, 0);
+        break;
+      }
+      case 'fan': case 'comet': {
+        const ap = m === 'fan' ? 0.55 : 0.28;
+        for (let i = 0; i < n; i++) {
+          const t = Math.pow(r.next(), 0.7), a = r.range(0, TAU), q = t * Math.tan(ap) * Math.sqrt(r.next()), f = fb(Math.cos(a) * q, t, Math.sin(a) * q, 2.4);
+          if (r.next() > 0.6 + f) continue;
+          const y = m === 'fan' ? -1 + t * 2 : 0.55 - t * 1.6;
+          const dark = m === 'comet' && q < t * Math.tan(ap) * 0.7;
+          emit(Math.cos(a) * q, y, Math.sin(a) * q, 0.5 + 0.5 * (1 - t), dark ? 1 : m === 'comet' ? 2 : 0, 1, dark);
+        }
+        if (m === 'fan') star(0, -1, 0); else for (let i = 0; i < n * 0.25; i++) { const d = randDir(r), q = 0.25; emit(d[0] * q, 0.6 + d[1] * q, d[2] * q, 0.8, d[1] > 0 ? 2 : 1, 1, d[1] <= 0); }
+        break;
+      }
+      case 'globule': {
+        const L = randDir(r);
+        for (let i = 0; i < n; i++) { const p = inBall(r), rr = V3.len(p); const rim = rr > 0.8 && V3.dot(p, L) > 0.35 * rr; emit(p[0] * 0.7, p[1] * 0.7, p[2] * 0.7, rim ? 0.9 : 0.8, rim ? 2 : 1, 1, !rim); }
+        break;
+      }
+      case 'lane': {
+        for (let i = 0; i < n; i++) { const x = r.range(-1, 1), w = 1 - x * x; emit(x, r.gauss() * 0.07 * w, r.gauss() * 0.22 * w, 0.75, 1, 1.1, r.next() < 0.85); }
+        break;
+      }
+      case 'sheet': {
+        for (let t = 0, c = 0; t < n * 4 && c < n; t++) {
+          const x = r.range(-1, 1), z = r.range(-1, 1), f = fb(x, 0, z, 1.6);
+          if (x * x + z * z > 1 || r.next() > f + 0.45) continue;
+          c++; emit(x, fb(z, 3, x, 1.2) * 0.35 + r.gauss() * 0.03, z, 0.35 + 0.65 * clamp(f + 0.3, 0, 1), f > 0.1 ? 1 : 0, 1.1, false);
+        }
+        break;
+      }
+      case 'stream': {
+        const P0 = [-1, 0, 0], P3 = [1, 0, 0], P1 = [-0.35, r.range(-0.6, 0.6), r.range(-0.6, 0.6)], P2 = [0.35, r.range(-0.6, 0.6), r.range(-0.6, 0.6)];
+        for (let i = 0; i < n; i++) {
+          const t = r.next(), a = (1 - t) ** 3, b = 3 * (1 - t) ** 2 * t, c2 = 3 * (1 - t) * t * t, d = t ** 3, w = 0.06 + 0.07 * Math.sin(t * Math.PI);
+          emit(a * P0[0] + b * P1[0] + c2 * P2[0] + d * P3[0] + r.gauss() * w, a * P0[1] + b * P1[1] + c2 * P2[1] + d * P3[1] + r.gauss() * w, a * P0[2] + b * P1[2] + c2 * P2[2] + d * P3[2] + r.gauss() * w, 0.4 + 0.4 * Math.sin(t * Math.PI), r.chance(0.2) ? 2 : r.chance(0.5) ? 1 : 0, 1, false);
+        }
+        break;
+      }
+      case 'spiral': {
+        const arms = r.int(2, 3), pitch = r.range(0.25, 0.45);
+        for (let i = 0; i < n; i++) {
+          const q = 0.1 + Math.pow(r.next(), 0.8) * 0.9, k = r.int(0, arms - 1), th = k * TAU / arms + Math.log(q / 0.1) / Math.tan(pitch) + r.gauss() * 0.18;
+          emit(Math.cos(th) * q, r.gauss() * 0.04, Math.sin(th) * q, 0.4 + 0.6 * (1 - q), q < 0.3 ? 2 : k % 2, 0.9, false);
+        }
+        star(0, 0, 0);
+        break;
+      }
+      case 'lattice': {
+        const g = r.int(2, 3), nodes = [];
+        for (let i = 0; i <= g; i++) for (let j = 0; j <= g; j++) for (let k = 0; k <= g; k++) nodes.push([(i / g) * 2 - 1 + r.gauss() * 0.06, (j / g) * 2 - 1 + r.gauss() * 0.06, (k / g) * 2 - 1 + r.gauss() * 0.06]);
+        const idx = (i, j, k) => (i * (g + 1) + j) * (g + 1) + k, edges = [];
+        for (let i = 0; i <= g; i++) for (let j = 0; j <= g; j++) for (let k = 0; k <= g; k++) { if (i < g) edges.push([idx(i, j, k), idx(i + 1, j, k)]); if (j < g) edges.push([idx(i, j, k), idx(i, j + 1, k)]); if (k < g) edges.push([idx(i, j, k), idx(i, j, k + 1)]); }
+        for (let i = 0; i < n; i++) { const e = r.pick(edges), t = r.next(), p = V3.lerp(nodes[e[0]], nodes[e[1]], t); emit(p[0] * 0.62 + r.gauss() * 0.012, p[1] * 0.62 + r.gauss() * 0.012, p[2] * 0.62 + r.gauss() * 0.012, 0.7, (e[0] + e[1]) % 2, 0.8, false); }
+        for (const q of nodes) emit(q[0] * 0.62, q[1] * 0.62, q[2] * 0.62, 1, 2, 1.1, false);
+        break;
+      }
+      case 'knot': {
+        const [pp, qq] = r.pick([[2, 3], [3, 2], [2, 5], [3, 4], [3, 5], [5, 2]]);
+        for (let i = 0; i < n; i++) {
+          const t = r.range(0, TAU), rk = 0.55 + 0.25 * Math.cos(qq * t), j = V3.scale(randDir(r), 0.05 * Math.sqrt(r.next()));
+          emit(rk * Math.cos(pp * t) + j[0], 0.3 * Math.sin(qq * t) + j[1], rk * Math.sin(pp * t) + j[2], 0.75, Math.floor(t / TAU * 6) % 2, 0.9, false);
+        }
+        break;
+      }
+      case 'crown': {
+        const k = r.int(8, 14);
+        for (let i = 0; i < n * 0.3; i++) { const a = r.range(0, TAU), q = 0.7 + r.gauss() * 0.05; emit(Math.cos(a) * q, -0.5 + r.gauss() * 0.04, Math.sin(a) * q, 0.6, 0, 1, false); }
+        const per = Math.round(n * 0.7 / k);
+        for (let j = 0; j < k; j++) {
+          const a = j / k * TAU + r.gauss() * 0.05, out = r.range(0.1, 0.45), L = r.range(0.6, 1.1);
+          for (let i = 0; i < per; i++) { const s = r.next(), rr = 0.7 + out * s, w = 0.06 * (1 - s); emit(Math.cos(a) * rr + r.gauss() * w, -0.5 + L * s, Math.sin(a) * rr + r.gauss() * w, 0.5 + 0.5 * s, s > 0.85 ? 2 : 1, 0.9, false); }
+        }
+        break;
+      }
+      case 'jellyfish': {
+        for (let i = 0; i < n * 0.45; i++) { const d = randDir(r); if (d[1] < 0) d[1] = -d[1]; const q = 0.7 * (1 + r.gauss() * 0.03); emit(d[0] * q, d[1] * q * 0.7, d[2] * q, 0.4 + 0.6 * d[1], d[1] < 0.2 ? 2 : 0, 1, false); }
+        const k = r.int(6, 12), per = Math.round(n * 0.55 / k);
+        for (let j = 0; j < k; j++) {
+          const a = j / k * TAU, ph = r.range(0, TAU);
+          for (let i = 0; i < per; i++) { const s = i / per, q = 0.62 * (1 - s * 0.4), sw = Math.sin(s * 7 + ph) * 0.1 * s; emit(Math.cos(a) * q + sw, -s * 1.1, Math.sin(a) * q + sw, 0.9 - s * 0.6, 1, 0.8, false); }
+        }
+        break;
+      }
+      case 'lens': {
+        for (let i = 0; i < n; i++) {
+          const q = Math.pow(r.next(), 0.7), a = r.range(0, TAU), ringy = Math.max(Math.exp(-(((q - 0.35) / 0.03) ** 2)), Math.exp(-(((q - 0.65) / 0.03) ** 2)), Math.exp(-(((q - 0.92) / 0.025) ** 2)));
+          if (r.next() > 0.25 + ringy) continue;
+          emit(Math.cos(a) * q, r.gauss() * 0.035 * (1 - q), Math.sin(a) * q, 0.35 + 0.65 * ringy, ringy > 0.5 ? 1 : 0, 0.9, false);
+        }
+        star(0, 0, 0);
+        break;
+      }
+      case 'globular': case 'open': {
+        const conc = m === 'globular' ? 0.28 : 0.6;
+        for (let i = 0; i < n; i++) { const p = inBall(r), k = Math.pow(r.next(), m === 'globular' ? 1.8 : 1) * conc * 2.2; emit(p[0] * k, p[1] * k, p[2] * k, r.range(0.5, 1), r.chance(0.1) ? 2 : r.chance(0.5) ? 1 : 0, r.range(0.5, 0.9), false); }
+        break;
+      }
+      case 'composite': {
+        for (const q of S.parts) {
+          genMorph(q.m, Math.round(n * q.f * (q === S.parts[0] ? 0.6 : 1)), r, S, (x, y, z, w, ci, sz, dark) => {
+            const b = q.B, lx = b.u[0] * x + b.n[0] * y + b.v[0] * z, ly = b.u[1] * x + b.n[1] * y + b.v[1] * z, lz = b.u[2] * x + b.n[2] * y + b.v[2] * z;
+            emit(lx * q.s + q.off[0], ly * q.s + q.off[1], lz * q.s + q.off[2], w, (ci + (q === S.parts[0] ? 0 : 1)) % 4, sz, dark);
+          });
+        }
+        break;
+      }
+      default: genMorph('blob', n, r, S, emit);
+    }
+  }
+  // glow adds up: points in crowded parts of a structure are dimmed (by a coarse 3D count of their
+  // neighbours) so the densest parts glow instead of burning out white, while thin wisps keep their light
+  const DG = 8, cells = new Uint16Array(DG * DG * DG);
+  function dimCrowded(pts) {
+    const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    for (let j = 0; j < pts.length; j += 8) if (pts[j + 7] > 0) for (let q = 0; q < 3; q++) { lo[q] = Math.min(lo[q], pts[j + q]); hi[q] = Math.max(hi[q], pts[j + q]); }
+    if (lo[0] > hi[0]) return;
+    const d = [0, 1, 2].map((q) => Math.max((hi[q] - lo[q]) / DG, 0.05)), area = (d[0] * d[1] + d[1] * d[2] + d[0] * d[2]) / 3;
+    const at = (j) => { let c = 0; for (let q = 2; q >= 0; q--) c = c * DG + Math.min(DG - 1, Math.floor((pts[j + q] - lo[q]) / d[q])); return c; };
+    cells.fill(0);
+    for (let j = 0; j < pts.length; j += 8) if (pts[j + 7] > 0) cells[at(j)]++;
+    for (let j = 0; j < pts.length; j += 8) {
+      const sz = pts[j + 7];
+      if (sz <= 0) continue;
+      const crowd = cells[at(j)] * sz * sz * 0.785 / area * 1.2;
+      if (crowd > 1) pts[j + 6] *= Math.max(0.12, 1 / crowd);
+    }
+  }
+  // world-space points of a structure at a level of detail: lit points and dark (dust) points, 8 floats each
+  const PART_N = [900, 360, 120];
+  function particlesOf(S, lod) {
+    const key = S.seed + ':' + lod;
+    let P = parts.get(key);
+    if (P) return P;
+    const r = new RNG.Rand(RNG.hash(S.seed, 'particles', lod));
+    const n = Math.round(PART_N[lod] * S.K.count * clamp(Math.sqrt(S.radius / 3), 0.55, 2.2) * (0.6 + 0.4 * S.dens));
+    const lit = [], dark = [], cols = S.cols, R = S.radius, u = S.u, v = S.v, nn = S.n, c = S.pos, W = S.warp;
+    const kk = Math.sqrt(PART_N[0] / PART_N[lod]), faint = S.K.gal ? 1 : 0.3;
+    const emit = (x, y, z, w, ci, sz, isDark) => {
+      if (W) {
+        if (W.kind === 'twist') { const a = y * W.k, cs = Math.cos(a), sn = Math.sin(a); const x2 = x * cs - z * sn; z = x * sn + z * cs; x = x2; }
+        else if (W.kind === 'bend') y += (x * x) * 0.35 * W.k;
+        else { y *= 0.45; x *= 1.15; }
+      }
+      let wx, wy, wz;
+      if (S.ends) { // a tidal stream is laid between its two galaxies, bowed to one side
+        const t = (x + 1) / 2, a = S.ends[0], b = S.ends[1], bow = Math.sin(t * Math.PI);
+        wx = lerp(a[0], b[0], t) + S.bow[0] * bow + (y * u[0] + z * v[0]) * R * 0.18; wy = lerp(a[1], b[1], t) + S.bow[1] * bow + (y * u[1] + z * v[1]) * R * 0.18; wz = lerp(a[2], b[2], t) + S.bow[2] * bow + (y * u[2] + z * v[2]) * R * 0.18;
+      } else { wx = c[0] + (u[0] * x + nn[0] * y + v[0] * z) * R; wy = c[1] + (u[1] * x + nn[1] * y + v[1] * z) * R; wz = c[2] + (u[2] * x + nn[2] * y + v[2] * z) * R; }
+      const col = ci >= 3 ? [0.92, 0.96, 1] : cols[ci] || cols[0], a = ci >= 3 ? 1 : clamp(w * 0.42 * S.dens * Math.min(kk, 2.2) * faint, 0.04, 1);
+      const size = (ci >= 3 ? 0.35 : 0.5 + 0.35 * sz) * Math.max(0.45, (S.ends ? R * 0.18 : R) / 4) * Math.pow(kk, 0.6) * (S.K.gal ? 1 : 2.1);
+      (isDark ? dark : lit).push(wx, wy, wz, isDark ? col[0] * 0.08 : col[0], isDark ? col[1] * 0.07 : col[1], isDark ? col[2] * 0.07 : col[2], isDark ? clamp(0.45 + w * 0.3, 0, 0.85) : a, ci >= 3 ? -size : size);
+    };
+    genMorph(S.morph, n, r, S, emit);
+    dimCrowded(lit);
+    P = { lit: Float32Array.from(lit), dark: Float32Array.from(dark) };
+    parts.set(key, P); trim(parts, 700);
+    return P;
+  }
+
+  /* ---------------------------------------------------------------- multiple-star systems */
+  // who can be a companion of whom (pulsars pair only with pulsars, black holes only with black holes)
+  const COMPANIONS = {
+    O: [['O', 1], ['B', 3]], B: [['B', 3], ['A', 2], ['F', 1]], A: [['A', 2], ['F', 3], ['G', 2], ['K', 1], ['M', 1], ['D', 1]],
+    F: [['F', 2], ['G', 3], ['K', 3], ['M', 3], ['D', 1]], G: [['G', 2], ['K', 4], ['M', 6], ['D', 1.2]], K: [['K', 3], ['M', 7], ['D', 1]],
+    M: [['M', 8], ['D', 0.6]], D: [['M', 5], ['K', 2], ['D', 3]], RG: [['G', 2], ['K', 3], ['M', 4], ['D', 2]], NS: [['NS', 1]], BH: [['BH', 1]],
+  };
+  const COMPACT = new Set(['NS', 'BH']);
+  // Holman & Wiegert (1999) critical semi-major axes for planets in binaries (mu = M2 / (M1 + M2))
+  const critS = (e, mu) => Math.max(0.05, 0.464 - 0.38 * mu - 0.631 * e + 0.586 * mu * e + 0.15 * e * e - 0.198 * mu * e * e);
+  const critP = (e, mu) => 1.6 + 5.1 * e - 2.22 * e * e + 4.12 * mu - 4.27 * e * mu - 5.09 * mu * mu + 4.61 * e * e * mu * mu;
+  const periodGame = (a, M) => Math.max(8, 480 * Math.pow(a, 1.5) / Math.sqrt(Math.max(0.1, M)));
+  const periodDays = (a, M) => 365.25 * Math.sqrt(Math.pow(a, 3) / Math.max(0.05, M));
+  const AU_PER_RSUN = 0.00465;
+  // (a star record moved down its class's sequence until it is no heavier than maxMass)
+  function lighten(rec, maxMass) {
+    const T = STAR_TYPES[rec.cls], k = clamp((maxMass * 0.97 - T.M[0]) / Math.max(1e-9, T.M[1] - T.M[0]), 0, 1);
+    rec.mass = Math.min(lerp(T.M[0], T.M[1], k), maxMass); rec.temp = lerp(T.T[0], T.T[1], k); rec.radius = lerp(T.R[0], T.R[1], k);
+    rec.lum = T.L[0] > 0 ? T.L[0] * Math.pow(T.L[1] / T.L[0], k) : 0; rec.color = starColor(rec.cls, rec.temp);
+    return rec;
+  }
+  // a companion no heavier than the primary, of a class that can pair with it
+  function companionOf(star, r, k, maxMass) {
+    const pool = COMPANIONS[star.cls] || COMPANIONS.M;
+    let rec = null;
+    for (let tries = 0; tries < 6 && !rec; tries++) {
+      const q = makeStarRecord(RNG.hash(star.seed, 'companion', k, tries), r.weighted(pool), { companionOf: star.id });
+      if (q.mass <= maxMass) rec = q;
+    }
+    if (!rec) rec = lighten(makeStarRecord(RNG.hash(star.seed, 'companion', k, 'dwarf'), COMPACT.has(star.cls) ? star.cls : star.cls === 'D' ? 'D' : 'M', { companionOf: star.id }), maxMass);
+    // (a companion of the primary's own class is a later, cooler subclass than its heavier primary)
+    const d0 = parseInt(star.specClass.slice(-1), 10);
+    if (rec.cls === star.cls && rec.cls.length === 1 && d0 >= 0) rec.specClass = rec.specClass.slice(0, -1) + Math.min(9, d0 + Math.round((1 - rec.mass / star.mass) * (10 - d0) * 1.5));
+    return rec;
+  }
+  // the multiplicity of a star: its companions and their orbits (null for a single star). Its own hash stream,
+  // so the star itself (and everything generated from its seed) is unchanged
+  function multiplicity(star) {
+    const r = new RNG.Rand(RNG.hash(star.seed, 'multiplicity')), compact = COMPACT.has(star.cls);
+    let kind = null;
+    const u = r.next();
+    if (compact) kind = u < (star.cls === 'NS' ? 0.1 : 0.08) ? 'binary' : null;
+    else kind = u < 0.0065 ? 'triple' : u < 0.0065 + (star.cls === 'RG' ? 0.08 : star.cls === 'D' ? 0.1 : 0.125) ? 'binary' : null;
+    if (!kind) return null;
+    const letter = ['A', 'B', 'C'], comps = [];
+    const B = companionOf(star, r, 1, star.mass);
+    B.name = `${star.name} B`; B.age = star.age;
+    const minSep = (a, b) => 3.5 * (a.radius + b.radius) * AU_PER_RSUN + 0.02;
+    let config, aIn, eIn;
+    if (compact) { config = 'close'; aIn = star.cls === 'NS' ? r.range(0.004, 0.03) : r.range(0.02, 0.8); eIn = r.range(0, star.cls === 'NS' ? 0.3 : 0.18); }
+    else if (kind === 'triple' || r.chance(0.38)) { config = kind === 'triple' ? 'hierarchical' : 'close'; aIn = Math.max(minSep(star, B), r.range(0.05, kind === 'triple' ? 0.4 : 0.6)); eIn = r.range(0, 0.1); }
+    else { config = 'wide'; aIn = Math.max(minSep(star, B) * 4, Math.exp(r.range(Math.log(15), Math.log(600)))); eIn = r.range(0, 0.55); }
+    const M12 = star.mass + B.mass;
+    comps.push({ star: B, letter: 'B', a: aIn, e: eIn, period: periodGame(aIn, M12), days: periodDays(aIn, M12), phase: r.range(0, TAU), tilt: r.range(-0.25, 0.25), around: 'A' });
+    let aOut = 0, eOut = 0;
+    if (kind === 'triple') {
+      const C = companionOf(star, r, 2, star.mass);
+      C.name = `${star.name} C`; C.age = star.age;
+      aOut = Math.max(aIn * 14, Math.exp(r.range(Math.log(40), Math.log(600)))); eOut = r.range(0, 0.35);
+      const M = M12 + C.mass;
+      comps.push({ star: C, letter: 'C', a: aOut, e: eOut, period: periodGame(aOut, M), days: periodDays(aOut, M), phase: r.range(0, TAU), tilt: r.range(-0.3, 0.3), around: 'AB' });
+    }
+    // where planets can orbit stably: around the close pair beyond its critical distance (circumbinary),
+    // or around the primary within the reach of a distant companion
+    const muIn = B.mass / M12, zone = { pType: config !== 'wide', aMin: 0, aMax: Infinity, lum: star.lum, mass: star.mass };
+    if (config === 'wide') zone.aMax = critS(eIn, muIn) * aIn * 0.92;
+    else { zone.aMin = critP(eIn, muIn) * aIn * 1.08; zone.lum = star.lum + B.lum; zone.mass = M12; }
+    if (kind === 'triple') { const C = comps[1].star, muOut = C.mass / (M12 + C.mass); zone.aMax = critS(eOut, muOut) * aOut * 0.92; }
+    const all = [star, ...comps.map((c) => c.star)];
+    return { kind, config, comps, letters: letter.slice(0, all.length), aIn, eIn, aOut, eOut, zone, totalMass: all.reduce((s, q) => s + q.mass, 0), totalLum: all.reduce((s, q) => s + q.lum, 0) };
+  }
+  // a companion's place on its (eccentric) orbit at time t: x, z in AU around what it orbits
+  function kepler(c, t) {
+    const M = TAU * t / c.period + c.phase;
+    let E = M;
+    for (let i = 0; i < 5; i++) E = M + c.e * Math.sin(E);
+    return [c.a * (Math.cos(E) - c.e), c.a * Math.sqrt(1 - c.e * c.e) * Math.sin(E)];
+  }
+  // where each star of a system is at time t, in AU, in the frame its planets orbit in (the centre of mass of
+  // a close pair, or the primary of a wide one): the primary first
+  function starPositions(star, t) {
+    const M = star.multi, out = [{ star, letter: 'A', pos: [0, 0, 0], c: null }];
+    if (!M) return out;
+    for (const c of M.comps) {
+      if (c.around === 'A' && M.config !== 'wide') {
+        const ang = TAU * t / c.period + c.phase, mu = c.star.mass / (star.mass + c.star.mass), q = [Math.cos(ang) * c.a, 0, Math.sin(ang) * c.a];
+        out[0].pos = V3.scale(q, -mu); out.push({ star: c.star, letter: c.letter, pos: V3.scale(q, 1 - mu), c });
+      } else { const [x, z] = kepler(c, t); out.push({ star: c.star, letter: c.letter, pos: [x, Math.sin(c.tilt) * z, z], c }); }
+    }
+    return out;
+  }
+  const CONFIG_TEXT = {
+    close: 'Close binary: the two stars circle each other in hours to months, and planets can only orbit the pair from outside (circumbinary orbits).',
+    wide: 'Wide binary: the companion orbits far out; planets circle the primary star, but only inside the reach of the companion’s gravity.',
+    hierarchical: 'Hierarchical triple: a close pair orbited by a distant third star. Planets can only orbit the inner pair, between the reach of the pair and of the third star.',
+  };
+
+  return {
+    REGIONS, GTYPES, CORES, SKINDS, MORPH, KLY, CONFIG_TEXT, COMP_NAME,
+    regionOf, galaxyAt, placeStar, lightOf, structuresIn, structureAt, particlesOf, multiplicity, toWorld, critS, critP, kepler, starPositions,
+    galaxyOf(sx, sz) { return regionOf(sx, sz).galaxy; },
+  };
+})();
+</script>
+
 <!-- ===== Climate & weather · planetary climate, drifting weather systems, cyclones, eruptions, tides ===== -->
 <script>
 'use strict';
@@ -1587,7 +2430,8 @@ const Climate = (() => {
     let C = cache.get(p);
     if (C) return C;
     p.prepare();
-    const host = p.isMoon ? p.parent : p, star = p.star, L = Math.max(0, star.lum), a = Math.max(0.02, host.a);
+    // (a planet around a close pair of stars basks in the light of both)
+    const host = p.isMoon ? p.parent : p, star = p.star, L = Math.max(0, host.hostLum != null ? host.hostLum : star.lum), a = Math.max(0.02, host.a);
     const rocky = p.kind === 'rocky', P = rocky ? p.pressure : 1000, lp = clamp((Math.log10(Math.max(P, 0.001)) + 2) / 3, 0, 1);
     C = { p, seed: RNG.hash(p.seed, 'climate'), rocky, P, locked: !!p.tidalLock, tilt: p.tilt, day: p.dayLength, year: host.period };
     C.noise = new Noise.Simplex(RNG.hash(p.seed, 'weather'));
@@ -1646,7 +2490,7 @@ const Climate = (() => {
       const k = clamp((m.mass / Math.max(0.01, p.mass)) / 0.0123 * Math.pow(3 / m.moonDist, 3) * 0.28, 0, 0.8);
       if (k > 0.005) C.moonTides.push({ m, k });
     }
-    C.sunTide = clamp(star.mass / (a * a * a) * 0.012, 0, 0.3);
+    C.sunTide = clamp((host.hostMass != null ? host.hostMass : star.mass) / (a * a * a) * 0.012, 0, 0.3);
     C.tideAmp = C.ocean > 0.03 ? Math.min(0.9, C.moonTides.reduce((s, q) => s + q.k, 0) + C.sunTide) : 0;
     // a moon squeezed by its planet is heated from within
     C.tidalHeat = p.isMoon ? clamp((p.parent.mass / Math.max(0.01, p.mass)) * 0.00012 * Math.pow(2.3 / p.moonDist, 3) * (p.parent.isGiant ? 1 : 0.3), 0, 1) : clamp(C.moonTides.reduce((s, q) => s + q.k, 0) * 0.12, 0, 0.3);
@@ -3990,6 +4834,12 @@ const Civ = (() => {
     for (let sx = rx * RS; sx < rx * RS + RS; sx++) for (let sz = rz * RS; sz < rz * RS + RS; sz++) out.push(...Universe.sector(sx, sz).stars);
     return out;
   }
+  // (the sectors of a region, one at a time, so a region full of galaxies is built without a stall)
+  function* sectorsOf(key, out) {
+    if (key.startsWith('pocket:')) { out.push(Universe.pocketStar(key.slice(7))); return; }
+    const [rx, rz] = key.split(',').map(Number);
+    for (let sx = rx * RS; sx < rx * RS + RS; sx++) for (let sz = rz * RS; sz < rz * RS + RS; sz++) { out.push(...Universe.sector(sx, sz).stars); yield; }
+  }
   const bodiesOf = (sys) => { const o = []; for (const p of sys.planets) { o.push(p); for (const m of p.moons) o.push(m); } return o; };
 
   // ---------------------------------------------------------------- region build
@@ -3999,10 +4849,14 @@ const Civ = (() => {
       stars: [], byStar: new Map(), civs: [], events: [], step: -1, holdings: new Map(), claimed: new Set(), terraformed: new Map(), projects: [], ready: false, universe: Universe.name,
     };
     R.k = 200 / R.steps;
-    const stars = starsOf(key);
+    const stars = [];
+    yield* sectorsOf(key, stars);
+    // the stars a sector always held keep their chance of cradling a people (so the peoples of earlier versions
+    // keep their homeworlds); the many added stars of a galaxy are each far less likely to, so a region crowded
+    // with galaxies holds only somewhat more peoples than before
     let n = 0;
     for (const s of stars) {
-      const gate = key.startsWith('pocket:') ? 0.9 : 0.32;
+      const gate = key.startsWith('pocket:') ? 0.9 : s.base ? 0.32 : 0.012;
       const rec = { star: s, sys: null, idx: R.stars.length, homes: [] };
       R.stars.push(rec); R.byStar.set(s.id, rec);
       if (RNG.unit(RNG.hash(s.seed, 'civ-gate', A.age)) > gate || s.cls === 'BH' || s.cls === 'NS') continue;
@@ -5505,7 +6359,9 @@ void main(){
   } else if (uMode == 2) {
     g = exp(-pow((r - 0.62) * 6.0, 2.0)) * (0.7 + 0.3 * sin(atan(vUV.y, vUV.x) * 3.0 + uTime * 2.0));
   } else {
-    g = step(abs(r - 0.8), 0.08) * 0.8;
+    // a thin dashed selection ring
+    float w = max(fwidth(r) * 1.5, 0.004);
+    g = step(abs(r - 0.9), w) * step(0.45, fract(atan(vUV.y, vUV.x) * 7.6394 + uTime * 0.05)) * 0.9;
   }
   g = floor(g * 7.0 + b) / 7.0 * uIntensity;
   if (g <= 0.0) discard;
@@ -5519,12 +6375,16 @@ out vec4 vC; out float vS; flat out float vK;
 void main(){
   gl_Position = uVP * vec4(aPos, 1.0);
   float s = clamp(aExt.x * uScale / max(gl_Position.w, 0.001), uMin, uMax);
-  float tw = 0.82 + 0.18 * sin(uTime * (1.3 + aExt.z) + aExt.z * 17.0);
+  float tw = aExt.w > 0.5 ? 1.0 : 0.82 + 0.18 * sin(uTime * (1.3 + aExt.z) + aExt.z * 17.0);
   vC = vec4(aCol.rgb, aCol.a * tw); vS = s; vK = aExt.y; gl_PointSize = s;
 }`, H + OUT + COMMON + `
 in vec4 vC; in float vS; flat in float vK; uniform int uMode;
 void main(){
   vec2 c = gl_PointCoord * 2.0 - 1.0; float r = length(c);
+  // soft glow (unresolved starlight, nebulae): a dithered disc fading to its edge
+  if (uMode == 2) { float k = 1.0 - r * r; k = floor(k * 4.0 + bayer4(gl_FragCoord.xy)) / 4.0; if (k <= 0.0) discard; oC = vec4(vC.rgb * vC.a * k * 1.3, 1.0); oI = vec4(0.0); return; }
+  // dust: dims the light behind it (drawn with the 'dark' blend), dithered, thinning toward its edge
+  if (uMode == 3) { float k = (1.0 - r * r) * vC.a; k = floor(k * 4.0 + bayer4(gl_FragCoord.xy)) / 4.0; if (k <= 0.0) discard; oC = vec4(0.0, 0.0, 0.0, min(k, 0.9)); oI = vec4(0.0); return; }
   float a = 1.0;
   if (vK > 1.5) a = step(abs(r - 0.66), 0.2);
   else if (vS >= 3.0 && uMode == 0) {
@@ -5552,11 +6412,31 @@ void main(){ vNdc = aPos.xy; gl_Position = vec4(aPos.xy, 0.0, 1.0); }`,
   H + OUT + COMMON + NOISE + `
 in vec2 vNdc;
 uniform mat4 uInvVP; uniform vec3 uTop; uniform vec3 uBottom; uniform vec3 uNeb1; uniform vec3 uNeb2; uniform float uTime; uniform float uSeed; uniform float uNebula; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uStars;
+uniform float uBand; uniform float uBandMode; uniform vec3 uBandN; uniform vec3 uBandC; uniform vec3 uBandCol; uniform float uBulge; uniform vec4 uFar; uniform vec3 uFarCol; uniform vec3 uSun2Dir; uniform vec3 uSun2Col;
 void main(){
   vec4 a = uInvVP * vec4(vNdc, -1.0, 1.0); vec4 b = uInvVP * vec4(vNdc, 1.0, 1.0);
   vec3 dir = normalize(b.xyz / b.w - a.xyz / a.w);
   vec3 c = mix(uBottom, uTop, dir.y * 0.5 + 0.5);
   float bb = bayer4(gl_FragCoord.xy);
+  // the home galaxy from inside: the band of its disk (with a dark dust lane and the glow of the bulge), or
+  // the even glow of an elliptical all around; from outside, a distant galaxy as a smudge of light
+  if (uBand > 0.0) {
+    float n1 = fbm3(dir * 3.3 + uSeed * 0.7) * 0.5 + 0.5, band;
+    float cd = max(dot(dir, uBandC), 0.0);
+    if (uBandMode > 0.5) band = 0.35 + 0.65 * pow(cd, 2.0) * (0.7 + 0.5 * n1);
+    else {
+      float pl = 1.0 - abs(dot(dir, uBandN));
+      band = smoothstep(0.82, 1.0, pl) * (0.5 + 0.65 * n1) + pow(cd, 7.0) * uBulge * smoothstep(0.6, 1.0, pl + 0.2);
+      band *= 1.0 - smoothstep(0.988, 1.0, pl) * smoothstep(0.35, 0.7, n1) * 0.75;
+    }
+    band = floor(band * 5.0 + bb) / 5.0 * uBand;
+    c += uBandCol * band * 0.3;
+  }
+  if (uFar.w > 0.0) {
+    float g = smoothstep(cos(uFar.w), 1.0, dot(dir, uFar.xyz));
+    g = floor(g * g * 4.0 + bb) / 4.0;
+    c += uFarCol * g * 0.4;
+  }
   if (uNebula > 0.0) {
     float n = fbm3(dir * 2.1 + uSeed); float n2 = snoise(dir * 4.5 + uSeed * 1.7);
     float neb = smoothstep(0.05, 0.75, n + 0.25 * n2) * uNebula;
@@ -5569,6 +6449,9 @@ void main(){
   }
   float sd = max(dot(dir, uSunDir), 0.0);
   c += uSunCol * (step(0.99965, sd) * 2.0 + pow(sd, 18.0) * 0.14 + pow(sd, 3.0) * 0.03);
+  // a second sun: the companion star of a binary
+  float sd2 = max(dot(dir, uSun2Dir), 0.0);
+  c += uSun2Col * (step(0.99975, sd2) * 2.0 + pow(sd2, 24.0) * 0.1 + pow(sd2, 4.0) * 0.015);
   oC = vec4(c, 1.0); oI = vec4(0.5, 0.5, 0.0, 0.0);
 }`];
 
@@ -5602,10 +6485,11 @@ void main(){
     }
     c = mix(c, c * vec3(0.26, 0.24, 0.38), edge * inf.b);
   }
-  if (uPosterize > 0.0) c = floor(c * uPosterize + bayer4(vec2(p)) * 0.999) / uPosterize;
   vec2 uv = (vec2(p) + 0.5) / uRes;
   float vg = length((uv - 0.5) * vec2(1.0, uRes.y / uRes.x)) * 1.25;
   c *= 1.0 - uVignette * smoothstep(0.55, 1.05, vg);
+  // retro palette: each channel limited to a few levels (spaced for the eye, so darks stay dark), ordered-dithered
+  if (uPosterize > 0.0) { vec3 g = sqrt(clamp(c, 0.0, 1.0)); g = floor(g * uPosterize + bayer4(vec2(p)) * 0.999) / uPosterize; c = g * g; }
   if (uFade > 0.0 && bayer8(vec2(p)) < uFade) c = uFadeCol;
   float alpha = 1.0;
   if (uTransparent > 0.5 && inf.a < 0.5) alpha = 0.0;
@@ -5673,12 +6557,12 @@ class Renderer {
     gl.clearBufferfv(gl.DEPTH, 0, [1]);
     gl.disable(gl.BLEND);
   }
-  // blending modes: 'none' | 'add' | 'alpha'
+  // blending modes: 'none' | 'add' | 'alpha' | 'dark' (dims what is behind by the source alpha)
   blend(mode) {
     const gl = this.gl;
     if (mode === 'none') { gl.disable(gl.BLEND); gl.depthMask(true); return; }
     gl.enable(gl.BLEND);
-    if (mode === 'add') gl.blendFunc(gl.ONE, gl.ONE); else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    if (mode === 'add') gl.blendFunc(gl.ONE, gl.ONE); else if (mode === 'dark') gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_ALPHA); else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
   end(cam, target = null) {
     const gl = this.gl, P = GFX.use(this.P.post), sprite = !!target;
@@ -9153,14 +10037,48 @@ class CivLife {
    VIEW HELPERS
    ============================================================================= */
 function drawSky(R, cam, o) {
-  const gl = R.gl, P = GFX.use(R.P.sky);
+  const gl = R.gl, P = GFX.use(R.P.sky), g = o.gal;
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
   GFX.setAll(P, {
     uInvVP: cam.inv, uTop: o.top || [0.02, 0.02, 0.06], uBottom: o.bottom || [0.01, 0.01, 0.03], uNeb1: o.neb1 || [0.3, 0.1, 0.5], uNeb2: o.neb2 || [0.1, 0.3, 0.5],
     uTime: o.time || 0, uSeed: o.seed || 0, uNebula: o.nebula || 0, uSunDir: o.sunDir || [0, 1, 0], uSunCol: o.sunCol || [0, 0, 0], uStars: o.stars != null ? o.stars : 1,
+    // the galaxy around (or near) the observer, and a companion sun
+    uBand: g && g.band ? g.band : 0, uBandMode: g && g.ell ? 1 : 0, uBandN: g && g.n ? g.n : [0, 1, 0], uBandC: g && g.c ? g.c : [1, 0, 0], uBandCol: g && g.col ? g.col : [0, 0, 0], uBulge: g && g.bulge ? g.bulge : 0,
+    uFar: g && g.far ? [g.far[0], g.far[1], g.far[2], g.size] : [0, 1, 0, 0], uFarCol: g && g.far ? g.col : [0, 0, 0],
+    uSun2Dir: o.sun2Dir || [0, 1, 0], uSun2Col: o.sun2Col || [0, 0, 0],
   });
   R.tri.draw();
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+}
+// CPU-side point buffers that a view fills over several frames and then copies into its GPU streams at once
+class PointStage {
+  constructor(max) { this.max = max; this.n = 0; this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 4); this.ext = new Float32Array(max * 4); }
+  reset() { this.n = 0; }
+  push(x, y, z, r, g, b, a, e0 = 1, e1 = 0, e2 = 0, e3 = 0) {
+    if (this.n >= this.max) return;
+    const i = this.n++, p = i * 3, c = i * 4;
+    this.pos[p] = x; this.pos[p + 1] = y; this.pos[p + 2] = z;
+    this.col[c] = r; this.col[c + 1] = g; this.col[c + 2] = b; this.col[c + 3] = a;
+    this.ext[c] = e0; this.ext[c + 1] = e1; this.ext[c + 2] = e2; this.ext[c + 3] = e3;
+  }
+  // hand the filled arrays to a GPU stream of the same size (taking its old ones for the next build) and upload
+  commit(s) {
+    [this.pos, s.pos] = [s.pos, this.pos]; [this.col, s.col] = [s.col, this.col]; [this.ext, s.ext] = [s.ext, this.ext];
+    s.n = this.n; s.upload();
+  }
+}
+// push packed points (x, y, z, r, g, b, a, size: 8 floats; a negative size marks a star) into streams
+function pushPoints(stream, arr, o, stars, am = 1) {
+  const P = stream.pos, C = stream.col, E = stream.ext, ox = o[0], oz = o[2];
+  for (let j = 0; j < arr.length; j += 8) {
+    const s = arr[j + 7];
+    if (s < 0) { if (stars) stars.push(arr[j] - ox, arr[j + 1], arr[j + 2] - oz, arr[j + 3], arr[j + 4], arr[j + 5], arr[j + 6] * am, -s * 2.2, 0, (j % 97) / 25, 0); continue; }
+    if (stream.n >= stream.max) continue;
+    const i = stream.n++, p = i * 3, c = i * 4;
+    P[p] = arr[j] - ox; P[p + 1] = arr[j + 1]; P[p + 2] = arr[j + 2] - oz;
+    C[c] = arr[j + 3]; C[c + 1] = arr[j + 4]; C[c + 2] = arr[j + 5]; C[c + 3] = arr[j + 6] * am;
+    E[c] = s; E[c + 1] = 0; E[c + 2] = 0; E[c + 3] = 1;
+  }
 }
 function drawGlow(R, cam, center, size, mode, color, color2, intensity, seed = 0, time = 0) {
   const P = GFX.use(R.P.glow);
@@ -9196,13 +10114,17 @@ function modelTRS(x, y, z, s, tilt = 0, spin = 0) {
 }
 
 /* =============================================================================
-   GALAXY VIEW · infinite seeded star field (sectors streamed around camera)
+   GALAXY VIEW · the cosmos, sector by sector: galaxies with their supermassive
+   cores, fields of scattered systems, empty voids, and the nebulae, clouds and
+   stranger formations in and between them (streamed around the camera, with
+   detail that follows the zoom)
    ============================================================================= */
 class GalaxyView {
   constructor(app) {
     this.app = app; this.name = 'galaxy';
     this.cam = new Camera({ target: [0, 0, 0], dist: 240, yaw: 0.6, pitch: 0.9, fov: 0.95, near: 1, far: 9000, edge: 5 });
     this.stars = []; this.selected = null; this.hover = null; this.key = ''; this.nebulae = [];
+    this.galaxies = []; this.structs = []; this.sel = null;
     this.stream = null; this.grid = null; this.civT = 1; this.civMap = null;
   }
   // territories, routes and fleets of civilizations in the regions around the camera
@@ -9230,47 +10152,122 @@ class GalaxyView {
       this.cam.goal.target = p.star.pos.slice(); this.cam.goal.dist = Math.min(this.cam.goal.dist, 190);
       if (p.snap) this.cam.snap();
       this.select(p.star);
-    } else if (p.target) { this.cam.goal.target = p.target.slice(); if (p.snap) this.cam.snap(); }
-    this.key = '';
+    } else if (p.galaxy) { this.viewGalaxy(p.galaxy, p.snap); this.selectObj({ kind: 'galaxy', obj: p.galaxy }); }
+    else if (p.target) { this.cam.goal.target = p.target.slice(); if (p.snap) this.cam.snap(); }
+    // (arriving, the neighbourhood is built at once; afterwards it streams in over a few frames)
+    this.key = ''; this.job = null; this.syncNext = true;
   }
   exit() { this.app.ui.markers.hide('sel'); }
   select(star) {
-    this.selected = star;
+    this.selected = star; this.sel = null;
     if (star) this.app.ui.panelFor(this);
     else { this.app.ui.panel.hide(); this.app.ui.quick([]); }
   }
-  ensure() {
-    const S = Universe.SECTOR, t = this.cam.cur.target;
+  // a galaxy, its core, or a cosmic structure
+  selectObj(o) {
+    this.selected = null; this.sel = o;
+    if (o) this.app.ui.panelFor(this);
+    else { this.app.ui.panel.hide(); this.app.ui.quick([]); }
+  }
+  focusOn(pos, dist, snap) { this.cam.goal.target = pos.slice(); this.cam.goal.dist = clamp(dist, 8, 2600); if (snap) this.cam.snap(); }
+  // a whole galaxy, seen from a little off its rotation axis so its arms read
+  viewGalaxy(G, snap) {
+    const n = G.n, c = this.cam.goal;
+    if (G.inc > 0.12) { c.yaw = Math.atan2(n[0], n[2]); c.yaw = this.cam.cur.yaw + angleDelta(this.cam.cur.yaw, c.yaw); }
+    c.pitch = clamp(Math.asin(n[1]) - 0.22, 0.55, 1.35);
+    this.focusOn(G.c, G.R * 3.2, snap);
+  }
+  // the galaxy the camera is looking into (if any)
+  galaxyHere() { const g = Cosmos.galaxyAt(this.cam.cur.target); return g && g.k < 1.25 ? g.G : null; }
+  // the sectors around the camera: when the camera moves to another sector (or zooms to another band) the
+  // neighbourhood is rebuilt into staging buffers a few milliseconds per frame while the previous one stays
+  // on screen, then swapped in whole (a jump, or a new universe, builds at once)
+  ensure(sync) {
+    const S = Universe.SECTOR, t = this.cam.cur.target, dist = this.cam.cur.dist;
+    if (this.job && this.job.u !== Universe.name) this.job = null;
+    if (this.job) { this.stepJob(sync); if (this.job || !sync) return; }
     const csx = Math.floor(t[0] / S), csz = Math.floor(t[2] / S);
-    const R = clamp(Math.ceil((this.cam.cur.dist * 1.7) / S), 3, 13);
-    const key = `${Universe.name}:${csx},${csz},${R}`;
+    const R = clamp(Math.ceil((dist * 1.7) / S), 3, 17);
+    // individual systems are resolved near the camera; far away only the light of the galaxies remains
+    const Rs = dist > 1100 ? 0 : clamp(Math.ceil((dist * 0.8) / S), 1, 4);
+    const band = dist < 330 ? 0 : dist < 700 ? 1 : dist < 1400 ? 2 : 3;
+    const key = `${Universe.name}:${csx},${csz},${R},${Rs},${band}`;
     if (key === this.key) return;
-    this.key = key;
-    const gl = this.app.R.gl;
-    this.cam.origin = [csx * S, 0, csz * S];
-    const o = this.cam.origin;
-    if (!this.stream) { this.stream = new GFX.Stream(24000, gl.POINTS); this.grid = new GFX.Stream(6000, gl.LINES); }
-    const st = this.stream; st.reset(); this.stars = [];
-    for (let x = csx - R; x <= csx + R; x++) for (let z = csz - R; z <= csz + R; z++) {
-      if ((x - csx) ** 2 + (z - csz) ** 2 > (R + 0.5) ** 2) continue;
-      for (const s of Universe.sector(x, z).stars) {
-        this.stars.push(s);
-        let size = 1.6 + Math.log10(1 + s.lum) * 0.8, kind = 0, a = 0.95;
-        if (s.cls === 'RG') size = 4.6; else if (s.cls === 'BH') { size = 4; kind = 2; } else if (s.cls === 'D') { size = 1.3; a = 0.8; } else if (s.cls === 'NS') size = 2.2;
-        const c = s.color;
-        st.push(s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2], c[0], c[1], c[2], a, size, kind, (s.seed % 100) / 25);
+    const first = !this.stream || this.builtU !== Universe.name || this.syncNext;
+    this.key = key; this.syncNext = false;
+    this.job = this.build(csx, csz, R, Rs, t.slice(), dist); this.job.u = Universe.name;
+    this.stepJob(sync || first);
+  }
+  stepJob(all) {
+    const t0 = performance.now();
+    for (;;) {
+      if (this.job.next().done) { this.job = null; return; }
+      if (!all && performance.now() - t0 > 6) return;
+    }
+  }
+  *build(csx, csz, R, Rs, t, dist) {
+    const S = Universe.SECTOR, gl = this.app.R.gl, o = [csx * S, 0, csz * S];
+    if (!this.stream) {
+      this.stream = new GFX.Stream(24000, gl.POINTS); this.grid = new GFX.Stream(6000, gl.LINES);
+      this.light = new GFX.Stream(120000, gl.POINTS); this.dust = new GFX.Stream(60000, gl.POINTS); this.neb = new GFX.Stream(110000, gl.POINTS); this.nebStars = new GFX.Stream(8000, gl.POINTS);
+      this.stage = { stream: new PointStage(24000), light: new PointStage(120000), dust: new PointStage(60000), neb: new PointStage(110000), nebStars: new PointStage(8000) };
+    }
+    const G0 = this.stage, st = G0.stream, Lt = G0.light, Du = G0.dust, Nb = G0.neb, Ns = G0.nebStars;
+    st.reset(); Lt.reset(); Du.reset(); Nb.reset(); Ns.reset();
+    const stars = [], galaxies = [], structs = [];
+    const cx = t[0], cz = t[2], edge = (R + 0.5) * S;
+    // nearest sectors first, so that an interrupted frame budget still fills the middle of the view first
+    const cells = [];
+    for (let x = csx - R; x <= csx + R; x++) for (let z = csz - R; z <= csz + R; z++) { const d2 = (x - csx) ** 2 + (z - csz) ** 2; if (d2 <= (R + 0.5) ** 2) cells.push([x, z, d2]); }
+    cells.sort((a, b) => a[2] - b[2]);
+    for (const [x, z, d2] of cells) {
+      const reg = Universe.regionOf(x, z);
+      if (reg.type === 'empty') continue;
+      const G = reg.galaxy;
+      if (G) {
+        galaxies.push(G);
+        const dh = Math.hypot(G.c[0] - cx, G.c[2] - cz), dc = Math.hypot(dh, dist), lod = dc < 250 ? 0 : dc < 520 ? 1 : dc < 900 ? 2 : 3;
+        // (the streamed disc of sectors fades out at its rim instead of ending in a hard edge)
+        const fade = 1 - smoothstep(edge * 0.62, edge * 0.98, dh);
+        if (fade > 0.02) { const Lg = Cosmos.lightOf(G, lod); pushPoints(Lt, Lg.pts, o, null, fade); pushPoints(Du, Lg.dust, o, null, fade); }
+      }
+      yield;
+      for (const s of Cosmos.structuresIn(x, z)) {
+        const dc = Math.hypot(s.pos[0] - cx, s.pos[2] - cz, dist), big = !s.K.gal;
+        if (dc > (big ? 1000 + s.radius * 40 : 280 + s.radius * 36)) continue;
+        structs.push(s);
+        const P = Cosmos.particlesOf(s, dc < 150 + s.radius * 12 ? 0 : dc < 380 + s.radius * 22 ? 1 : 2);
+        pushPoints(Nb, P.lit, o, Ns); pushPoints(Du, P.dark, o);
+        yield;
+      }
+      if (Rs && d2 <= (Rs + 0.5) ** 2) {
+        for (const s of Universe.sector(x, z).stars) {
+          stars.push(s);
+          let size = 1.6 + Math.log10(1 + s.lum) * 0.8, kind = 0, a = 0.95;
+          if (s.cls === 'RG') size = 4.6; else if (s.cls === 'BH') { size = 4; kind = 2; } else if (s.cls === 'D') { size = 1.3; a = 0.8; } else if (s.cls === 'NS') size = 2.2;
+          const c = s.color, tw = (s.seed % 100) / 25;
+          st.push(s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2], c[0], c[1], c[2], a, size, kind, tw);
+          // companions: a double (or triple) star, just resolved
+          if (s.multi) s.multi.comps.forEach((q, i) => {
+            const ang = (s.seed % 628) / 100 + i * 2.1, off = 0.45 + i * 0.3, cc = q.star.cls === 'BH' ? [1, 0.62, 0.3] : q.star.color;
+            st.push(s.pos[0] - o[0] + Math.cos(ang) * off, s.pos[1] + 0.1, s.pos[2] - o[2] + Math.sin(ang) * off, cc[0], cc[1], cc[2], 0.85, Math.max(1.2, size * 0.7), q.star.cls === 'BH' ? 2 : 0, tw + 1);
+          });
+        }
+        yield;
       }
     }
-    st.upload();
+    // swap the new neighbourhood in
+    st.commit(this.stream); Lt.commit(this.light); Du.commit(this.dust); Nb.commit(this.neb); Ns.commit(this.nebStars);
     const g = this.grid; g.reset();
     const gc = [0.28, 0.36, 0.8];
     for (let i = -R; i <= R + 1; i++) for (let j = -R; j <= R; j++) {
       const f1 = 1 - Math.hypot(i, j + 0.5) / (R + 1), f2 = 1 - Math.hypot(j + 0.5, i) / (R + 1);
-      if (f1 > 0) { g.push(i * S, 0, j * S, ...gc, f1 * 0.28); g.push(i * S, 0, (j + 1) * S, ...gc, f1 * 0.28); }
-      if (f2 > 0) { g.push(j * S, 0, i * S, ...gc, f2 * 0.28); g.push((j + 1) * S, 0, i * S, ...gc, f2 * 0.28); }
+      if (f1 > 0) { g.push(i * S, 0, j * S, ...gc, f1 * 0.2); g.push(i * S, 0, (j + 1) * S, ...gc, f1 * 0.2); }
+      if (f2 > 0) { g.push(j * S, 0, i * S, ...gc, f2 * 0.2); g.push((j + 1) * S, 0, i * S, ...gc, f2 * 0.2); }
     }
     g.upload();
-    this.nebulae = Universe.nebulae(csx - R, csz - R, csx + R, csz + R);
+    this.cam.origin = o; this.stars = stars; this.galaxies = galaxies; this.structs = structs; this.nebulae = structs; this.builtU = Universe.name;
+    if (this.hover && !stars.includes(this.hover)) this.hover = null;
   }
   update(dt) {
     if (this.app.autopilot || this.app.splashOn) this.cam.goal.yaw += dt * (this.app.splashOn ? 0.06 : 0.03);
@@ -9283,24 +10280,82 @@ class GalaxyView {
   }
   render(R) {
     const gl = R.gl, cam = this.cam.compute(R.aspect), o = this.cam.origin, pal = Universe.palette, T = this.app.anim;
-    R.begin([0.01, 0.012, 0.03]);
-    drawSky(R, cam, { top: [0.02, 0.025, 0.06], bottom: [0.01, 0.01, 0.025], neb1: pal.a, neb2: pal.b, nebula: 0.55, seed: Universe.seed % 97, time: T, stars: 0.7 });
+    R.begin([0.008, 0.009, 0.022]);
+    drawSky(R, cam, { top: [0.015, 0.018, 0.045], bottom: [0.008, 0.008, 0.02], neb1: pal.a, neb2: pal.b, nebula: 0.28, seed: Universe.seed % 97, time: T, stars: 0.55 });
     gl.depthMask(false);
-    R.blend('add');
-    for (const n of this.nebulae) drawGlow(R, cam, [n.pos[0] - o[0], n.pos[1], n.pos[2] - o[2]], n.radius, 1, Color.mul(n.color, 0.35), Color.mul(n.color2, 0.35), 1, n.seed, T);
     R.blend('alpha');
     GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); this.grid.draw();
+    const P = GFX.use(R.P.points), scale = R.low[1] / (2 * Math.tan(this.cam.fov / 2));
+    // the unresolved light of the galaxies and the glow of nebulae, then the dust that dims them
+    // (close in, the unresolved glow shrinks to a fine haze: the stars themselves are resolved there)
     R.blend('add');
-    const P = GFX.use(R.P.points);
-    GFX.setAll(P, { uVP: cam.vp, uScale: R.low[1] / (2 * Math.tan(this.cam.fov / 2)), uTime: T, uMin: 1, uMax: 16, uMode: 0 });
-    this.stream.draw();
+    GFX.setAll(P, { uVP: cam.vp, uScale: scale, uTime: T, uMin: 1, uMax: clamp(2.5 + this.cam.cur.dist * 0.045, 3, 12), uMode: 2 });
+    this.light.draw();
+    GFX.set(P, 'uMax', 14); this.neb.draw();
+    R.blend('dark');
+    GFX.setAll(P, { uMode: 3, uMax: 10 }); this.dust.draw();
+    R.blend('add');
+    this.renderCores(R, cam, T);
+    // stars: embedded young stars of the nebulae, then the star systems themselves
+    GFX.use(P); GFX.setAll(P, { uVP: cam.vp, uScale: scale, uTime: T, uMin: 1, uMax: 16, uMode: 0 });
+    this.nebStars.draw(); this.stream.draw();
     if (this.selected && !this.selected.pocket) {
       const s = this.selected;
       drawGlow(R, cam, [s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2]], 4 + this.cam.cur.dist * 0.02, 0, Color.mul(s.color, 0.8), null, 0.9, 1, T);
     }
+    if (this.sel) this.renderSel(R, cam, T);
     if (this.civMap) this.renderCiv(R, cam, T);
     R.blend('none'); gl.depthMask(true);
     R.end(cam.info());
+  }
+  // supermassive cores: the glow of the nucleus, accretion rings, relativistic jets, radio lobes
+  renderCores(R, cam, T) {
+    const gl = R.gl, o = this.cam.origin, tg = this.cam.cur.target, dist = this.cam.cur.dist, t = this.app.t;
+    const L = this.coreL || (this.coreL = new GFX.Stream(8000, gl.LINES)), Pt = this.coreP || (this.coreP = new GFX.Stream(4000, gl.POINTS));
+    L.reset(); Pt.reset();
+    for (const G of this.galaxies) {
+      const C = G.core, dc = Math.hypot(G.c[0] - tg[0], G.c[2] - tg[2], dist);
+      if (dc > 2200) continue;
+      const c = [G.c[0] - o[0], G.c[1], G.c[2] - o[2]], k = clamp(dc / 240, 0.3, 5), key = C.key;
+      const fl = C.C.flicker ? 0.55 + 0.6 * Math.abs(Math.sin(T * 5.3 + (G.seed % 7))) * (0.6 + 0.4 * Math.sin(T * 0.9)) : 1;
+      const bright = C.C.glow * fl, col = Color.mix(G.col.bulge, C.C.col, 0.55);
+      drawGlow(R, cam, c, (G.bulge * 1.1 + 1.2) * Math.min(1.6, 0.8 + bright * 0.25), 0, Color.mul(col, clamp(0.28 * bright, 0.12, 0.8)), null, 0.9, (G.seed % 50) / 7, T);
+      if (dc < 900) {
+        if (key === 'binary') {
+          const a = T * 0.6 + (G.seed % 9), d = 0.7 * k;
+          for (const s of [1, -1]) drawGlow(R, cam, [c[0] + Math.cos(a) * d * s, c[1], c[2] + Math.sin(a) * d * s], 0.8 * k, 2, Color.mul(C.C.col, 0.9), null, 1.1, s, T);
+        } else if (key !== 'cluster') drawGlow(R, cam, c, (key === 'quasar' || key === 'blazar' ? 1.4 : 0.9) * k, 2, Color.mul(C.C.col, key === 'smbh' || key === 'imbh' ? 0.75 : 1), null, 1.2, 1, T);
+        if (key === 'quasar' || key === 'blazar') drawGlow(R, cam, c, 2.6 * k * fl, 0, Color.mul([0.8, 0.9, 1], 0.9), null, 1.3, 3, T);
+      }
+      if (C.jet) {
+        const j = C.jet, len = C.jetLen, jc = key === 'radio' ? [0.8, 0.6, 1] : [0.6, 0.8, 1];
+        for (const s of [1, -1]) {
+          for (let i = 0; i < 18; i++) {
+            const f0 = i / 18, f1 = (i + 1) / 18, al = (0.65 - f0 * 0.5) * fl;
+            L.push(c[0] + j[0] * len * f0 * s, c[1] + j[1] * len * f0 * s, c[2] + j[2] * len * f0 * s, ...jc, al);
+            L.push(c[0] + j[0] * len * f1 * s, c[1] + j[1] * len * f1 * s, c[2] + j[2] * len * f1 * s, ...jc, al);
+          }
+          // knots racing out along the jet
+          for (let i = 0; i < 5; i++) { const f = fract(t * 0.06 + i / 5 + (G.seed % 13) / 13); Pt.push(c[0] + j[0] * len * f * s, c[1] + j[1] * len * f * s, c[2] + j[2] * len * f * s, ...jc, 1 - f * 0.7, 0.5 + 0.4 * (1 - f), 0, 0, 1); }
+          if (C.C.lobes) drawGlow(R, cam, [c[0] + j[0] * len * s, c[1] + j[1] * len * s, c[2] + j[2] * len * s], len * 0.32, 1, [0.32, 0.22, 0.5], [0.2, 0.3, 0.55], 0.9, (G.seed % 30) + (s > 0 ? 0 : 5), T);
+        }
+      }
+    }
+    if (L.n) { L.upload(); R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); L.draw(); R.blend('add'); }
+    if (Pt.n) { Pt.upload(); const P = GFX.use(R.P.points); GFX.setAll(P, { uVP: cam.vp, uScale: R.low[1] / (2 * Math.tan(this.cam.fov / 2)), uTime: T, uMin: 1, uMax: 5, uMode: 2 }); Pt.draw(); }
+  }
+  // the outline of the selected galaxy (a ring in its own plane) or structure
+  renderSel(R, cam, T) {
+    const gl = R.gl, o = this.cam.origin, S = this.sel;
+    if (S.kind === 'struct') { const s = S.obj; drawGlow(R, cam, [s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2]], s.radius * 1.35, 3, [0.5, 0.8, 1], null, 0.7, 1, T); return; }
+    const G = S.obj, L = this.selL || (this.selL = new GFX.Stream(600, gl.LINES)); L.reset();
+    const rr = S.kind === 'core' ? Math.max(1.2, G.bulge * 0.8) : G.R * 1.08, n = 96, col = S.kind === 'core' ? [1, 0.8, 0.5] : [0.55, 0.85, 1];
+    for (let i = 0; i < n; i++) {
+      if (i % 2) continue;
+      const a0 = i / n * TAU, a1 = (i + 1) / n * TAU;
+      for (const a of [a0, a1]) { const w = Cosmos.toWorld(G, Math.cos(a) * rr, 0, Math.sin(a) * rr); L.push(w[0] - o[0], w[1], w[2] - o[2], ...col, 0.75); }
+    }
+    L.upload(); R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); L.draw(); R.blend('add');
   }
   renderCiv(R, cam, T) {
     const gl = R.gl, o = this.cam.origin, M = this.civMap, k = clamp(this.cam.cur.dist / 240, 0.6, 3);
@@ -9337,8 +10392,8 @@ class GalaxyView {
     }
     // battles among the stars flare where they are fought
     for (const q of M.battles || []) {
-      const k = clamp(1 - (tu - q.t) / Civ.STEP, 0, 1), fl = 0.5 + 0.5 * Math.sin(tu * 3 + q.t);
-      if (k > 0) drawGlow(R, cam, [q.star.pos[0] - o[0], q.star.pos[1], q.star.pos[2] - o[2]], 5 * k + 2, 2, Color.mul([1, 0.35, 0.25], 0.5 * k * fl + 0.15), null, 0.8, 3, T);
+      const kk = clamp(1 - (tu - q.t) / Civ.STEP, 0, 1), fl = 0.5 + 0.5 * Math.sin(tu * 3 + q.t);
+      if (kk > 0) drawGlow(R, cam, [q.star.pos[0] - o[0], q.star.pos[1], q.star.pos[2] - o[2]], 5 * kk + 2, 2, Color.mul([1, 0.35, 0.25], 0.5 * kk * fl + 0.15), null, 0.8, 3, T);
     }
     L.upload(); P.upload();
     R.blend('alpha'); GFX.use(R.P.line); GFX.set(R.P.line, 'uVP', cam.vp); L.draw();
@@ -9347,6 +10402,9 @@ class GalaxyView {
     P.draw();
   }
   rel(s) { const o = this.cam.origin; return [s.pos[0] - o[0], s.pos[1], s.pos[2] - o[2]]; }
+  relP(p) { const o = this.cam.origin; return [p[0] - o[0], p[1], p[2] - o[2]]; }
+  // projected radius in css pixels of a sphere of radius r at a point
+  pxRadius(p, r) { const R = this.app.R; return (r / (Math.max(1e-3, p.w) * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5; }
   pick(x, y, rad = 24) {
     const R = this.app.R; let best = null, bd = rad * rad;
     for (const s of this.stars) {
@@ -9357,25 +10415,81 @@ class GalaxyView {
     }
     return best;
   }
-  labels(L) {
-    const R = this.app.R;
+  // a core, a structure or a galaxy under the pointer (cores first, then the smallest structure, then galaxies)
+  pickObj(x, y) {
+    const R = this.app.R, dist = this.cam.cur.dist;
+    let best = null, bk = 1e9;
+    for (const G of this.galaxies) {
+      const p = this.cam.project(this.relP(G.c), R.cssW, R.cssH);
+      if (!p.visible) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (dist < 700) { const rc = Math.max(12, this.pxRadius(p, G.bulge * 0.6)); if (d < rc && d / rc < bk) { bk = d / rc - 1; best = { kind: 'core', obj: G }; } }
+    }
+    if (best) return best;
+    for (const s of this.structs) {
+      const p = this.cam.project(this.relP(s.pos), R.cssW, R.cssH);
+      if (!p.visible) continue;
+      const rp = Math.max(10, this.pxRadius(p, s.radius) * 0.75), d = Math.hypot(p.x - x, p.y - y);
+      if (d < rp && d / rp < bk) { bk = d / rp; best = { kind: 'struct', obj: s }; }
+    }
+    if (best) return best;
+    for (const G of this.galaxies) {
+      const p = this.cam.project(this.relP(G.c), R.cssW, R.cssH);
+      if (!p.visible) continue;
+      const rp = Math.max(14, this.pxRadius(p, G.R) * 0.9), d = Math.hypot(p.x - x, p.y - y);
+      if (d < rp && d / rp < bk) { bk = d / rp; best = { kind: 'galaxy', obj: G }; }
+    }
+    return best;
+  }
+  labels(L0) {
+    const R = this.app.R, dist = this.cam.cur.dist, mob = this.app.mobile, tg = this.cam.cur.target;
+    // (labels that would overlap one already placed are skipped)
+    const placed = [], L = { add: (x, y, text, cls, col) => { const w = text.length * 3.6 + 8; if (cls !== 'lbl-sel' && placed.some((q) => Math.abs(q[0] - x) < (q[2] + w) && Math.abs(q[1] - y) < 13)) return; placed.push([x, y, w]); L0.add(x, y, text, cls, col); } };
     const show = (s, cls) => { const p = this.cam.project(this.rel(s), R.cssW, R.cssH); if (p.visible) L.add(p.x, p.y, s.name, cls); return p; };
     const book = this.app.store.systemMarks();
     let n = 0;
     if (book.size) for (const s of this.stars) if (book.has(Codes.ofStar(s)) && n++ < 20) show(s, 'lbl-book');
+    // galaxy names from afar, the core and the nearby structures from close in
+    if (dist > 240) {
+      const list = this.galaxies.map((G) => [Math.hypot(G.c[0] - tg[0], G.c[2] - tg[2]), G]).sort((a, b) => a[0] - b[0]);
+      let m = 0;
+      for (const [, G] of list) {
+        if (m >= (mob ? 10 : 24)) break;
+        const p = this.cam.project(this.relP(G.c), R.cssW, R.cssH);
+        if (!p.visible) continue;
+        const rp = this.pxRadius(p, G.R);
+        if (rp < 9) continue;
+        m++; L.add(p.x, p.y + Math.max(12, rp * 0.75), G.name, 'lbl-gal');
+      }
+    } else {
+      const G = this.galaxyHere();
+      if (G) { const p = this.cam.project(this.relP(G.c), R.cssW, R.cssH); if (p.visible) L.add(p.x, p.y - 14, G.core.title, 'lbl-core'); }
+    }
+    if (dist < 360) {
+      let m = 0;
+      for (const s of this.structs) {
+        if (m >= (mob ? 5 : 12)) break;
+        const p = this.cam.project(this.relP(s.pos), R.cssW, R.cssH);
+        if (!p.visible || this.pxRadius(p, s.radius) < 16) continue;
+        m++; L.add(p.x, p.y, s.name, 'lbl-neb');
+      }
+    }
     if (this.hover && this.hover !== this.selected) show(this.hover, 'lbl-hover');
     if (this.civMap) {
       let m = 0;
-      const zoom = this.cam.cur.dist;
       for (const w of this.civMap.owners) {
-        if (!w.home || m > (this.app.mobile ? 8 : 18) || (zoom > 500 && w.civ.stage < 4)) continue;
+        if (!w.home || m > (mob ? 8 : 18) || (dist > 500 && w.civ.stage < 4)) continue;
         const p = this.cam.project(this.rel(w.star), R.cssW, R.cssH);
         if (!p.visible) continue;
         m++; L.add(p.x, p.y + 15, Civ.civName(w.civ), 'lbl-civ', Color.hex(Color.mix(w.civ.culture.pal.accent, [1, 1, 1], 0.3)));
       }
     }
     if (this.selected && !this.selected.pocket) { const p = show(this.selected, 'lbl-sel'); this.app.ui.markers.set('sel', p.x, p.y, p.visible, 'reticle'); }
-    else this.app.ui.markers.hide('sel');
+    else if (this.sel) {
+      const o = this.sel, pos = o.kind === 'struct' ? o.obj.pos : o.obj.c, p = this.cam.project(this.relP(pos), R.cssW, R.cssH);
+      if (p.visible) L.add(p.x, p.y - 18, o.kind === 'struct' ? o.obj.name : o.kind === 'core' ? o.obj.core.title : o.obj.name, 'lbl-sel');
+      this.app.ui.markers.hide('sel');
+    } else this.app.ui.markers.hide('sel');
   }
   groundAt(x, y) { const R = this.app.R, ray = this.cam.ray(x, y, R.cssW, R.cssH); if (Math.abs(ray.d[1]) < 1e-4) return null; const t = -ray.o[1] / ray.d[1]; if (t < 0) return null; return [ray.o[0] + ray.d[0] * t + this.cam.origin[0], 0, ray.o[2] + ray.d[2] * t + this.cam.origin[2]]; }
   pan(dx, dy) {
@@ -9386,16 +10500,38 @@ class GalaxyView {
   }
   rotate(dx, dy) { this.cam.goal.yaw -= dx * 0.006; this.cam.goal.pitch = clamp(this.cam.goal.pitch + dy * 0.005, 0.12, 1.5); }
   zoom(f, x, y) {
-    const c = this.cam.goal, nd = clamp(c.dist * f, 22, 2600), k = nd / c.dist;
+    const c = this.cam.goal, nd = clamp(c.dist * f, 8, 2600), k = nd / c.dist;
     if (x != null) { const g = this.groundAt(x, y); if (g) { c.target[0] += (g[0] - c.target[0]) * (1 - k); c.target[2] += (g[2] - c.target[2]) * (1 - k); } }
     c.dist = nd;
   }
-  tap(x, y) { const s = this.pick(x, y); this.select(s); }
-  dbl(x, y) { const s = this.pick(x, y); if (s) { this.select(s); this.app.openSystem(s); } else this.zoom(0.6, x, y); }
-  hoverAt(x, y) { const s = this.pick(x, y, 18); this.hover = s; return !!s; }
-  crumbs() { return [{ label: Universe.name, icon: 'galaxy' }]; }
-  hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · tap a star' : 'Drag to pan · right-drag to orbit · scroll to zoom · click a star · double-click to enter'; }
-  status() { const t = this.cam.cur.target, S = Universe.SECTOR; return `Sector ${Math.floor(t[0] / S)}, ${Math.floor(t[2] / S)} · ${fmt.n(this.stars.length)} stars in range`; }
+  tap(x, y) {
+    const s = this.pick(x, y);
+    if (s) { this.select(s); return; }
+    const o = this.pickObj(x, y);
+    if (o) this.selectObj(o); else this.select(null);
+  }
+  dbl(x, y) {
+    const s = this.pick(x, y);
+    if (s) { this.select(s); this.app.openSystem(s); return; }
+    const o = this.pickObj(x, y);
+    if (!o) { this.zoom(0.6, x, y); return; }
+    this.selectObj(o);
+    if (o.kind === 'galaxy') this.viewGalaxy(o.obj);
+    else if (o.kind === 'core') this.focusOn(o.obj.c, Math.max(16, o.obj.bulge * 5));
+    else this.focusOn(o.obj.pos, Math.max(8, o.obj.radius * 4.5));
+  }
+  hoverAt(x, y) { const s = this.pick(x, y, 18); this.hover = s; return !!s || (this.cam.cur.dist > 300 && !!this.pickObj(x, y)); }
+  crumbs() {
+    const out = [{ label: Universe.name, icon: 'galaxy' }], G = this.galaxyHere();
+    if (G) out.push({ label: G.name, icon: 'target', go: () => this.selectObj({ kind: 'galaxy', obj: G }) });
+    return out;
+  }
+  hint() { return this.app.mobile ? 'Drag to pan · pinch to zoom · tap a star, galaxy or nebula' : 'Drag to pan · right-drag to orbit · scroll to zoom · click a star, galaxy or nebula · double-click to enter'; }
+  status() {
+    const t = this.cam.cur.target, S = Universe.SECTOR, sx = Math.floor(t[0] / S), sz = Math.floor(t[2] / S), reg = Universe.regionOf(sx, sz);
+    const where = reg.galaxy ? `${reg.galaxy.name} · ${reg.galaxy.T.short} galaxy` : reg.info.name;
+    return `${where} · sector ${sx}, ${sz} · ${fmt.n(this.stars.length)} systems in range`;
+  }
 }
 
 /* =============================================================================
@@ -9409,7 +10545,7 @@ class SystemView {
   }
   enter(p) {
     const sys = p.system;
-    if (this.sys !== sys) { this.dispose(); this.build(sys); this.cam.goal.target = [0, 0, 0]; this.cam.goal.dist = clamp(this.maxR * 1.25, 30, 700); this.cam.snap(); this.cam.cur.dist *= 1.6; }
+    if (this.sys !== sys) { this.dispose(); this.build(sys); this.cam.goal.target = [0, 0, 0]; this.cam.goal.dist = clamp(this.viewR * 1.25, 30, 900); this.cam.snap(); this.cam.cur.dist *= 1.6; }
     this.selected = null; this.follow = null; this.starSel = false;
     if (p.planet) { const b = this.bodies.find((q) => q.p === p.planet); if (b) this.select(b, true); }
     else this.app.ui.panelFor(this);
@@ -9418,10 +10554,22 @@ class SystemView {
   dispose() { for (const b of this.bodies) if (b.mesh) b.mesh.dispose(); this.bodies = []; }
   build(sys) {
     this.sys = sys;
-    const st = sys.star;
-    this.sr = st.cls === 'BH' ? 2.4 : st.cls === 'NS' ? 1.2 : st.cls === 'D' ? 1.6 : clamp(3 + Math.log10(1 + st.radius) * 6, 2, 14);
-    const a0 = sys.planets.length ? sys.planets[0].a : 1;
-    this.orbitR = (a) => this.sr * 2.2 + 6 + 24 * Math.sqrt(a / a0);
+    const st = sys.star, M = sys.multi;
+    const srOf = (s) => s.cls === 'BH' ? 2.4 : s.cls === 'NS' ? 1.2 : s.cls === 'D' ? 1.6 : clamp(3 + Math.log10(1 + s.radius) * 6, 2, 14);
+    this.sr = srOf(st);
+    // the stars: the primary, and the companions of a multiple star (a close pair circles the middle of the
+    // system; a distant companion keeps its own wide orbit beyond the planets)
+    this.stars = [{ s: st, r: this.sr, pos: [0, 0, 0], letter: 'A', c: null }];
+    let base = this.sr * 2.2 + 6;
+    this.pairD = 0;
+    if (M) {
+      for (const c of M.comps) this.stars.push({ s: c.star, r: srOf(c.star) * 0.92, pos: [0, 0, 0], letter: c.letter, c });
+      if (M.config !== 'wide') { const B = this.stars[1]; this.pairD = (this.sr + B.r) * 1.3 + 1.5; base = Math.max(base, this.pairD + Math.max(this.sr, B.r) * 2 + 6); }
+    }
+    const a0 = sys.planets.length ? sys.planets[0].a : M && M.zone.aMin ? M.zone.aMin * 1.12 : 1, aL = sys.planets.length ? sys.planets[sys.planets.length - 1].a : a0;
+    this.orbitR = (a) => base + 24 * Math.sqrt(a / a0);
+    // (beyond the outermost planet distances are compressed, so a companion hundreds of AU out stays in view)
+    this.farR = (a) => a <= aL ? this.orbitR(a) : this.orbitR(aL) + 34 * Math.log2(1 + (a - aL) / aL);
     this.bodies = [];
     for (const p of sys.planets) {
       const b = { p, r: clamp(0.8 + Math.sqrt(p.radius) * 0.9, 0.6, 4.2), R: this.orbitR(p.a), pos: [0, 0, 0], mesh: null };
@@ -9429,6 +10577,8 @@ class SystemView {
       for (const m of p.moons) this.bodies.push({ p: m, parent: b, r: clamp(0.3 + Math.sqrt(m.radius) * 0.7, 0.28, 1.1), R: 0, pos: [0, 0, 0], mesh: null });
     }
     this.maxR = sys.planets.length ? this.orbitR(sys.planets[sys.planets.length - 1].a) : 40;
+    // (the opening view takes in a distant companion's whole orbit too)
+    this.viewR = this.stars.reduce((m, S) => S.c && (S.c.around === 'AB' || M.config === 'wide') ? Math.max(m, this.farR(S.c.a * (1 + S.c.e)) * 1.05) : m, this.maxR);
     const gl = this.app.R.gl;
     // orbit & habitable-zone lines
     const lines = this.lines = this.lines || new GFX.Stream(12000, gl.LINES);
@@ -9441,12 +10591,30 @@ class SystemView {
       }
     };
     for (const b of this.bodies) if (!b.parent) circle(b.R, [0.35, 0.45, 0.95], 0.55);
-    if (st.lum > 0.001 && sys.planets.length) { circle(this.orbitR(sys.hzIn), [0.3, 0.9, 0.5], 0.35, 160, true); circle(this.orbitR(sys.hzOut), [0.3, 0.9, 0.5], 0.35, 160, true); }
+    if ((M ? M.zone.lum : st.lum) > 0.001 && sys.planets.length) { circle(this.orbitR(sys.hzIn), [0.3, 0.9, 0.5], 0.35, 160, true); circle(this.orbitR(sys.hzOut), [0.3, 0.9, 0.5], 0.35, 160, true); }
+    if (M) {
+      // the stars' own orbits: the close pair around their centre of mass, a distant companion on its ellipse
+      for (const S of this.stars) {
+        if (!S.c) continue;
+        if (S.c.around === 'A' && M.config !== 'wide') { const mu = S.s.mass / (st.mass + S.s.mass); circle(this.pairD * (1 - mu), [1, 0.8, 0.5], 0.4, 64); circle(this.pairD * mu, [1, 0.8, 0.5], 0.4, 64); continue; }
+        const c = S.c, n = 160;
+        for (let i = 0; i < n; i++) {
+          const pt = (k) => { const E = k / n * TAU, x = c.a * (Math.cos(E) - c.e), z = c.a * Math.sqrt(1 - c.e * c.e) * Math.sin(E), r = Math.hypot(x, z), f = this.farR(r) / Math.max(r, 1e-9); return [x * f, Math.sin(c.tilt) * z * f, z * f]; };
+          const p0 = pt(i), p1 = pt(i + 1);
+          lines.push(...p0, 1, 0.75, 0.45, 0.4); lines.push(...p1, 1, 0.75, 0.45, 0.4);
+        }
+      }
+      // where stable planetary orbits begin (around a close pair) and end (inside a companion's reach)
+      const Z = M.zone, zc = [1, 0.42, 0.32];
+      if (Z.aMin > 0) circle(this.orbitR(Z.aMin), zc, 0.5, 96, true);
+      if (isFinite(Z.aMax)) circle(this.farR(Z.aMax), zc, 0.5, 128, true);
+    }
     lines.upload();
     this.belt = this.belt || new GFX.Stream(4000, gl.POINTS);
     this.comets = this.comets || new GFX.Stream(400, gl.POINTS);
     this.buildQueue = this.bodies.slice();
     this.neb = st.pocket ? null : Universe.nebulaAt(st.pos);
+    this.gal = Universe.skyOf(st);
     this.civT = 99; this.civRoutes = []; this.civMarks = new Map();
   }
   refreshCiv() {
@@ -9488,6 +10656,16 @@ class SystemView {
       if (!b.p.isGiant) { let w = b.p; try { w = Civ.worldOf(b.p, t); } catch (e) { w = b.p; } b.world = w; b.mesh = buildGlobe(w, 14); }
     }
     this.civT += dt; if (this.civT > 3 || Math.abs(t - (this.civAt || 0)) > 120) { this.civT = 0; this.refreshCiv(); }
+    if (this.stars.length > 1) {
+      // a close pair is drawn at a fixed separation around the middle; a distant star on the system's own scale
+      const M = this.sys.multi, P = Cosmos.starPositions(this.sys.star, t), k = this.pairD / Math.max(M.aIn, 1e-9);
+      for (let i = 0; i < P.length; i++) {
+        const S = this.stars[i], q = P[i].pos;
+        if (M.config !== 'wide' && (!S.c || S.c.around === 'A')) S.pos = [q[0] * k, 0, q[2] * k];
+        else if (!S.c) S.pos = [0, 0, 0];
+        else { const r = Math.hypot(q[0], q[2]), f = this.farR(r) / Math.max(r, 1e-9); S.pos = [q[0] * f, q[1] * f, q[2] * f]; }
+      }
+    }
     for (const b of this.bodies) {
       if (!b.parent) { const a = b.p.orbitAngle(t); b.pos = [Math.cos(a) * b.R, Math.sin(b.p.incl) * Math.sin(a) * b.R, Math.sin(a) * b.R]; }
     }
@@ -9503,14 +10681,14 @@ class SystemView {
     const gl = R.gl, cam = this.cam.compute(R.aspect), st = this.sys.star, T = this.app.anim, t = this.app.t;
     const pal = Universe.palette, neb = this.neb;
     R.begin([0.01, 0.012, 0.03]);
-    drawSky(R, cam, { neb1: neb ? neb.neb.color : pal.a, neb2: neb ? neb.neb.color2 : pal.b, nebula: neb ? 1.1 - neb.k * 0.6 : 0.25, seed: st.seed % 97, time: T, stars: 0.9 });
-    // star
+    drawSky(R, cam, { neb1: neb ? neb.neb.color : pal.a, neb2: neb ? neb.neb.color2 : pal.b, nebula: neb ? 1.1 - neb.k * 0.6 : 0.25, seed: st.seed % 97, time: T, stars: 0.9, gal: this.gal });
+    // the star (or stars)
     const sc = st.color;
-    if (st.cls === 'BH') {
-      GFX.use(R.P.star); GFX.setAll(R.P.star, { uVP: cam.vp, uView: cam.view, uModel: modelTRS(0, 0, 0, this.sr), uStarCol: sc, uTime: T, uSeed: 1, uKind: 1, uCamPos: cam.pos });
-      R.sphereMesh.draw();
-    } else {
-      GFX.use(R.P.star); GFX.setAll(R.P.star, { uVP: cam.vp, uView: cam.view, uModel: modelTRS(0, 0, 0, this.sr, 0, T * 0.02), uStarCol: sc, uTime: T, uSeed: (st.seed % 100) / 10, uKind: 0, uCamPos: cam.pos });
+    for (const S of this.stars) {
+      const q = S.s, p = S.pos;
+      GFX.use(R.P.star);
+      if (q.cls === 'BH') GFX.setAll(R.P.star, { uVP: cam.vp, uView: cam.view, uModel: modelTRS(p[0], p[1], p[2], S.r), uStarCol: q.color, uTime: T, uSeed: 1 + (S.c ? 2 : 0), uKind: 1, uCamPos: cam.pos });
+      else GFX.setAll(R.P.star, { uVP: cam.vp, uView: cam.view, uModel: modelTRS(p[0], p[1], p[2], S.r, 0, T * 0.02), uStarCol: q.color, uTime: T, uSeed: (q.seed % 100) / 10, uKind: 0, uCamPos: cam.pos });
       R.sphereMesh.draw();
     }
     // planets
@@ -9545,8 +10723,11 @@ class SystemView {
       GFX.setAll(P, { uModel: modelTRS(b.pos[0], b.pos[1], b.pos[2], Rs), uCenter: b.pos, uRp: b.r, uRs: Rs, uAtmo: p.atmo.color, uStrength: 0.9 });
       R.sphereMesh.draw();
     }
-    if (st.cls === 'BH') { drawGlow(R, cam, [0, 0, 0], this.sr * 3.2, 2, [1, 0.6, 0.25], null, 1.4, 1, T); drawGlow(R, cam, [0, 0, 0], this.sr * 6, 0, [0.5, 0.3, 0.6], null, 0.5, 2, T); }
-    else drawGlow(R, cam, [0, 0, 0], this.sr * (st.cls === 'NS' ? 9 : 3.4), 0, Color.mul(sc, 0.9), null, st.cls === 'NS' ? 0.8 + 0.6 * Math.abs(Math.sin(T * 6)) : 1.1, (st.seed % 50) / 7, T);
+    for (const S of this.stars) {
+      const q = S.s, p = S.pos, ph = S.c ? 1.7 * S.c.phase : 0;
+      if (q.cls === 'BH') { drawGlow(R, cam, p, S.r * 3.2, 2, [1, 0.6, 0.25], null, 1.4, 1 + ph, T); drawGlow(R, cam, p, S.r * 6, 0, [0.5, 0.3, 0.6], null, 0.5, 2 + ph, T); }
+      else drawGlow(R, cam, p, S.r * (q.cls === 'NS' ? 9 : 3.4), 0, Color.mul(q.color, 0.9), null, q.cls === 'NS' ? 0.8 + 0.6 * Math.abs(Math.sin(T * 6 + ph)) : 1.1, (q.seed % 50) / 7, T);
+    }
     // belts + comets
     if (this.sys.belts.length) {
       const bs = this.belt; bs.reset();
@@ -9647,6 +10828,12 @@ class SystemView {
       if (tq && (!mob || b === this.selected)) L.add(p.x, p.y + rpx + (cm ? 38 : 25), `terraforming · ${fmt.pct(clamp((this.app.t - tq.start) / (tq.end - tq.start), 0, 1))}`, 'lbl-civ', '#8ff0b0');
       if (b === this.selected) this.app.ui.markers.set('sel', p.x, p.y, true, 'reticle', Math.max(28, rpx * 2 + 16));
     }
+    // the stars of a multiple system are named by letter
+    if (this.stars.length > 1) for (const S of this.stars) {
+      const p = this.cam.project(S.pos, R.cssW, R.cssH); if (!p.visible) continue;
+      const rpx = (S.r / (p.w * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5;
+      L.add(p.x, p.y - rpx - 12, `${this.sys.star.name} ${S.letter}`, S.s === this.starSel ? 'lbl-sel' : 'lbl-star');
+    }
     if (!this.selected) this.app.ui.markers.hide('sel');
   }
   pan(dx, dy) {
@@ -9658,21 +10845,38 @@ class SystemView {
   }
   rotate(dx, dy) { this.cam.goal.yaw -= dx * 0.006; this.cam.goal.pitch = clamp(this.cam.goal.pitch + dy * 0.005, 0.05, 1.5); }
   zoom(f) { this.cam.goal.dist = clamp(this.cam.goal.dist * f, 4, 1400); }
+  // the star under the pointer (any star of a multiple system)
   pickStar(x, y) {
-    const R = this.app.R, p = this.cam.project([0, 0, 0], R.cssW, R.cssH);
-    if (!p.visible) return false;
-    const rpx = (this.sr / (p.w * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5;
-    return Math.hypot(p.x - x, p.y - y) < Math.max(22, rpx * 1.3);
+    const R = this.app.R;
+    let best = null, bd = 1e9;
+    for (const S of this.stars) {
+      const p = this.cam.project(S.pos, R.cssW, R.cssH);
+      if (!p.visible) continue;
+      const rpx = (S.r / (p.w * Math.tan(this.cam.fov / 2))) * R.cssH * 0.5, d = Math.hypot(p.x - x, p.y - y);
+      if (d < Math.max(22, rpx * 1.3) && d - rpx < bd) { bd = d - rpx; best = S; }
+    }
+    return best;
+  }
+  selectStar(S) {
+    this.selected = null; this.starSel = S ? S.s : null;
+    // (a distant companion is followed; the stars at the middle are looked at from the middle)
+    if (S) { const far = S.c && (S.c.around === 'AB' || this.sys.multi.config === 'wide'); this.follow = far ? S : null; if (!far) this.cam.goal.target = [0, 0, 0]; }
+    this.app.ui.panelFor(this);
   }
   tap(x, y) {
     const b = this.pick(x, y);
     if (b) this.select(b, true);
-    else { this.selected = null; this.starSel = this.pickStar(x, y); if (this.starSel) { this.follow = null; this.cam.goal.target = [0, 0, 0]; } this.app.ui.panelFor(this); }
+    else this.selectStar(this.pickStar(x, y));
   }
   dbl(x, y) { const b = this.pick(x, y); if (b) this.app.openPlanet(b.p); }
   hoverAt(x, y) { return !!this.pick(x, y) || this.pickStar(x, y); }
-  crumbs() { return [{ label: this.sys.star.pocket ? 'Pocket space' : Universe.name, icon: 'galaxy', go: () => this.app.openGalaxy(this.sys.star) }, { label: this.sys.star.name, icon: 'star' }]; }
-  status() { const s = this.sys.star; return `${s.specClass} ${s.typeLabel} · ${this.sys.planets.length} planets · live orbits`; }
+  crumbs() {
+    const s = this.sys.star, out = [{ label: s.pocket ? 'Pocket space' : Universe.name, icon: 'galaxy', go: () => this.app.openGalaxy(s) }];
+    if (s.galaxy) out.push({ label: s.galaxy.name, icon: 'target', go: () => this.app.go('galaxy', { galaxy: s.galaxy }) });
+    out.push({ label: s.name, icon: 'star' });
+    return out;
+  }
+  status() { const s = this.sys.star; return `${s.specClass} ${s.typeLabel}${s.multi ? ` · ${s.multi.kind} star` : ''} · ${this.sys.planets.length} planets · live orbits`; }
   hint() { return this.app.mobile ? 'Tap a planet to inspect · double-tap to observe' : 'Click a planet to inspect · double-click to observe · right-drag to orbit'; }
 }
 
@@ -9695,6 +10899,7 @@ class PlanetView {
       this.globe = planet.isGiant ? null : buildGlobe(planet, q === 'low' ? 40 : q === 'high' ? 80 : 60);
       this.moons = (planet.isMoon ? [] : planet.moons).map((m) => ({ p: m, mesh: null }));
       this.body = planet.original || planet; this.civT = 99; this.sites = []; this.civI = null; this.arcs = []; this.battles = []; this.voy = []; this.fleets = [];
+      this.gal = Universe.skyOf(planet.star);
       this.moonQueue = this.moons.slice();
       this.site = null;
       // the world's weather, mapped at low resolution (refreshed a few rows per frame)
@@ -9710,6 +10915,17 @@ class PlanetView {
     this.app.ui.panelFor(this);
   }
   exit() { this.app.ui.markers.hide('pin'); }
+  // in a multiple system: where the primary and its companion stand in this world's sky (a second sun
+  // beside the first around a close pair; a brilliant star, or a small far sun, when the companion is distant)
+  sunsAt(t) {
+    const star = this.planet.star;
+    if (!star.multi) return null;
+    const host = this.planet.isMoon ? this.planet.parent : this.planet, a = host.orbitAngle(t), pp = [Math.cos(a) * host.a, 0, Math.sin(a) * host.a];
+    const P = Cosmos.starPositions(star, t), B = P[1], dA = V3.sub(P[0].pos, pp), dB = V3.sub(B.pos, pp);
+    const q = B.star, fluxA = star.lum / Math.max(1e-6, V3.dot(dA, dA)), fluxB = q.lum / Math.max(1e-6, V3.dot(dB, dB));
+    const k = q.cls === 'BH' ? 0.35 : clamp(Math.sqrt(fluxB / Math.max(fluxA, 1e-9)), 0.12, 1);
+    return { dir: V3.norm(dA), dir2: V3.norm(dB), col2: Color.mul(q.cls === 'BH' ? [0.4, 0.25, 0.1] : Color.mix(q.color, [1, 1, 1], 0.3), k) };
+  }
   refreshLife(force) {
     const t = this.app.t, p = this.planet;
     if (!p.life.has) { this.community = []; return; }
@@ -9804,9 +11020,9 @@ class PlanetView {
   render(R) {
     const gl = R.gl, cam = this.cam.compute(R.aspect), p = this.planet, t = this.app.t, T = this.app.anim;
     const sun = p.sunDirWorld(t), star = p.star, sc = star.color, pal = Universe.palette;
-    const neb = star.pocket ? null : Universe.nebulaAt(star.pos);
+    const neb = star.pocket ? null : Universe.nebulaAt(star.pos), suns = this.sunsAt(t);
     R.begin([0.01, 0.012, 0.03]);
-    drawSky(R, cam, { neb1: neb ? neb.neb.color : pal.a, neb2: neb ? neb.neb.color2 : pal.b, nebula: neb ? 1 : 0.25, seed: star.seed % 97, time: T, stars: 0.9, sunDir: sun, sunCol: star.cls === 'BH' ? [0.4, 0.25, 0.1] : Color.mix(sc, [1, 1, 1], 0.3) });
+    drawSky(R, cam, { neb1: neb ? neb.neb.color : pal.a, neb2: neb ? neb.neb.color2 : pal.b, nebula: neb ? 1 : 0.25, seed: star.seed % 97, time: T, stars: 0.9, sunDir: suns ? suns.dir : sun, sunCol: star.cls === 'BH' ? [0.4, 0.25, 0.1] : Color.mix(sc, [1, 1, 1], 0.3), sun2Dir: suns && suns.dir2, sun2Col: suns && suns.col2, gal: this.gal });
     const lightCol = Color.mul(Color.mix(sc, [1, 1, 1], 0.45), star.cls === 'BH' || star.cls === 'NS' ? 0.55 : 1.05);
     const env = { lightDir: sun, lightCol, amb: [0.05, 0.06, 0.1] };
     const spin = p.rotAngle(t), model = modelTRS(0, 0, 0, 1, p.tilt, spin);
@@ -12260,14 +13476,40 @@ const Thumbs = {
     return src;
   },
   star(s, size = 40) {
-    const c = h('canvas', { width: size, height: size, class: 'thumb' }), x = c.getContext('2d'), m = size / 2;
-    const col = s.cls === 'BH' ? [0, 0, 0] : s.color;
-    for (let r = m; r > 0; r--) {
-      const k = r / m, a = s.cls === 'BH' ? (Math.abs(k - 0.55) < 0.12 ? 1 : 0) : k < 0.42 ? 1 : Math.pow(1 - k, 2) * 1.6;
-      const cc = s.cls === 'BH' ? [1, 0.6, 0.25] : k < 0.42 ? Color.mix(col, [1, 1, 1], 0.5 * (1 - k / 0.42)) : col;
-      x.fillStyle = `rgba(${cc.map((v) => Math.round(v * 255)).join(',')},${clamp(a, 0, 1)})`;
-      x.beginPath(); x.arc(m, m, r, 0, TAU); x.fill();
-    }
+    const c = h('canvas', { width: size, height: size, class: 'thumb' }), x = c.getContext('2d');
+    // a multiple star shows its components side by side, the primary largest
+    const all = s.multi ? [s, ...s.multi.comps.map((q) => q.star)] : [s];
+    all.forEach((q, i) => {
+      const n = all.length, m = n === 1 ? size / 2 : size * (i ? 0.2 : 0.3), cx = n === 1 ? size / 2 : i === 0 ? size * 0.38 : size * 0.76, cy = n === 1 ? size / 2 : i === 0 ? size * 0.42 : i === 1 ? size * 0.66 : size * 0.26;
+      const col = q.cls === 'BH' ? [0, 0, 0] : q.color;
+      for (let r = m; r > 0; r--) {
+        const k = r / m, a = q.cls === 'BH' ? (Math.abs(k - 0.55) < 0.12 ? 1 : 0) : k < 0.42 ? 1 : Math.pow(1 - k, 2) * 1.6;
+        const cc = q.cls === 'BH' ? [1, 0.6, 0.25] : k < 0.42 ? Color.mix(col, [1, 1, 1], 0.5 * (1 - k / 0.42)) : col;
+        x.fillStyle = `rgba(${cc.map((v) => Math.round(v * 255)).join(',')},${clamp(a, 0, 1)})`;
+        x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill();
+      }
+    });
+    return c;
+  },
+  // a nebula or other structure: a few hundred of its own points, flattened onto the icon
+  nebula(S, size = 40) {
+    const c = h('canvas', { width: size, height: size, class: 'thumb' }), x = c.getContext('2d');
+    x.fillStyle = '#070a1c'; x.fillRect(0, 0, size, size);
+    const P = Cosmos.particlesOf(S, 1), m = size / 2, k = m * 0.92 / Math.max(S.radius, 0.1), img = x.getImageData(0, 0, size, size), d = img.data;
+    const B = S.ends ? { u: V3.norm(V3.sub(S.ends[1], S.ends[0])), v: [0, 0, 1] } : { u: S.u, v: S.v };
+    // light is splatted softly and scaled so the brightest parts are fully lit; dust darkens
+    const acc = new Float32Array(size * size * 3), shade = new Float32Array(size * size).fill(1);
+    const each = (arr, fn) => { for (let j = 0; j < arr.length; j += 8) {
+      const rel = [arr[j] - S.pos[0], arr[j + 1] - S.pos[1], arr[j + 2] - S.pos[2]], px = Math.round(m + V3.dot(rel, B.u) * k), py = Math.round(m + V3.dot(rel, B.v) * k);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const qx = px + dx, qy = py + dy; if (qx >= 0 && qy >= 0 && qx < size && qy < size) fn(qy * size + qx, j, dx || dy ? (dx && dy ? 0.25 : 0.5) : 1); }
+    } };
+    each(P.lit, (i, j, w) => { const a = (P.lit[j + 7] < 0 ? 0.6 : P.lit[j + 6]) * w; for (let q = 0; q < 3; q++) acc[i * 3 + q] += P.lit[j + 3 + q] * a; });
+    each(P.dark, (i, j, w) => { shade[i] *= 1 - 0.3 * w; });
+    const lum = []; for (let i = 0; i < size * size; i++) { const l = Math.max(acc[i * 3], acc[i * 3 + 1], acc[i * 3 + 2]); if (l > 0) lum.push(l); }
+    lum.sort((a, b) => a - b);
+    const ref = lum.length ? Math.max(1e-6, lum[Math.floor(lum.length * 0.94)]) : 1;
+    for (let i = 0; i < size * size; i++) for (let q = 0; q < 3; q++) d[i * 4 + q] = Math.min(255, (d[i * 4 + q] + acc[i * 3 + q] / ref * 235) * shade[i]);
+    x.putImageData(img, 0, 0);
     return c;
   },
 };
@@ -12567,10 +13809,16 @@ class MarkerSet {
    PANEL CONTENT
    ============================================================================= */
 const Panels = {
-  galaxy(v, app) { return v.selected ? starPanel(v.selected, app, { onClose: () => { v.selected = null; } }) : null; },
+  galaxy(v, app) {
+    if (v.selected) return starPanel(v.selected, app, { onClose: () => { v.selected = null; } });
+    const o = v.sel;
+    if (!o) return null;
+    const close = () => { v.sel = null; };
+    return o.kind === 'galaxy' ? galaxyPanel(o.obj, v, app, close) : o.kind === 'core' ? corePanel(o.obj, v, app, close) : structurePanel(o.obj, v, app, close);
+  },
   system(v, app) {
     const sys = v.sys, s = sys.star, b = v.selected;
-    if (v.starSel) return starPanel(s, app, { inSystem: true, onClose: () => { v.starSel = false; } });
+    if (v.starSel) return v.starSel === s || !s.multi ? starPanel(s, app, { inSystem: true, onClose: () => { v.starSel = null; } }) : companionPanel(v.starSel, s, app, () => { v.starSel = null; });
     if (b) return planetPanel(b.p, app, { inSystem: true });
     const code = Codes.ofStar(s);
     return {
@@ -12578,7 +13826,8 @@ const Panels = {
       bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
       badges: sys.lifeCount ? [chip(`${sys.lifeCount} biospheres`, 'c-life')] : [],
       tabs: [{ id: 'bodies', label: 'Bodies', render: () => h('div', null, civSummaryFor(s, app), h('div', { class: 'plist' },
-        h('div', { class: 'prow', onclick: () => { v.starSel = true; v.selected = null; app.ui.panelFor(v); } }, Thumbs.star(s, 30), h('div', null, h('b', null, s.name), h('small', null, `${s.specClass} · ${s.typeLabel} · ${s.cls === 'BH' ? '—' : fmt.n(s.temp) + ' K'}`)), chip('star', 'c-star')),
+        h('div', { class: 'prow', onclick: () => v.selectStar(v.stars[0]) }, Thumbs.star(s, 30), h('div', null, h('b', null, s.multi ? `${s.name} A` : s.name), h('small', null, `${s.specClass} · ${s.typeLabel} · ${s.cls === 'BH' ? '—' : fmt.n(s.temp) + ' K'}`)), chip('star', 'c-star')),
+        ...(s.multi ? v.stars.slice(1).map((S) => h('div', { class: 'prow', onclick: () => v.selectStar(S) }, Thumbs.star(S.s, 30), h('div', null, h('b', null, S.s.name), h('small', null, `${S.s.specClass} · ${S.s.typeLabel} · ${fmt.au(S.c.a)} from ${S.c.around === 'AB' ? 'the pair' : 'A'}`)), chip(S.letter, 'c-multi'))) : []),
         sys.planets.length ? sys.planets.map((p) => [
         h('div', { class: 'prow', onclick: () => v.select(v.bodies.find((q) => q.p === p), true) }, Thumbs.planet(p, 30), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)} · ${fmt.temp(p.tempC)}`)), p.life.has ? chip('life', 'c-life') : p.rings ? chip('rings') : null),
         ...p.moons.map((m) => h('div', { class: 'prow sub', onclick: () => v.select(v.bodies.find((q) => q.p === m), true) }, Thumbs.planet(m, 22), h('div', null, h('b', null, m.title), h('small', null, `${m.typeName} · ${fmt.temp(m.tempC)}`)), m.life.has ? chip('life', 'c-life') : null)),
@@ -12601,17 +13850,20 @@ function starPanel(s, app, o) {
     for (const p of sys.planets) { all.push(p); for (const m of p.moons) all.push(m); }
     for (const p of all) if (p.life.has) lifeP.push(p);
     const badges = [chip(s.typeLabel, 'c-star')];
+    if (s.multi) badges.push(chip(s.multi.kind === 'triple' ? 'triple star' : 'binary star', 'c-multi'));
     if (lifeP.length) badges.push(chip(`${lifeP.length} with life`, 'c-life'));
     if (sys.planets.some((p) => p.rings)) badges.push(chip('Ringed giant', ''));
     return {
-      key: 'star:' + code, title: s.name, sub: `${s.specClass} · ${s.typeLabel}`, icon: Thumbs.star(s, 40), badges, code,
+      key: 'star:' + code, title: s.name, sub: `${s.specClass} · ${s.typeLabel}${s.multi ? ` + ${s.multi.comps.map((q) => q.star.specClass).join(' + ')}` : ''}`, icon: Thumbs.star(s, 40), badges, code,
       bookmark: { code, kind: 'system', name: s.name, type: s.typeLabel, sub: `${sys.planets.length} planets` },
       tabs: [
         { id: 'overview', label: 'Overview', render: () => h('div', null,
           h('div', { class: 'grid' }, stat('Class', s.specClass), stat('Temperature', s.cls === 'BH' ? '—' : `${fmt.n(s.temp)} K`), stat('Luminosity', s.cls === 'BH' ? '0' : `${fmt.sig(s.lum)} L☉`), stat('Mass', `${fmt.sig(s.mass)} M☉`), stat('Radius', `${fmt.sig(s.radius)} R☉`), stat('Age', `${s.age.toFixed(1)} Gyr`), stat('Bodies', `${sys.planets.length} + ${sys.bodyCount - sys.planets.length} moons`), stat('Sector', s.pocket != null ? 'pocket space' : `${s.sx}, ${s.sz}`)),
+          multiSection(s, sys),
+          homeSection(s, app),
           section('Planets', all.length ? h('div', { class: 'plist' }, sys.planets.map((p) => h('div', { class: 'prow', onclick: () => app.openSystem(s, p) }, Thumbs.planet(p, 28), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${fmt.au(p.a)}${p.moons.length ? ` · ${p.moons.length} moon${p.moons.length > 1 ? 's' : ''}` : ''}`)), p.life.has || p.moons.some((m) => m.life.has) ? chip('life', 'c-life') : null))) : h('p', { class: 'muted' }, 'No planets have formed around this star.')),
           civSummaryFor(s, app),
-          section('Habitable zone', h('p', { class: 'muted' }, s.lum > 0.0005 ? `${fmt.au(sys.hzIn)} – ${fmt.au(sys.hzOut)}` : 'None — this object emits almost no light.'))) },
+          section('Habitable zone', h('p', { class: 'muted' }, (s.multi ? s.multi.zone.lum : s.lum) > 0.0005 ? `${fmt.au(sys.hzIn)} – ${fmt.au(sys.hzOut)}${s.multi && s.multi.zone.pType ? ' (lit by both stars)' : ''}` : 'None — this object emits almost no light.'))) },
         { id: 'gen', label: 'Seed', render: () => h('div', null, section('Seed chain', seedChain(s.pocket != null ? [['Pocket seed', s.pocket, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]] : [['Universe', Universe.name, RNG.strHash('universe:' + Universe.name)], ['Sector', `${s.sx}, ${s.sz}`, RNG.hash(Universe.seed, s.sx, s.sz, 'sector')], ['Star', `#${s.i}`, s.seed], ['System', 'orbits & bodies', RNG.hash(s.seed, 'system')]])), section('Share code', codeRow(code))) },
       ],
       actions: o.inSystem ? [{ label: 'Galaxy', icon: 'galaxy', fn: () => app.openGalaxy(s) }] : [{ label: 'Enter system', icon: 'play', primary: true, fn: () => app.openSystem(s) }],
@@ -12620,6 +13872,135 @@ function starPanel(s, app, o) {
     };
 }
 
+// a companion star, seen from inside its system
+function companionPanel(q, host, app, onClose) {
+  const M = host.multi, c = M.comps.find((x) => x.star === q), per = c.days < 2 ? `${fmt.sig(c.days * 24)} hours` : c.days < 800 ? `${fmt.sig(c.days)} days` : `${fmt.sig(c.days / 365.25)} years`;
+  const role = c.around === 'AB' ? `the third star, circling the inner pair ${fmt.au(c.a)} out` : M.config === 'wide' ? `a distant companion ${fmt.au(c.a)} from ${host.name} A` : `the close companion of ${host.name} A, ${fmt.au(c.a)} away`;
+  return {
+    key: 'comp:' + host.id + '/' + c.letter, title: q.name, sub: `${q.specClass} · ${q.typeLabel} · companion ${c.letter}`, icon: Thumbs.star(q, 40), onClose,
+    badges: [chip(q.typeLabel, 'c-star'), chip(M.kind === 'triple' ? 'triple star' : 'binary star', 'c-multi')],
+    tabs: [{ id: 'overview', label: 'Overview', render: () => h('div', null,
+      h('p', { class: 'desc' }, `${cap(role)}.`),
+      h('div', { class: 'grid' }, stat('Class', q.specClass), stat('Temperature', q.cls === 'BH' ? '—' : `${fmt.n(q.temp)} K`), stat('Luminosity', q.cls === 'BH' ? '0' : `${fmt.sig(q.lum)} L☉`), stat('Mass', `${fmt.sig(q.mass)} M☉`),
+        stat('Radius', `${fmt.sig(q.radius)} R☉`), stat('Orbit', per), stat('Separation', fmt.au(c.a)), stat('Eccentricity', c.e.toFixed(2))),
+      multiSection(host, SystemGen.generate(host))) }],
+    actions: [{ label: `${host.name} A`, icon: 'star', fn: () => { const v = app.view; if (v.selectStar) v.selectStar(v.stars[0]); } }],
+  };
+}
+// the companions of a multiple star, their orbits, and where planets can survive among them
+function multiSection(s, sys) {
+  const M = s.multi;
+  if (!M) return null;
+  const Z = M.zone, rows = [h('div', { class: 'prow' }, Thumbs.star(s, 30), h('div', null, h('b', null, `${s.name} A`), h('small', null, `${s.specClass} · ${s.typeLabel} · ${fmt.sig(s.mass)} M☉ · primary`)), chip('A', 'c-star'))];
+  for (const c of M.comps) {
+    const q = c.star, per = c.days < 2 ? `${fmt.sig(c.days * 24)} hours` : c.days < 800 ? `${fmt.sig(c.days)} days` : `${fmt.sig(c.days / 365.25)} years`;
+    rows.push(h('div', { class: 'prow' }, Thumbs.star(q, 30), h('div', null, h('b', null, q.name), h('small', null, `${q.specClass} · ${q.typeLabel} · ${fmt.sig(q.mass)} M☉ · ${fmt.au(c.a)} from ${c.around === 'AB' ? 'the inner pair' : 'A'} · orbit ${per}${c.e > 0.05 ? ` · e ${c.e.toFixed(2)}` : ''}`)), chip(c.letter, 'c-star')));
+  }
+  const zone = Z.pType ? `Stable planetary orbits begin ${fmt.au(Z.aMin)} from the pair${isFinite(Z.aMax) ? ` and end at ${fmt.au(Z.aMax)}, where the third star takes over` : ''}.` : `Stable planetary orbits around ${s.name} A end at ${fmt.au(Z.aMax)}; beyond, the companion’s pull scatters them.`;
+  return section(M.kind === 'triple' ? 'Triple star system' : 'Binary star system', h('p', { class: 'small' }, Cosmos.CONFIG_TEXT[M.config]), h('div', { class: 'plist' }, rows),
+    h('p', { class: 'muted small' }, zone + (sys.lost ? ` ${sys.lost} would-be planet${sys.lost > 1 ? 's' : ''} never formed there.` : '')));
+}
+// where a star lives: its galaxy (and where in it), a field of scattered systems, or pocket space
+function homeSection(s, app) {
+  if (s.pocket != null) return null;
+  const G = s.galaxy;
+  if (!G) return section('Region', h('p', { class: 'small' }, s.region === 'scattered' ? 'An independent system in the intergalactic field, far from any galaxy.' : 'Deep space.'));
+  return section('Galaxy', h('div', { class: 'prow', onclick: () => { app.go('galaxy', { galaxy: G }); } }, galaxyIcon(G, 30), h('div', null, h('b', null, G.name), h('small', null, `${G.T.name} · ${fmt.n(Math.round(s.gdist * Cosmos.KLY * 10) / 10)} kly from the core, in ${Cosmos.COMP_NAME[s.gcomp] || 'the galaxy'}`)), chip(G.core.short, 'c-core')));
+}
+// a tiny pixel portrait of a galaxy (its type, colours and tilt)
+function galaxyIcon(G, size = 40) {
+  const c = h('canvas', { width: size, height: size, class: 'thumb' }), x = c.getContext('2d'), m = size / 2, img = x.createImageData(size, size);
+  const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], sq = Math.max(0.25, Math.cos(G.inc)), rot = G.pa;
+  for (let py = 0; py < size; py++) for (let px = 0; px < size; px++) {
+    let u = (px + 0.5 - m) / (m * 0.92), w = (py + 0.5 - m) / (m * 0.92);
+    const cu = Math.cos(rot), su = Math.sin(rot), ru = u * cu - w * su, rw = (u * su + w * cu) / sq;
+    const rr = Math.hypot(ru, rw), th = Math.atan2(rw, ru);
+    let d = Math.exp(-rr * rr / 0.05) * 1.3 + Math.exp(-rr * 2.4) * 0.5, col = G.col.bulge;
+    if (G.arms) { const arm = Math.cos(G.arms * (th - Math.log(Math.max(rr, 0.05)) / Math.tan(G.pitch) * G.twist)); d += Math.max(0, arm) * Math.exp(-rr * 2) * 0.9 * (rr > 0.12 ? 1 : 0); if (arm > 0.5 && rr > 0.2) col = Color.mix(G.col.bulge, G.col.arm, 0.7); }
+    if (G.type === 'ring') d += Math.exp(-(((rr - 0.7) / 0.1) ** 2)) * 1.1;
+    if (G.type === 'irregular') {
+      // its own star-forming knots over a faint haze
+      const gx = ru * G.R, gz = rw * G.R;
+      d = Math.exp(-rr * 2.8) * 0.35;
+      for (const cl of G.clumps || []) d += Math.exp(-((gx - cl.x) ** 2 + (gz - cl.z) ** 2) / (cl.s * cl.s)) * 0.45 * cl.w;
+      col = d > 0.55 ? G.col.arm : G.col.disk;
+    }
+    if (G.type === 'elliptical') d = Math.exp(-rr * 3.2) * 1.4;
+    d *= rr < 1 ? 1 : 0;
+    const th2 = (B4[(py & 3) * 4 + (px & 3)] / 16) * 0.35, q = Math.floor(clamp(d, 0, 1) * 4 + th2) / 4, i = (py * size + px) * 4;
+    img.data[i] = col[0] * 255 * q; img.data[i + 1] = col[1] * 255 * q; img.data[i + 2] = col[2] * 255 * q; img.data[i + 3] = q > 0 ? 255 : 0;
+  }
+  x.putImageData(img, 0, 0);
+  return c;
+}
+function galaxyPanel(G, v, app, onClose) {
+  const stars = Universe.sector(G.sx, G.sz).stars, S = Cosmos.structuresIn(G.sx, G.sz).filter((q) => q.G === G);
+  const code = `U:${Universe.name}@${Math.round(G.c[0])},${Math.round(G.c[2])}`;
+  const bin = stars.filter((q) => q.multi && q.multi.kind === 'binary').length, tri = stars.filter((q) => q.multi && q.multi.kind === 'triple').length;
+  const byType = {}; for (const q of stars) byType[q.cls] = (byType[q.cls] || 0) + 1;
+  return {
+    key: 'galaxy:' + G.id, title: G.name, sub: `${G.T.name} · ${G.catalog}`, icon: galaxyIcon(G, 40), code,
+    badges: [chip(G.T.short, 'c-gal'), chip(G.core.short, 'c-core')],
+    bookmark: { code, kind: 'galaxy', name: G.name, type: G.T.name, sub: `${stars.length} systems` },
+    tabs: [
+      { id: 'overview', label: 'Overview', render: () => h('div', null,
+        h('p', { class: 'desc' }, G.T.desc),
+        h('div', { class: 'grid' }, stat('Type', G.T.name), stat('Diameter', `${fmt.n(Math.round(G.R * 2 * Cosmos.KLY))} kly`), stat('Star systems', `${stars.length} charted`), stat('Arms', G.arms ? String(G.arms) : G.type === 'ring' ? 'a ring' : '—'),
+          stat('Inclination', `${Math.round(G.inc * 57.3)}°`), stat('Gas', G.gas > 0.7 ? 'rich' : G.gas > 0.3 ? 'moderate' : 'poor'), stat('Binary · triple', `${bin} · ${tri}`), stat('Sector', `${G.sx}, ${G.sz}`)),
+        section('Core', h('div', { class: 'prow', onclick: () => v.selectObj({ kind: 'core', obj: G }) }, h('div', null, h('b', null, G.core.title), h('small', null, `${G.core.name} · ${fmtMass(G.core.mass)}`)), chip(G.core.short, 'c-core'))),
+        section('Stellar population', h('div', { class: 'gases' }, Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([k, n]) => chip(`${STAR_TYPES[k].label} ${n}`)))),
+        S.length ? section('Nebulae & structures', h('div', { class: 'plist' }, S.map((q) => h('div', { class: 'prow', onclick: () => { v.selectObj({ kind: 'struct', obj: q }); v.focusOn(q.pos, Math.max(8, q.radius * 4.5)); } }, h('div', null, h('b', null, q.name), h('small', null, `${q.K.name} · ${q.morph === 'composite' ? q.label : Cosmos.MORPH[q.morph]} · in ${q.env.where}`)), chip(q.kind === 'exotic' ? 'anomaly' : 'nebula', q.kind === 'exotic' ? 'c-exo' : 'c-neb'))))) : null,
+        section('Share code', codeRow(code))) },
+      { id: 'systems', label: 'Systems', render: () => {
+        const wrap = h('div', { class: 'plist' });
+        const list = stars.slice(0, 60);
+        for (const q of list) wrap.append(h('div', { class: 'prow', onclick: () => { v.select(q); v.focusOn(q.pos, 60); } }, Thumbs.star(q, 26), h('div', null, h('b', null, q.name), h('small', null, `${q.specClass} · ${q.typeLabel}${q.multi ? ` · ${q.multi.kind}` : ''} · in ${Cosmos.COMP_NAME[q.gcomp] || 'the galaxy'}`))));
+        if (stars.length > list.length) wrap.append(h('p', { class: 'muted small' }, `…and ${stars.length - list.length} more. Zoom in to see them all.`));
+        return wrap;
+      } },
+    ],
+    actions: [{ label: 'Fly to galaxy', icon: 'target', primary: true, fn: () => v.viewGalaxy(G) }],
+    quick: [{ label: 'Fly to', icon: 'target', fn: () => v.viewGalaxy(G) }],
+    onClose,
+  };
+}
+const fmtMass = (m) => (m >= 1e9 ? `${fmt.sig(m / 1e9)} billion M☉` : m >= 1e6 ? `${fmt.sig(m / 1e6)} million M☉` : m >= 1e3 ? `${fmt.sig(m / 1e3)} thousand M☉` : `${fmt.sig(m)} M☉`);
+const fmtLum = (l) => (l >= 1e12 ? `${fmt.sig(l / 1e12)} trillion L☉` : l >= 1e9 ? `${fmt.sig(l / 1e9)} billion L☉` : l >= 1e6 ? `${fmt.sig(l / 1e6)} million L☉` : `${fmt.n(Math.round(l))} L☉`);
+function corePanel(G, v, app, onClose) {
+  const C = G.core;
+  return {
+    key: 'core:' + G.id, title: C.title, sub: `${C.name} · heart of the ${G.name}`, icon: galaxyIcon(G, 40),
+    badges: [chip(C.short, 'c-core')],
+    tabs: [{ id: 'info', label: 'Core', render: () => h('div', null,
+      h('p', { class: 'desc' }, C.C.desc),
+      h('div', { class: 'grid' }, stat('Object', C.name), stat(C.key === 'cluster' ? 'Black hole' : 'Mass', fmtMass(C.key === 'cluster' ? C.mass / 300 : C.mass)), stat('Luminosity', fmtLum(C.lum)), stat('Spin', C.key === 'cluster' ? '—' : C.spin.toFixed(2)),
+        C.jet ? stat('Jets', `${fmt.n(Math.round(C.jetLen * Cosmos.KLY))} kly each`) : stat('Jets', 'none'), C.key === 'binary' ? stat('Companion', fmtMass(C.mass2)) : C.key === 'cluster' ? stat('Stars', `~${fmt.n(Math.round(C.stars / 1e5) * 1e5)}`) : stat('Galaxy', G.T.short),
+        C.key === 'binary' ? stat('Separation', `${fmt.sig(C.sepPc)} pc · ${fmt.sig(C.period)} yr orbit`) : null)) }],
+    actions: [{ label: 'Galaxy', icon: 'galaxy', fn: () => v.selectObj({ kind: 'galaxy', obj: G }) }],
+    onClose,
+  };
+}
+function structurePanel(S, v, app, onClose) {
+  const code = `U:${Universe.name}@${Math.round(S.pos[0])},${Math.round(S.pos[2])}`, G = S.G;
+  const temp = S.temp >= 1e5 ? `${fmt.sig(S.temp / 1e6)} million K` : `${fmt.n(Math.round(S.temp))} K`;
+  const dens = S.density < 0.01 ? `${S.density.toExponential(1)} atoms/cm³` : `${fmt.sig(S.density)} atoms/cm³`;
+  const comp = { emission: 'ionised hydrogen, helium, oxygen', nursery: 'molecular hydrogen, dust, newborn stars', reflection: 'dust grains', dark: 'cold dust and molecules', planetary: 'ionised hydrogen, oxygen, nitrogen', remnant: 'shocked gas, heavy elements, a stellar core', cloud: 'hydrogen and dust', cavity: 'hot thin gas in a shell of cool gas', globular: 'ancient stars', open: 'young stars and leftover gas', intergalactic: 'hot, thin hydrogen', filament: 'hot gas and dark matter', void: 'extremely thin gas', tidal: 'stripped stars and gas', exotic: 'unknown' }[S.kind];
+  return {
+    key: 'struct:' + S.id, title: S.name, sub: `${S.K.name} · ${S.morph === 'composite' ? S.label : Cosmos.MORPH[S.morph]}`, icon: Thumbs.nebula(S, 40), code,
+    badges: [chip(S.kind === 'exotic' ? 'anomaly' : S.K.name.toLowerCase(), S.kind === 'exotic' ? 'c-exo' : 'c-neb')],
+    bookmark: { code, kind: 'structure', name: S.name, type: S.K.name, sub: G ? G.name : 'intergalactic' },
+    tabs: [{ id: 'info', label: 'Structure', render: () => h('div', null,
+      h('p', { class: 'desc' }, S.K.desc),
+      h('div', { class: 'grid' }, stat('Shape', S.morph === 'composite' ? S.label : Cosmos.MORPH[S.morph]), stat('Size', S.ly < 10 ? `${fmt.sig(S.ly)} ly` : `${fmt.n(Math.round(S.ly))} ly`), stat('Temperature', temp), stat('Density', dens),
+        stat('Mass', fmtMass(S.mass)), stat('Made of', comp), stat('Location', S.env.where), stat('Galaxy', G ? G.name : 'none')),
+      S.env.ionised ? h('p', { class: 'muted small' }, 'The radiation of the active galactic nucleus ionises it: its gas glows teal and violet.') : null,
+      S.warp ? h('p', { class: 'muted small' }, `Its shape is ${S.warp.kind === 'twist' ? 'twisted around its axis' : S.warp.kind === 'bend' ? 'bent by the pressure of its surroundings' : 'flattened'}.`) : null,
+      S.toScale ? null : h('p', { class: 'muted small' }, 'Drawn enlarged on the map: at true scale it would be a speck beside its galaxy.'),
+      section('Share code', codeRow(code))) }],
+    actions: G ? [{ label: G.name, icon: 'galaxy', fn: () => v.selectObj({ kind: 'galaxy', obj: G }) }] : [],
+    onClose,
+  };
+}
 function codeRow(code) { return h('div', { class: 'coderow' }, h('code', null, code), btn('', () => copyText(code), { icon: 'copy', title: 'Copy' }), btn('', () => copyText(location.href.split('#')[0] + '#' + encodeURIComponent(code)), { icon: 'link', title: 'Copy share link' })); }
 function seedChain(items) { return h('div', { class: 'chain' }, items.map(([k, v, hsh], i) => h('div', { class: 'chain-i' }, h('span', { class: 'chain-k' }, k), h('span', { class: 'chain-v' }, v), h('code', null, RNG.hex(hsh)), i < items.length - 1 ? h('span', { class: 'chain-arrow' }, '↓') : null))); }
 
@@ -13308,13 +14689,16 @@ const Modals = {
       const cells = [];
       for (let x = -R; x <= R; x++) for (let z = -R; z <= R; z++) if (x * x + z * z <= R * R) cells.push([x * x + z * z, cx + x, cz + z]);
       cells.sort((a, b) => a[0] - b[0]);
-      const job = UI._scan = { stop: false, i: 0, found: 0, checked: 0 };
+      const job = UI._scan = { stop: false, i: 0, j: 0, found: 0, checked: 0 };
       const step = () => {
         if (job.stop) return;
         const tt = performance.now();
+        // (star by star, so a crowded galaxy sector never overruns the frame budget)
         while (job.i < cells.length && performance.now() - tt < 10 && job.found < 40) {
-          const [, sx, sz] = cells[job.i++];
-          for (const s of Universe.sector(sx, sz).stars) {
+          const [, sx, sz] = cells[job.i], stars = Universe.sector(sx, sz).stars;
+          if (job.j >= stars.length) { job.i++; job.j = 0; continue; }
+          {
+            const s = stars[job.j++];
             if (f.star !== 'any' && s.cls !== f.star) continue;
             const sys = SystemGen.generate(s);
             scan: for (const pl of sys.planets) for (const p of [pl, ...pl.moons]) {
@@ -13338,11 +14722,11 @@ const Modals = {
               }
               job.found++;
               const d = Math.hypot(s.pos[0] - t0[0], s.pos[2] - t0[2]);
-              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(d)} ly`)), civTag || (p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null)));
+              results.append(h('div', { class: 'prow', onclick: () => { UI.closeModal(); app.openPlanet(p); } }, Thumbs.planet(p, 32), h('div', null, h('b', null, p.title), h('small', null, `${p.typeName} · ${s.name} (${s.specClass}) · ${fmt.n(Math.round(d * Cosmos.KLY))} kly`)), civTag || (p.life.has ? chip(`${p.life.count} sp.`, 'c-life') : null)));
                           }
           }
         }
-        status.textContent = `Scanned ${job.i}/${cells.length} sectors · ${fmt.n(job.checked)} bodies · ${job.found} matches${job.i >= cells.length || job.found >= 40 ? ' · done' : '…'}`;
+        status.textContent = `Scanned ${Math.min(cells.length, job.i + (job.j ? 1 : 0))}/${cells.length} sectors · ${fmt.n(job.checked)} bodies · ${job.found} matches${job.i >= cells.length || job.found >= 40 ? ' · done' : '…'}`;
         if (job.i < cells.length && job.found < 40) requestAnimationFrame(step);
         else if (!job.found) results.append(h('p', { class: 'muted' }, 'No matches in range. Widen the radius or relax the filters.'));
       };
@@ -13360,7 +14744,7 @@ const Modals = {
       if (tab === 'favs') { body.append(favoritesList(app, draw)); return; }
       if (tab === 'places') {
         if (!Store.d.bookmarks.length) body.append(h('p', { class: 'muted' }, 'Nothing saved yet. Use the ★ button on any star, planet or surface site.'));
-        for (const b of Store.d.bookmarks) body.append(h('div', { class: 'prow' }, icon(b.kind === 'system' ? 'star' : 'planet', 'mid'), h('div', { onclick: () => { UI.closeModal(); app.openCode(b.code); } }, h('b', null, b.name), h('small', null, `${b.type || ''}${b.sub ? ' · ' + b.sub : ''}`), h('code', { class: 'tiny' }, b.code)), h('button', { class: 'ib', title: 'Delete', onclick: () => { Store.toggleBookmark(b); draw(); } }, icon('close'))));
+        for (const b of Store.d.bookmarks) body.append(h('div', { class: 'prow' }, icon(b.kind === 'system' ? 'star' : b.kind === 'galaxy' ? 'galaxy' : b.kind === 'structure' ? 'target' : 'planet', 'mid'), h('div', { onclick: () => { UI.closeModal(); app.openCode(b.code); } }, h('b', null, b.name), h('small', null, `${b.type || ''}${b.sub ? ' · ' + b.sub : ''}`), h('code', { class: 'tiny' }, b.code)), h('button', { class: 'ib', title: 'Delete', onclick: () => { Store.toggleBookmark(b); draw(); } }, icon('close'))));
       } else if (tab === 'civs') {
         const L = Store.d.civs || [];
         if (!L.length) body.append(h('p', { class: 'muted' }, 'Save civilizations from their dossier to follow their history across ages.'));
@@ -13400,13 +14784,13 @@ const Modals = {
   settings(app) {
     const s = Store.d.settings;
     const apply = () => { Store.save(); app.applySettings(); };
-    const row = (label, ctrl) => h('label', { class: 'setting' }, h('span', null, label), ctrl);
+    const row = (label, ctrl, title) => h('label', { class: 'setting', title: title || null }, h('span', null, label), ctrl);
     const sel = (key, opts) => h('select', { onchange: (e) => { s[key] = e.target.value; apply(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(s[key] || app.quality) === String(v) }, l)));
     const chk = (key) => h('input', { type: 'checkbox', checked: !!s[key], onchange: (e) => { s[key] = e.target.checked; apply(); } });
     UI.modal('Settings', h('div', { class: 'form1' },
       row('Pixel size', sel('pixel', [['auto', 'Auto'], ['1', '1× (sharp)'], ['2', '2×'], ['3', '3×'], ['4', '4×'], ['5', '5×'], ['6', '6× (chunky)']])),
       row('Quality', sel('quality', [['low', 'Low (mobile)'], ['medium', 'Medium'], ['high', 'High']])),
-      row('Pixel outlines', chk('outline')), row('Retro color quantization', chk('posterize')), row('Vignette', chk('vignette')), row('Show FPS', chk('fps')),
+      row('Pixel outlines', chk('outline')), row('Retro color quantization', chk('posterize'), 'Limit the picture to a small dithered palette of 343 colours, like old 8-bit hardware'), row('Vignette', chk('vignette')), row('Show FPS', chk('fps')),
       row('Fullscreen', btn(app.fsElement ? 'Leave' : 'Enter', () => { UI.closeModal(); app.toggleFullscreen(); }, { icon: app.fsElement ? 'shrink' : 'full' })),
       section('Sound', ...(() => {
         const a = Sound.cfg(), set = (k, v) => { s.audio = Object.assign({}, Sound.cfg(), { [k]: v }); Store.save(); Sound.settingsChanged(); };
@@ -13425,11 +14809,12 @@ const Modals = {
     UI.modal('Observer’s handbook', h('div', { class: 'help' },
       h('p', null, 'You are an observer drifting through an infinite, seeded universe. Nothing here is stored — every star, world, river and creature is regenerated from numbers. The universe runs on a shared clock and keeps evolving while you are away.'),
       section('Navigation', h('ul', null,
-        h('li', null, h('b', null, 'Galaxy · '), 'drag to pan, scroll or pinch to zoom, tap a star to inspect, double-tap to enter.'),
-        h('li', null, h('b', null, 'System · '), 'planets move along real orbits. Tap to inspect, double-tap to observe.'),
+        h('li', null, h('b', null, 'Galaxy · '), 'drag to pan, scroll or pinch to zoom, tap a star, a galaxy, its core or a nebula to inspect, double-tap to enter or fly to it.'),
+        h('li', null, h('b', null, 'System · '), 'planets (and the companions of double and triple stars) move along real orbits. Tap to inspect, double-tap to observe.'),
         h('li', null, h('b', null, 'Planet · '), 'drag to spin the globe, tap to pick a landing site, double-tap to descend.'),
         h('li', null, h('b', null, 'Surface · '), 'drag to pan, twist / right-drag / Q·E to rotate, tap a creature to study its genome and offspring.'))),
       section('Keyboard', h('div', { class: 'keys' }, [['WASD / arrows', 'pan'], ['Q / E', 'rotate'], ['R / F', 'tilt'], ['+ / −', 'zoom'], ['Z / X', 'dive / rise (water)'], ['PgDn / PgUp', 'dive / rise a step'], ['Enter', 'primary action'], ['Esc', 'back'], ['Space', 'freeze time'], ['1–5', 'time speed'], ['/', 'survey scanner'], ['B', 'saved'], ['G', 'seeds'], ['P', 'autopilot'], ['M', 'sound on / off'], ['H', 'hide interface'], ['F', 'follow selected'], ['L', 'next favourite here · all favourites'], ['Shift + F', 'fullscreen']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
+      section('Galaxies & stars', h('p', null, 'Each sector of the map holds a galaxy, a field of scattered stars far from any galaxy, or an empty void. Galaxies are spiral, barred, disk, elliptical, irregular or ring-shaped, with their own size, tilt, arms and gas; young blue stars crowd their arms and old stars their bulge and halo, around a supermassive core — a quiet black hole, an active nucleus, a quasar or blazar with jets, a radio galaxy with lobes, a pair of black holes or a dense star cluster. Nebulae, nurseries, remnants, clouds, clusters and stranger formations lie inside them; great clouds, filaments and tidal streams drift between them. About one star in eight has a companion and a very few are triple: pulsars pair only with pulsars and black holes only with black holes. Companions decide where planets can orbit stably — around a close pair only from outside, around the star of a wide pair only within the companion’s reach — and a close pair lights its worlds with two suns.')),
       section('Life', h('p', null, 'Creatures belong to eighteen body-plan families: on land and in the air quadrupeds, bipeds, hexapods, octopods, serpents, avians, gastropods and aerostats; in the water fish-like swimmers, whale-like cetoids, long-necked marine reptiles, rays, eels, jellies, cephalopods, crustaceans, echinoderms and siphonophore chains. A 45-gene genome controls anatomy, colour, pattern and behaviour; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed — offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
       section('Origin of life', h('p', null, 'Not every world is alive. Each has a potential for life from its liquid solvent (water, acid, methane — or an ocean under the ice), temperatures that keep it liquid, raw chemistry, energy (starlight or internal heat) and shelter from radiation; given that, the seed decides whether life ever starts and when. Worlds then age in geological time (about 60 million years to the hour): prebiotic chemistry, first cells, microbial mats and stromatolites, complex cells, the first multicellular life, and — on some — complex ecosystems. Microbial strains carry their own genomes that mutate, compete for their niches (sunlit water, deep water, sediments, vents, hot springs, sea ice, land), split, colonize and die out; their blooms tint the seas, their mats colour the shallows, and they are the plankton that feeds the filter feeders. See the ', h('b', null, 'Biosphere'), ' tab of any planet.')),
       section('Oceans & diving', h('p', null, 'Seas are divided into zones by depth, temperature, light, currents, nutrients and the shape of the floor: coral reefs and lagoons, kelp forests, seagrass meadows, mangroves, marshes and estuaries, upwellings, continental shelves and slopes, the open ocean, seamounts, abyssal plains, hadal trenches, hydrothermal vent fields, polar seas and waters under the ice, lakes and rivers — and acid or hydrocarbon seas elsewhere. Every sea creature belongs to a zone and a depth band, and its genome adapts to them (light-gathering or lost eyes, bioluminescence, pressure proofing, antifreeze, blubber, gigantism). Over water, press ', h('b', null, 'Dive'), ' (Z or Page Down; X or Page Up to rise, or Shift + wheel): light fades and reddens with depth, pressure and cold rise, and below the sunlit zone a lamp lights your way. Whales surface to blow and sometimes breach, squid ink when chased, and fishers of coastal settlements take their catch from the same seas.')),
@@ -13698,7 +15083,7 @@ const App = {
   applySettings() {
     const s = Store.d.settings;
     this.quality = s.quality || (this.mobile ? 'low' : 'medium');
-    this.R.pixel = s.pixel || 'auto'; this.R.outline = s.outline !== false; this.R.posterize = s.posterize ? 36 : 0; this.R.vignette = s.vignette === false ? 0 : 0.35;
+    this.R.pixel = s.pixel || 'auto'; this.R.outline = s.outline !== false; this.R.posterize = s.posterize ? 6 : 0; this.R.vignette = s.vignette === false ? 0 : 0.35;
     this.R.resize();
     const f = document.getElementById('fps'); if (f) f.style.display = s.fps ? '' : 'none';
   },
