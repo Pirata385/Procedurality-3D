@@ -379,6 +379,7 @@ p.k-battle { color: #ffab9a; }
 .favrow > .fav-act { flex: none; display: flex; align-items: center; gap: 6px; }
 .favrow .srow-tags { margin-top: 3px; }
 .chip.c-dead { background: #2a1a24; color: #c9a3b6; box-shadow: inset 0 0 0 1px #5a3348; }
+.warn { color: #ffb48f; }
 .p-tabs .tab.tab-fav { color: #ff9fc6; }
 .p-tabs .tab.tab-fav.on { color: #ffd6e6; }
 body.noui .fav-edge { display: none !important; }
@@ -1198,7 +1199,7 @@ class Planet {
       case 'ice': return eN > 0.72 ? B.MOUNTAIN : (m > 0.38 || t < -25) ? B.SNOW : (life ? B.TUNDRA : B.BARREN);
       case 'methane': return eN > 0.62 ? B.SNOW : m > 0.52 ? (life ? B.FUNGAL : B.BARREN) : B.BARREN;
       case 'toxic': return eN > 0.62 ? B.VOLCANIC : m > 0.58 ? (life ? B.TOXIC : B.VOLCANIC) : m > 0.34 ? (life ? B.FUNGAL : B.BARREN) : B.DESERT;
-      case 'fungal': return eN > 0.7 ? B.MOUNTAIN : m > 0.74 ? B.SWAMP : m > 0.3 ? B.FUNGAL : B.DESERT;
+      case 'fungal': return eN > 0.7 ? B.MOUNTAIN : this.shortDay ? (m > 0.4 ? B.BARREN : B.DESERT) : m > 0.74 ? B.SWAMP : m > 0.3 ? B.FUNGAL : B.DESERT;
     }
     if (!life) { if (t < -10) return B.SNOW; if (eN > 0.62) return B.MOUNTAIN; return m < 0.4 ? B.DESERT : B.BARREN; }
     if (t < -12) return B.SNOW;
@@ -1288,6 +1289,19 @@ class Planet {
     const hour = mod(12 + (angleDelta(lonS, lonP)) / Math.PI * 12, 24);
     return { elev, hour, sun: s };
   }
+}
+
+// the shortest solar day (sunrise to sunrise, s) complex life can live by. Under a faster sky the sun sets before an
+// animal has reached its bed, slept and woken, a hunter cannot finish a hunt by the light it hunts in, and no ecosystem
+// can run through its daily round: no plants, no animals, no complex organisms of any kind. Microbes are indifferent to
+// it and may still live there if the rest allows (see PlanetGen.dayLimit, Biosphere.of)
+const MIN_SOLAR_DAY = 90;
+// a world's solar day: its spin combined with its year, the sun racing round faster the shorter the year (the same
+// rate Climate.solarDay measures from the sun's path); Infinity for a world locked to its star
+function solarDayOf(p) {
+  if (p.tidalLock) return Infinity;
+  const host = p.isMoon ? p.parent : p;
+  return 1 / (1 / Math.max(1, p.dayLength) + 1 / Math.max(1, host.period));
 }
 
 const PlanetGen = (() => {
@@ -1472,6 +1486,18 @@ const PlanetGen = (() => {
       const nm = kind === 'gas' ? r.int(0, 5) : kind === 'icegiant' ? r.int(0, 4) : p.radius > 0.7 ? r.int(0, 2) : r.int(0, 1);
       for (let k = 0; k < nm; k++) p.moons.push(create(Object.assign({ seed: RNG.hash(seed, 'moon', k), index, star, a: p.a, frost, parent: p, moonIndex: k, system: ctx.system }, ctx.lum != null ? { lum: ctx.lum, mass: ctx.mass } : null)));
     }
+    // --- the length of the day (last of all, after every draw: the rest of this world and every other stays as it was)
+    return dayLimit(p);
+  }
+  // too short a day for complex life (MIN_SOLAR_DAY): no animals, plants or complex organisms, no nesting grounds or
+  // fossil beds, and a habitability to match; its microbes (if any) are left to the biosphere (Biosphere.of)
+  function dayLimit(p) {
+    p.solarDayLen = solarDayOf(p);
+    p.shortDay = p.solarDayLen < MIN_SOLAR_DAY;
+    if (!p.shortDay) return p;
+    p.habitability = Math.min(p.habitability, 0.05 * p.solarDayLen / MIN_SOLAR_DAY);
+    p.life = { has: false, bio: 0, count: 0 };
+    p.features = Object.assign({}, p.features, { fossils: false, nests: false });
     return p;
   }
 
@@ -1564,7 +1590,8 @@ const PlanetGen = (() => {
     p.terrain = Object.assign({}, src.terrain, { craters: src.terrain.craters * 0.25 });
     p.features = Object.assign({}, src.features, { nests: true, fossils: false, geysers: false });
     p.nick = src.nick; p.name = src.name;
-    return p;
+    // (new air and seas cannot lengthen the day: under too fast a sky the terraformed world stays without complex life)
+    return dayLimit(p);
   }
   // a lifeless world seeded by a life monolith: the same ground (every mountain and basin stays where it was), its air
   // thickened or thinned and its climate brought into the range where water is liquid, seas filled in its lowest basins
@@ -1596,9 +1623,9 @@ const PlanetGen = (() => {
     p.terrain = src.terrain;
     p.features = Object.assign({}, src.features, { nests: true, fossils: false });
     p.nick = src.nick; p.name = src.name;
-    return p;
+    return dayLimit(p);
   }
-  return { create, terraform, seedLife };
+  return { create, terraform, seedLife, dayLimit };
 })();
 
 /* ---------------------------------------------------------------------------
@@ -3039,7 +3066,53 @@ const Meteo = (() => {
     }
   }
 
-  return { at, siteOf, forecast, cyclones, cycloneAt, tideAt, zonal, field, dirOf, WxMap, eruption };
+  // ---------------------------------------------------------------- giant-planet vortices
+  // The storm systems of the gas and ice giants, seen from orbit and from inside the cloud decks alike: the
+  // world's persistent great storm (if it has one) and vortices that spin up in the shear between the jets,
+  // drift with their band, grow, peak and decay on deterministic schedules (a pure function of the world and
+  // universal time, like every other weather system here). Each: lat, lon, R (fraction of the planet's
+  // radius), int (0..1), spin (+1 anticlockwise seen from above), arms, w (turn rate, rad/s of view time).
+  const GV_SLOT = 1500, GV_LANES = 5, gvCache = new WeakMap();
+  function giantStorms(p, t) {
+    const g = p.gas;
+    if (!g) return [];
+    const C = gvCache.get(p) || {}, key = Math.floor(t / 4);
+    if (C.key === key && C.list) return C.list;
+    const out = [], ice = p.type === 'icegiant', seed = RNG.hash(p.seed, 'vortex'), off = p.seed % 11;
+    const jet = (lat) => Math.sin(lat * g.bands + off);
+    if (g.storm) {
+      const hs = new RNG.Rand(RNG.hash(seed, 'great'));
+      // anticyclonic, like the great spots of real giants: turning against the planet's spin in its hemisphere
+      out.push({ id: 'great', great: true, lat: g.storm.lat, lon: g.storm.lon, R: g.storm.size, int: 1, spin: g.storm.lat >= 0 ? -1 : 1, arms: hs.int(2, 3), w: 0.05 / (0.4 + g.storm.size * 3), seed: hs.range(0, 50), t0: 0, age: 0.5 });
+    }
+    const chance = clamp(0.3 + g.turb * 1.6, 0.35, 0.8) * (ice ? 0.8 : 1);
+    for (let j = 0; j < GV_LANES; j++) {
+      const W = GV_SLOT * (1 + j * 0.37), sh = (j * 0.61 % 1) * W, k = Math.floor((t + sh) / W);
+      for (let kk = k - 1; kk <= k; kk++) {
+        const h = RNG.hash(seed, j, kk);
+        if (RNG.unit(h) > chance) continue;
+        const r = new RNG.Rand(h), t0 = kk * W - sh + r.range(0, W * 0.4), life = W * r.range(0.8, 1.3), age = (t - t0) / life;
+        if (age < 0 || age > 1) continue;
+        const lat = r.range(-1.05, 1.05), lon0 = r.range(-Math.PI, Math.PI), grow = Math.pow(Math.sin(Math.PI * age), 0.6);
+        // carried along its band by the jet (and slowly poleward), growing and fading over its life
+        const lon = lon0 + jet(lat) * g.speed * 2.4e-4 * (t - t0), R = r.range(0.045, 0.11) * (ice ? 1.15 : 1) * (0.55 + 0.45 * grow);
+        const spin = (lat >= 0 ? 1 : -1) * (r.chance(0.7) ? 1 : -1), int = grow * r.range(0.7, 1);
+        if (int < 0.06) continue;
+        out.push({ id: h, great: false, lat, lon, R, int, spin, arms: r.int(2, 4), w: 0.05 / (0.4 + R * 3), seed: r.range(0, 50), t0, age });
+      }
+    }
+    // two vortices cannot share one patch of sky: the weaker is swallowed by the stronger (the great storm first)
+    out.sort((a, b) => (b.great - a.great) || b.int * b.R - a.int * a.R);
+    const kept = [];
+    for (const s of out) {
+      s.dir = dirOf(s.lat, s.lon);
+      if (!kept.some((q) => angle(q.dir, s.dir) < (q.R + s.R) * 1.3) && kept.length < 6) kept.push(s);
+    }
+    C.list = kept; C.key = key; gvCache.set(p, C);
+    return kept;
+  }
+
+  return { at, siteOf, forecast, cyclones, cycloneAt, tideAt, zonal, field, dirOf, WxMap, eruption, giantStorms };
 })();
 </script>
 
@@ -4317,8 +4390,15 @@ const Biosphere = (() => {
       if (B.rateK * avail < AT[6] * 1.02) { B.rateK = AT[6] * 1.05 / avail; B.notes.push('evolution raced ahead here, far faster than usual'); }
     }
     F.time = { k: clamp((star.age - B.originGyr) / 3, 0, 1), text: `the system is ${fmt.sig(star.age)} billion years old` };
-    // what the verdict rests on
-    const weakest = Object.entries(F).filter(([k]) => k !== 'time').sort((a, b) => a[1].k - b[1].k)[0];
+    // the day, which matters to complex life only: under too fast a sky (MIN_SOLAR_DAY) evolution stops at single cells
+    const sd = p.solarDayLen != null ? p.solarDayLen : solarDayOf(p);
+    F.day = { k: isFinite(sd) ? clamp(sd / (MIN_SOLAR_DAY * 2), 0, 1) : 1, text: !isFinite(sd) ? 'an endless day and an endless night, one face turned to the star' : p.shortDay ? `the sun rises and sets every ${fmt.dur(sd)}: too fast for complex life, which needs a day of at least ${MIN_SOLAR_DAY} s` : `a day of ${fmt.dur(sd)} from sunrise to sunrise: long enough for complex life` };
+    if (p.shortDay) {
+      B.cap = Math.min(B.cap, 4); B.shortDay = true;
+      B.notes.push(`its day is too short for complex life (${fmt.dur(sd)} from sunrise to sunrise): no animal could sleep and wake, no hunter finish a hunt, no ecosystem run its daily round by so fast a sky, so life here stays microbial`);
+    }
+    // what the verdict rests on (the length of the day only ever limits complex life)
+    const weakest = Object.entries(F).filter(([k]) => k !== 'time' && k !== 'day').sort((a, b) => a[1].k - b[1].k)[0];
     B.limit = weakest ? weakest[0] : null;
     cache.set(p, B);
     return B;
@@ -4637,7 +4717,7 @@ const Ocean = (() => {
     S = { zones: [], fresh: false, maxDepthM: 0, medium: p.liquid };
     if (p.isGiant || !p.liquid) { statsCache.set(p, S); return S; }
     const N = 900, ga = Math.PI * (3 - Math.sqrt(5)), o = {}, cnt = new Float32Array(ZONES.length), n2 = p.noise2;
-    const st = Biosphere.stageAt(p, 0).i, complex = p.life.has || p.terraformed, C = Climate.of(p);
+    const st = Biosphere.stageAt(p, 0).i, complex = (p.life.has || p.terraformed) && !p.shortDay, C = Climate.of(p);
     let nWater = 0;
     for (let i = 0; i < N; i++) {
       const y = 1 - (i / (N - 1)) * 2, rr = Math.sqrt(1 - y * y), th = ga * i, x = Math.cos(th) * rr, z = Math.sin(th) * rr;
@@ -4695,7 +4775,7 @@ class Surface {
     const C = planet.isGiant ? null : Climate.of(planet);
     this.ventK = this.liquid && this.liquid !== 'lava' && C ? 0.35 + 0.65 * clamp(C.volc * 2 + C.tidalHeat * 3, 0, 1) : 0;
     this.bio = Biosphere.of(planet);
-    this.complex = !!(planet.life.has || planet.terraformed);
+    this.complex = !!(planet.life.has || planet.terraformed) && !planet.shortDay;
     this.salty = ty === 'desert' || ty === 'arid';
   }
   // what the world's microbes look like now (blooms, mats, vent and spring colours), refreshed now and then
@@ -5665,7 +5745,7 @@ const Civ = (() => {
 
   const stageName = (s) => (STAGES[s] ? STAGES[s].name : 'Pre-sapient');
   const stageKey = (s) => (STAGES[s] ? STAGES[s].key : 'none');
-  function habitable(b, R) { if (R && R.terraformed.has(b.seed)) return true; return b.kind === 'rocky' && HAB_TYPES.has(b.type) && b.pressure > 0.25 && b.pressure < 5 && b.tempC > -25 && b.tempC < 50; }
+  function habitable(b, R) { if (b.shortDay) return false; if (R && R.terraformed.has(b.seed)) return true; return b.kind === 'rocky' && HAB_TYPES.has(b.type) && b.pressure > 0.25 && b.pressure < 5 && b.tempC > -25 && b.tempC < 50; }
   function isCradle(b) { return b.kind === 'rocky' && b.life.has && b.life.count >= 4 && CRADLE_TYPES.has(b.type) && b.habitability > 0.12; }
 
   function regionKey(star) { return star.pocket != null ? 'pocket:' + star.pocket : Math.floor(star.sx / RS) + ',' + Math.floor(star.sz / RS); }
@@ -6077,7 +6157,7 @@ const Civ = (() => {
   }
   function terraform(R, c, t, rnd) {
     if (R.projects.some((p) => p.civ === c)) return;
-    const pool = c.colonies.concat(c.holdings).filter((x) => x.body && x.kind === 'dome' && !R.terraformed.has(x.body.seed) && x.body.radius > 0.15);
+    const pool = c.colonies.concat(c.holdings).filter((x) => x.body && x.kind === 'dome' && !R.terraformed.has(x.body.seed) && x.body.radius > 0.15 && !x.body.shortDay);
     if (!pool.length) return;
     const col = pool[Math.floor(rnd.next() * pool.length)];
     R.projects.push({ civ: c, body: col.body, start: t, end: t + STEP * rnd.int(18, 36) });
@@ -7154,24 +7234,83 @@ out vec3 vW; out vec3 vN; out vec3 vL;
 void main(){ vec4 w = uModel * vec4(aPos, 1.0); vW = w.xyz; vN = mat3(uModel) * aNrm; vL = aPos; gl_Position = uVP * w; }`,
   H + OUT + COMMON + NOISE + `
 in vec3 vW; in vec3 vN; in vec3 vL;
-uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3; uniform float uBands; uniform float uTurb; uniform float uTime; uniform float uSeed; uniform vec4 uStorm; uniform float uOutline;
+uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3; uniform float uBands; uniform float uTurb; uniform float uTime; uniform float uSeed; uniform float uOutline;
+uniform mat4 uModel; uniform float uIce;
+// storm systems (Meteo.giantStorms, laid out by planetUniforms): uVx = centre (unit vector), radius; uVz = the east
+// direction there, intensity x spin (0: no storm in this slot); uVy = spiral arms, noise seed, great storm (1), turn
+// angle of the storm (rad, wrapped)
+uniform vec4 uVx[6]; uniform vec4 uVy[6]; uniform vec4 uVz[6];
+vec3 turn(vec3 v, vec3 k, float a){ float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
+vec2 rot2(vec2 v, float a){ float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
 void main(){
   vec3 p = normalize(vL);
-  float lat = p.y;
+  // the bands flow around each vortex: the gas is dragged round it, most strongly at its rim
+  vec3 pb = p;
+  for (int i = 0; i < 6; i++) {
+    float vk = uVz[i].w;
+    if (vk == 0.0) continue;
+    vec3 vc = uVx[i].xyz, dp = p - vc;
+    float R = uVx[i].w, d2 = dot(dp, dp);
+    if (d2 > 10.24 * R * R || dot(p, vc) < 0.0) continue;
+    float r = sqrt(d2) / R;
+    pb = turn(pb, vc, sign(vk) * (0.5 + abs(vk)) * r * exp(-r * r * 0.5) * smoothstep(3.2, 2.0, r));
+  }
+  float lat = pb.y;
   float rot = uTime * 0.012 * (1.0 + 0.5 * sin(lat * 7.0 + uSeed));
-  float ca = cos(rot), sa = sin(rot); vec3 q = vec3(ca * p.x - sa * p.z, p.y, sa * p.x + ca * p.z);
+  float ca = cos(rot), sa = sin(rot); vec3 q = vec3(ca * pb.x - sa * pb.z, pb.y, sa * pb.x + ca * pb.z);
   float t = snoise(vec3(q.x * 2.2, q.y * 9.0, q.z * 2.2) + uSeed) * uTurb + snoise(vec3(q.x * 6.0, q.y * 20.0, q.z * 6.0) + uSeed * 2.0) * uTurb * 0.35;
   float v = fract(lat * uBands * 0.5 + t + 10.0);
   // explicit palette blend (no array constructors: some mobile GPU compilers reject them)
   float k = v * 4.0, f = smoothstep(0.3, 0.7, fract(k));
   vec3 base = k < 1.0 ? mix(uC0, uC1, f) : k < 2.0 ? mix(uC1, uC2, f) : k < 3.0 ? mix(uC2, uC3, f) : mix(uC3, uC0, f);
-  if (uStorm.w > 0.5) {
-    vec3 sp = vec3(cos(uStorm.x) * sin(uStorm.y), sin(uStorm.x), cos(uStorm.x) * cos(uStorm.y));
-    float sd = distance(p, sp) / uStorm.z;
-    if (sd < 1.0) { float ring = fract(sd * 3.0 - uTime * 0.05 + snoise(p * 12.0) * 0.2); base = mix(base, mix(uC3, uC1, step(0.5, ring)) * 1.1, smoothstep(1.0, 0.6, sd)); }
+  // the storms themselves: spiral rain bands, a towering eyewall and a deep eye, three cloud layers turning at
+  // their own rates, and a dark collar where the vortex meets the bands
+  vec3 bump = vec3(0.0);
+  for (int i = 0; i < 6; i++) {
+    float vk = uVz[i].w;
+    if (vk == 0.0) continue;
+    vec3 vc = uVx[i].xyz, dp = p - vc;
+    float R = uVx[i].w, d2 = dot(dp, dp);
+    if (d2 > 1.96 * R * R || dot(p, vc) < 0.0) continue;
+    float r = sqrt(d2) / R;
+    vec4 w = uVy[i];
+    float sp = sign(vk), vis = clamp(abs(vk) * 1.6, 0.0, 1.0), th = w.w, great = w.z;
+    vec3 e1 = uVz[i].xyz, e2 = cross(vc, e1);
+    vec2 d = vec2(dot(dp, e1), dot(dp, e2)) / R;
+    float a = atan(d.y, d.x), eyeR = great > 0.5 ? 0.15 : 0.11;
+    // (cheap 2-D value noise in each layer's turning frame: the storm is flat on the sphere)
+    vec2 dA = rot2(d, -th), dB = rot2(d, -2.0 * th);
+    float nA = (vnoise(dA * 2.2 + w.y) - 0.5) * 1.3 + (vnoise(dA * 4.6 + w.y + 4.7) - 0.5) * 0.5;
+    float nB = (vnoise(dB * 5.0 + w.y + 9.1) - 0.5) * 2.0;
+    // logarithmic spiral arms trailing the spin, torn by turbulence
+    float arm = cos(w.x * (a - th + sp * 2.3 * log(max(r, 0.03))) + nA * 2.2);
+    float armK = smoothstep(0.4, 0.8, arm * 0.5 + 0.5 + nA * 0.2) * smoothstep(eyeR + 0.03, eyeR + 0.24, r) * smoothstep(1.32, 0.85, r);
+    float wall = smoothstep(eyeR - 0.01, eyeR + 0.05, r) * smoothstep(eyeR + 0.3, eyeR + 0.12, r) * (0.85 + 0.3 * nB);
+    float eye = smoothstep(eyeR + 0.02, eyeR - 0.04, r);
+    // (crisp cel steps in pixel mode, with no dither: dithered storm clouds read as drifting sand)
+    float cloud = clamp(max(wall, armK * (0.8 + 0.3 * nA)), 0.0, 1.0);
+    if (uHD < 0.5) cloud = floor(cloud * 3.0 + 0.4) / 3.0;
+    float env = smoothstep(1.38, 0.9, r) * vis;
+    float collar = smoothstep(0.82, 1.02, r) * smoothstep(1.4, 1.12, r);
+    if (uHD < 0.5) { env = floor(env * 3.0 + 0.5) / 3.0; collar = floor(collar * 2.0 + 0.5) / 2.0; }
+    vec3 bright = mix(base, vec3(1.0, 0.98, 0.94), 0.7);
+    vec3 deep = base * vec3(0.4, 0.38, 0.44);
+    // great spots of gas giants run red; ice giants' storms are dark spots trimmed with bright ice clouds
+    vec3 body = uIce > 0.5 ? base * vec3(0.28, 0.34, 0.55) : great > 0.5 ? mix(base, vec3(0.78, 0.3, 0.17), 0.62) : mix(base, bright, 0.35);
+    vec3 col = mix(mix(body, deep, 0.35), uIce > 0.5 ? vec3(0.92, 0.96, 1.0) : bright, cloud);
+    col = mix(col, deep * mix(0.35, 0.8, smoothstep(0.0, eyeR, r)), eye);
+    col = mix(col, deep, collar * 0.8);
+    base = mix(base, col, env);
+    // a funnel: the decks sink into the eye (its wall lit on one side, shadowed on the other), the eyewall towers
+    vec2 o = d / max(r, 1e-3);
+    float sink = smoothstep(eyeR - 0.08, eyeR + 0.02, r) * smoothstep(eyeR + 0.14, eyeR + 0.02, r) * 1.5;
+    float tower = smoothstep(eyeR + 0.1, eyeR + 0.26, r) * smoothstep(0.62, 0.34, r) * 0.45;
+    bump += (e1 * o.x + e2 * o.y) * (tower - sink) * env;
   }
-  vec3 c = toon(base, normalize(vN));
-  oC = vec4(c, 1.0); oI = vec4(encN(normalize(mat3(uView) * normalize(vN))), uOutline, 1.0);
+  vec3 n = normalize(vN);
+  if (dot(bump, bump) > 0.0) n = normalize(n + mat3(uModel) * bump / length(uModel[0].xyz));
+  vec3 cc = toon(base, n);
+  oC = vec4(cc, 1.0); oI = vec4(encN(normalize(mat3(uView) * normalize(vN))), uOutline, 1.0);
 }`];
 
   // gas giant cloud decks: bottomless layered atmosphere, wind-sheared streaks, storm vortices
@@ -9217,6 +9356,9 @@ function segPointDist(x0, z0, x1, z1, px, pz) {
   return Math.hypot(px - x0 - vx * t, pz - z0 - vz * t);
 }
 // the families that joined the ecosystems later (their few extra rules leave the older families' behaviour as it was)
+// asleep, the body idles: hunger (energy spent), thirst and the toll of cold and heat come on at a third of the waking
+// rate (waking costs 200% more than sleep). A plain factor in (0, 1]: a rate multiplied by it can never turn negative
+const SLEEP_METAB = 1 / 3;
 const NEW_LIVES = new Set(['ratite', 'wader', 'waterfowl', 'anuran', 'urodele', 'caecilian', 'finwalker', 'chimera', 'insect']);
 // fliers that come down to perch, feed, sleep and nest: birds, and the chimeras that fly on borrowed wings
 const perches = (sp) => sp.fam === 'avian' || ((sp.fam === 'chimera' || sp.fam === 'insect') && sp.habitat === 'air');
@@ -9667,7 +9809,7 @@ class Ecosystem {
       if (sp.predators.includes(b.sp) && d < td && (b.state !== 'sleep' || d < perc * 0.3) && (!edge || Nav.ok(W, b, a.x, a.z, 0.5))) { threat = b; td = d; }
       else if (fisher && b.sp.habitat === 'water') { if (sp.prey.includes(b.sp) && d < perc * sight) { const q = this.fishScore(a, b, d); if (q > fs) { fs = q; fish = b; } } }
       else if (wader && b.sp.habitat === 'water') { if (sp.prey.includes(b.sp) && d < wfd && W.waterAt(b.x, b.z) - b.y < 1.3 && b.P.S * (b.grow || 1) < P.S * 0.7) { wfish = b; wfd = d; } }
-      else if (sp.prey.includes(b.sp) && d < pd && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05 && (sp.habitat !== 'water' || Math.abs(b.y - a.y) < 3 + P.S) && (!edge || Nav.ok(W, a, b.x, b.z, 0.5))) { prey = b; pd = d; }
+      else if (sp.prey.includes(b.sp) && d < pd && (!b.hid || b.state !== 'cover' || d < perc * 0.3) && (b.state !== 'stand' || a.energy < 0.25) && (b.grow || 1) * b.P.S < (a.grow || 1) * P.S * 1.05 && (sp.habitat !== 'water' || Math.abs(b.y - a.y) < 3 + P.S) && (!edge || Nav.ok(W, a, b.x, b.z, 0.5))) { prey = b; pd = d; }
       if (b.sp === sp) { cx += b.x; cz += b.z; cn++; if (b.sex !== a.sex && b.grow >= 1 && b.mateCD <= 0 && b.energy > 0.5 && d < md && this.mateOK(b) && this.pairOK(a, b)) { mate = b; md = d; } }
     }
     const sleepy = (P.noct ? env.night < 0.4 : env.night > 0.6) && sp.habitat !== 'water';
@@ -9685,14 +9827,17 @@ class Ecosystem {
       if (P.social > 0.45 && a.state !== 'flee') this.alarmHerd(a, threat);
       // (a swimming bird that can fly takes to the air)
       if (Am && Am.flies && !a.airborne && !a.larva) this.takeOff(a, 6 + this.rng.next() * 8);
-      // (a shelter close by is safer than running: it bolts into its den, its burrow or a cave)
-      else if (a.state !== 'carry' && !a.airborne && sp.habitat !== 'air') { const ref = this.refuge(a, 9, 'hide'); if (ref && this.goHome(a, ref, 'hide', set)) return; }
-      set('flee', threat); return;
+      // (a den, a burrow or a cave is no bolt-hole: shelters are for sleep, storms and the young. Prey save themselves
+      // the way their kind does: see evade; the rest run, a herd all together)
+      else if (a.state !== 'carry' && !a.airborne && sp.habitat === 'land' && !a.cit && this.evade(a, threat, td, set)) return;
+      set('flee', threat); a.herdAt = P.social > 0.45 && cn > 1 ? [cx / cn, cz / cn, this.t] : null; return;
     }
     // a tornado bearing down: run from it
     if (M && M.hazards.length && !a.cit && sp.habitat !== 'water') for (const hz of M.hazards) if (Math.hypot(hz.x - a.x, hz.z - a.z) < hz.r) { if (a.state === 'carry') this.drop(a); set('flee', hz); return; }
     // a plunge, or a catch on its way ashore, is seen through
     if (a.state === 'dive' || a.state === 'carry') return;
+    // hidden in the undergrowth or standing its ground: it holds still while the hunter is about
+    if ((a.state === 'cover' || a.state === 'stand') && a.target && a.target.state !== 'dead' && !a.target.inside && a.stateT < (a.state === 'stand' ? 15 : 30) && Math.hypot(a.target.x - a.x, a.target.z - a.z) < perc * 1.2) return;
     // a cold-blooded amphibian in the cold sinks into torpor (at the bottom of the pond, or dug in) until it warms
     if (Am && Am.moist && W.tempAt && W.tempAt(a.x, a.z) < lerp(7, -9, a.g[G.cold])) {
       // (in its burrow if it has one near: it sleeps out the cold dug in)
@@ -9721,6 +9866,9 @@ class Ecosystem {
     if (a.state === 'brood' || a.state === 'build') { set('wander', null); a.stateT = 99; }
     // a mother about to give birth goes home to her den (if it is gone, or too far, she gives birth where she is)
     if (a.litter) { const d = a.den && this.denById(a.den); if (d && d.state === 'ready' && this.t - a.litter.t < 90) { if (this.goHome(a, { k: 'den', id: d.id }, 'nurse', set)) return; } this.birthNow(a); }
+    // (hunger or thirst grown dangerous wakes any sleeper, in the open or on watch: up it gets to feed or drink, and
+    // sleeps again once it has; one asleep in a shelter comes out for the same reason, see thinkInside)
+    if (sleepy && (a.state === 'sleep' || a.state === 'watch' || a.state === 'bed') && (a.energy < 0.12 || (sp.habitat === 'land' && a.thirst > 0.92))) a.upT = this.t;
     // (the newer lineages do not sleep when they are starving: they stay up to feed)
     if (sleepy && a.state !== 'hunt' && sp.fam !== 'floater' && !(a.energy < 0.22 && NEW_LIVES.has(sp.fam)) && !(a.upT != null && this.t - a.upT < 90 && (a.energy < 0.5 || a.thirst > 0.6))) {
       // nightfall alone sends nobody underground: where it sleeps is written in its genes and set by the weather. A
@@ -9800,6 +9948,26 @@ class Ecosystem {
   // and carry the catch ashore. Everything is decided by perception, hunger, depth, light,
   // weather and the hunter's own genes, step by step.
   // somewhere out of the weather: under the nearest tree, else where it stands
+  // how a hunted land animal saves itself, by its kind (false: it simply runs, see think). Horns, tusks, spines or
+  // armour and the size to use them: it stands and faces the hunter. Small and no herd animal, with thick cover close
+  // by (a tree, or the undergrowth of a forest, a jungle or a marsh; tall grass for the smallest): it slips into it and
+  // freezes, and a hunter passes by what it cannot see. A den, a burrow or a cave is never the escape
+  evade(a, threat, td, set) {
+    const P = a.P, me = P.S * (a.grow || 1), foe = threat.P ? threat.P.S * (threat.grow || 1) : me;
+    // (already hidden: it keeps still unless the hunter is almost on it, then it bolts; already standing: it holds)
+    if (a.state === 'cover' && a.target === threat) return !a.hid || td > 2 + P.bodyL + (threat.P ? threat.P.bodyL : 1);
+    if (a.state === 'stand' && a.target === threat) return a.stateT < 15;
+    // (real armour, not the plain chitin of an insect's skin)
+    const armed = (P.armor || 0) > 0.55 || (P.horns && a.g[G.horns] > 0.6) || (P.spikes && a.g[G.spikes] > 0.55) || !!(P.chim && P.chim.extra === 'tusks');
+    if (a.grow >= 1 && armed && me >= foe * 0.8) { set('stand', threat); a.hid = false; return true; }
+    if (P.social > 0.45 || me >= foe * 0.8 || td < 3 + P.bodyL) return false;
+    const W = this.world, b = W.biomeAt(a.x, a.z);
+    const thick = b === B.JUNGLE || b === B.FOREST || b === B.SWAMP || b === B.FUNGAL || (me < 0.45 && (b === B.GRASS || b === B.SAVANNA));
+    const c = thick ? [a.x, a.z] : this.cover(a);
+    if (!thick && (Math.hypot(c[0] - a.x, c[1] - a.z) > 7 || (c[0] === a.x && c[1] === a.z))) return false;
+    set('cover', threat); a.tx = c[0]; a.tz = c[1]; a.hid = false;
+    return true;
+  }
   cover(a) {
     const W = this.world, ch = W.chunkAt ? W.chunkAt(a.x, a.z) : null;
     let best = null, bd = 144;
@@ -10127,10 +10295,13 @@ class Ecosystem {
     a.mateCD -= dt; a.huntCD -= dt; a.drinkCD -= dt; a.fishCD -= dt; a.diveCD -= dt;
     // (cold-blooded amphibians burn far less than warm-blooded animals, and almost nothing in torpor)
     // (a colony's workers and soldiers are small and fed at home: they spend less)
-    a.energy -= dt * 0.0045 * P.metab * (a.inside ? 0.45 : a.state === 'hunt' || a.state === 'flee' ? 2.2 : a.state === 'torpor' ? 0.2 : 1) * (sp.family.amphibian ? 0.6 : 1) * (a.caste === 'worker' || a.caste === 'soldier' ? 0.5 : 1);
+    // (asleep, in the open, in a den, a burrow or a cave, or on its nest, it spends a third as much: see SLEEP_METAB. It
+    // still ages, and hunger or thirst grown dangerous wake it: see think)
+    const zz = this.asleep(a, env) ? SLEEP_METAB : 1;
+    a.energy -= dt * Math.max(0, 0.0045 * P.metab * (a.inside ? 0.45 : a.state === 'hunt' || a.state === 'flee' ? 2.2 : a.state === 'torpor' ? 0.2 : 1) * (sp.family.amphibian ? 0.6 : 1) * (a.caste === 'worker' || a.caste === 'soldier' ? 0.5 : 1) * zz);
     const M = W.meteo;
     // heat makes thirst come faster; rain on the ground and the leaves slakes it
-    if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * 0.0035 * (M ? (1 + 0.8 * M.heat) * (1 - 0.6 * M.rain) : 1) * (a.inside ? 0.5 : 1));
+    if (sp.habitat === 'land') a.thirst = Math.min(1, a.thirst + dt * Math.max(0, 0.0035 * (M ? (1 + 0.8 * M.heat) * (1 - 0.6 * M.rain) : 1) * (a.inside ? 0.5 : 1) * zz));
     // an amphibian's skin dries out of the water (fast in heat, wind and dry country, slowly by night, in rain or in a
     // marsh) and soaks up water again in it; dried out, it wastes away
     if (sp.amph && sp.amph.moist && !a.larva && !a.cit && !a.inside) {
@@ -10150,7 +10321,7 @@ class Ecosystem {
       const T = W.tempAt(a.x, a.z), cold = Math.max(a.g[G.cold], P.fur * 0.8), heat = a.g[G.heat];
       // (a shelter keeps out most of the cold and the heat)
       const stress = (Math.max(0, (-T - 2) / 18) * (1 - cold) + Math.max(0, (T - 32) / 14) * (1 - heat)) * (a.inside ? 0.2 : 1);
-      if (stress > 0) a.energy -= dt * 0.003 * Math.min(2, stress);
+      if (stress > 0) a.energy -= dt * 0.003 * Math.min(2, stress) * zz;
     } else if (!a.cit && sp.marine && W.waterTempAt) {
       // in the sea: the water at its depth (the cold deep, the heat around a vent)
       const T = W.waterTempAt(a.x, a.z, a.y), stress = Math.max(0, (-T - 1) / 12) * (1 - a.g[G.cold]) + Math.max(0, (T - 30) / 12) * (1 - a.g[G.heat]);
@@ -10171,9 +10342,35 @@ class Ecosystem {
     const anim = a.anim;
     let eat = 0, jaw = 0, sleep = 0, attack = 0, toShore = false;
     switch (a.state) {
-      case 'flee': if (tgt) { const dx = a.x - tgt.x, dz = a.z - tgt.z, d = Math.hypot(dx, dz) || 1; tx = a.x + (dx / d) * 10; tz = a.z + (dz / d) * 10; if (d > P.percep * 1.2 || tgt.state === 'dead') a.state = 'wander'; } spd = P.speed * 1.05; run = 1; break;
+      case 'flee': if (tgt) {
+        const dx = a.x - tgt.x, dz = a.z - tgt.z, d = Math.hypot(dx, dz) || 1;
+        let ux = dx / d, uz = dz / d;
+        // (a herd runs together: away from the hunter and in towards the others, unless that is towards the hunter)
+        const hc = a.herdAt;
+        if (hc && this.t - hc[2] < 4) { const hx = hc[0] - a.x, hz = hc[1] - a.z, hd = Math.hypot(hx, hz); if (hd > 2 && (hx * ux + hz * uz) / hd > -0.3) { ux += (hx / hd) * 0.6; uz += (hz / hd) * 0.6; const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l; } }
+        tx = a.x + ux * 10; tz = a.z + uz * 10; if (d > P.percep * 1.2 || tgt.state === 'dead') a.state = 'wander';
+      } spd = P.speed * 1.05; run = 1; break;
+      case 'cover': {
+        // slipping into the undergrowth, then frozen there, low, still and silent, until the hunter has gone
+        const d = Math.hypot(a.tx - a.x, a.tz - a.z);
+        if (d > 0.45 && a.stateT < 10) { tx = a.tx; tz = a.tz; spd = P.speed; run = 1; a.hid = false; }
+        else { spd = 0; sleep = 0.3; a.hid = true; }
+        if (!tgt || tgt.state === 'dead' || tgt.inside || a.stateT > 40 || Math.hypot(tgt.x - a.x, tgt.z - a.z) > P.percep * 1.3) { a.state = 'wander'; a.target = null; a.hid = false; a.stateT = 99; }
+        break;
+      }
+      case 'stand': {
+        // standing its ground: turned to face the hunter, head down, horns, tusks or spines towards it
+        if (!tgt || tgt.state === 'dead' || tgt.inside || a.stateT > 16 || Math.hypot(tgt.x - a.x, tgt.z - a.z) > P.percep * 1.3) { a.state = 'wander'; a.target = null; a.stateT = 99; break; }
+        spd = 0; tx = a.x; tz = a.z;
+        a.heading += clamp(angleDelta(a.heading, Math.atan2(tgt.x - a.x, tgt.z - a.z)), -dt * 3, dt * 3);
+        attack = Math.hypot(tgt.x - a.x, tgt.z - a.z) < P.bodyL + tgt.P.bodyL + 1.5 ? 1 : 0.45; jaw = 0.3;
+        break;
+      }
       case 'hunt':
         if (!tgt || tgt.state === 'dead' || tgt.inside || a.stateT > 14) { a.state = 'wander'; a.huntCD = 12; break; }
+        // (prey that has slipped into the undergrowth is lost unless the hunter is right on it; one standing its ground
+        // with horns, spines or armour is left alone by a hunter that is not starving)
+        if ((tgt.state === 'cover' && tgt.hid && Math.hypot(tgt.x - a.x, tgt.z - a.z) > P.percep * 0.3) || (tgt.state === 'stand' && a.energy > 0.25 && a.stateT > 3)) { a.state = 'wander'; a.target = null; a.huntCD = 10; a.stateT = 99; break; }
         tx = tgt.x; tz = tgt.z; spd = P.speed * 1.12; run = 1; attack = 0.5; jaw = 0.5;
         break;
       case 'eat':
@@ -10203,10 +10400,10 @@ class Ecosystem {
         if (perches(sp) && (this.wet(a.x, a.z) || this.tidal(a.x, a.z))) {
           // (far out at sea it keeps flying on until land comes within reach)
           if (!a.dest || a.stateT < dt || Math.hypot(a.dest[0] - a.x, a.dest[1] - a.z) < 1.5) a.dest = this.shore(a) || [a.x + Math.sin(a.heading) * 30, a.z + Math.cos(a.heading) * 30];
-          tx = a.dest[0]; tz = a.dest[1]; spd = P.speed * 0.6; toShore = true;
+          tx = a.dest[0]; tz = a.dest[1]; spd = P.speed * 0.6; toShore = a.toShore = true;
           break;
         }
-        sleep = 1; a.rest = Math.max(0, a.rest - dt * 0.02); break;
+        a.toShore = false; sleep = 1; a.rest = Math.max(0, a.rest - dt * 0.02); break;
       case 'fish': {
         // patrolling low over the shallows, or perched on the bank watching the water
         if (a.fmode === 'perch') {
@@ -10424,6 +10621,8 @@ class Ecosystem {
         break;
       default: spd = Math.hypot(tx - a.x, tz - a.z) > 1.5 ? P.speed * (sp.habitat === 'air' ? 0.6 : 0.32) : 0;
     }
+    // (dozing on its nest through its hours of sleep)
+    a.dozing = a.state === 'brood' && sleep > 0 && this.sleepyNow(a, env);
     if (sp.habitat === 'air') { spd = Math.max(spd, a.anim.fly > 0.5 && !a.perched ? P.speed * 0.45 : 0); if (a.state === 'sleep' && !toShore) spd = 0; }
     if (sp.habitat === 'land' && a.airborne) spd = Math.max(spd, P.speed * 0.8);
     if (sp.habitat === 'amph') {
@@ -10518,8 +10717,9 @@ class Ecosystem {
       && (!a.diving || Math.abs(a.y - tgt.y) < P.S * 0.8 + 0.4)) {
       this.sound(a, 'attack');
       // armour plates and spines sometimes turn the strike: defended prey escape to breed another day
-      const guard = clamp((tgt.P.armor || 0) * 0.5 + (tgt.P.spikes ? tgt.g[G.spikes] * 0.3 : 0), 0, 0.6);
-      if (this.rng.next() < guard) { a.state = 'wander'; a.target = null; a.huntCD = 10; a.stateT = 0; tgt.state = 'flee'; tgt.target = a; tgt.stateT = 0; this.sound(tgt, 'flee'); }
+      // (and more of them when it stands and faces the hunter, horns or tusks lowered)
+      const stand = tgt.state === 'stand', guard = clamp((tgt.P.armor || 0) * 0.5 + (tgt.P.spikes ? tgt.g[G.spikes] * 0.3 : 0) + (stand ? 0.3 + (tgt.P.horns || (tgt.P.chim && tgt.P.chim.extra === 'tusks') ? 0.1 : 0) : 0), 0, stand ? 0.8 : 0.6);
+      if (this.rng.next() < guard) { a.state = 'wander'; a.target = null; a.huntCD = 10; a.stateT = 0; if (stand) tgt.stateT = 0; else { tgt.state = 'flee'; tgt.target = a; tgt.stateT = 0; this.sound(tgt, 'flee'); } }
       else { this.kill(tgt, 'predation', a); a.state = 'eat'; a.target = tgt; a.stateT = 0; a.energy = Math.min(1, a.energy + 0.15); }
     }
     const gy = W.heightAt(a.x, a.z);
@@ -10790,7 +10990,7 @@ Object.assign(Ecosystem.prototype, {
     return out;
   },
   // somewhere to go in: its colony or its own den, else a cave with room. A cave dweller sleeps in caves; anything that
-  // walks or perches runs into one when chased, or takes to one in a storm, hard frost or the heat of the day
+  // walks or perches takes to one in a storm, hard frost or the heat of the day (never to escape a hunter: see evade)
   // the candidates are taken nearest first (its own den counts as nearer than it is), and one is chosen only if there is
   // a real way to its mouth: a clear line, or a route found by the pathfinder. Shelters it failed to reach lately are
   // passed over, so an unreachable one is never "reached" some other way
@@ -10979,6 +11179,14 @@ Object.assign(Ecosystem.prototype, {
   },
   // is it the hour to be asleep, for this one?
   sleepyNow(a, env) { return (a.P.noct ? env.night < 0.4 : env.night > 0.6) && a.sp.habitat !== 'water'; },
+  // asleep now: lying up in the open, curled up in a den, a burrow or a cave (gone in to sleep, or in its hours of sleep
+  // while it waits out the weather there), or dozing on its nest. Torpor is deeper still and keeps its own rate
+  asleep(a, env) {
+    if (a.inside) return a.inside.why === 'sleep' || (a.inside.k !== 'col' && a.inside.why !== 'hide' && a.inside.why !== 'nurse' && this.sleepyNow(a, env));
+    // (a land bird still flying on to the shore to sleep is not asleep yet)
+    if (a.state === 'sleep') return !a.toShore;
+    return a.state === 'brood' && !!a.dozing;
+  },
   // what the weather and the temperature ask of it now: to shelter from a storm, the cold or the heat
   hardship(a) {
     const W = this.world, M = W.meteo;
@@ -11297,7 +11505,8 @@ Object.assign(Ecosystem.prototype, {
     if (threat && td < perc * 0.6 && a.caste === 'soldier' && (a.x - c.x) ** 2 + (a.z - c.z) ** 2 < 100) { c.alarmT = 10; c.foe = threat.id; set('defend', threat); return true; }
     const goBack = () => { set('return', null); const m = this.mouthOf(c, Math.atan2(a.x - c.x, a.z - c.z)); a.tx = m[0]; a.tz = m[1]; return true; };
     if (a.state === 'defend') return goBack();
-    if (threat && td < perc * 0.7) { this.goHome(a, { k: 'col', id: c.id }, 'hide', set); return true; }
+    // (a worker does not bolt into the nest with a hunter on its heels: it runs, and one near home rouses the defenders)
+    if (threat && td < perc * 0.7) { if ((threat.x - c.x) ** 2 + (threat.z - c.z) ** 2 < 196) { c.alarmT = Math.max(c.alarmT || 0, 8); c.foe = threat.id; } set('flee', threat); return true; }
     const done = !hour || bad || (a.load || 0) >= 1 || (a.state === 'forage' && a.stateT > 100) || a.energy < 0.35;
     if (done && a.state !== 'return') return goBack();
     if (a.state === 'return') return true;
@@ -11943,7 +12152,7 @@ const Nav = {
    every creature outside the view they were frozen in time while unobserved.
    Parent–child links and the favourite creatures are built on this.
    ============================================================================= */
-const DEATH_CAUSE = { attack: 'an attack', impact: 'the great impact', winter: 'the impact winter', mutation: 'a crippling mutation', age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city', storm: 'a tornado', fished: "fishers' nets", desiccation: 'drying out', spent: 'the end of its nuptial flight', swarmed: 'the defenders of a colony', defence: 'defending its colony' };
+const DEATH_CAUSE = { daylength: 'a day too short for complex life', attack: 'an attack', impact: 'the great impact', winter: 'the impact winter', mutation: 'a crippling mutation', age: 'old age', starvation: 'starvation', predation: 'a predator', battle: 'battle', razed: 'the fall of its city', storm: 'a tornado', fished: "fishers' nets", desiccation: 'drying out', spent: 'the end of its nuptial flight', swarmed: 'the defenders of a colony', defence: 'defending its colony' };
 const dirOfLatLon = (ll) => { const la = ll[0] * Math.PI / 180, lo = ll[1] * Math.PI / 180; return [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)]; };
 
 const EcoSave = {
@@ -12118,9 +12327,11 @@ const EcoSave = {
     if (rec.stats) eco.stats = Object.assign({ births: 0, deaths: 0, kills: 0, causes: {} }, rec.stats);
     for (const k of rec.cells || []) eco.seeded.add(k);
     const known = new Map(), inCom = new Set(eco.community), older = [];
+    // (under too short a day no complex life survives: what was saved of the wildlife is gone, see unsuited)
     const speciesOf = (code) => {
       if (known.has(code)) return known.get(code);
       let sp = null;
+      if (P.shortDay) { known.set(code, null); return null; }
       const m = Ecology.parseCode(code);
       if (m && m.world === pc) { sp = Ecology.speciesOfEra(P, m.slot, m.era, m.salt); if (sp && sp.code !== code) sp = null; }
       if (sp && !inCom.has(sp)) older.push(sp);
@@ -12430,6 +12641,14 @@ const Favorite = {
     return out;
   },
   sites() { return new Set(this.list.map((f) => f.site)); },
+  // a site whose world has too short a day for complex life (MIN_SOLAR_DAY): the creatures favourited there are gone
+  unsuited(v) {
+    let n = 0;
+    for (const f of this.list) if (f.site === v.siteId && !f.dead && !this.isCit(f)) { f.dead = { cause: 'daylength', t: v.app.t, age: 0 }; n++; }
+    if (!n) return;
+    this.ver++; Store.save(true);
+    v.app.ui.log(`♥ ${n === 1 ? 'Your favourite here is' : `Your ${n} favourites here are`} gone: this world's day is too short for complex life (${fmt.dur(v.planet.solarDayLen)} from sunrise to sunrise)`, 'death');
+  },
   // how an individual is named in messages
   title(a) { return a.cit ? `${citRole(a)} ${a.name} of ${a.cit.city.name || Civ.civName(a.cit.civ)}` : `${a.name} (${a.sp.common} #${a.id})`; },
   add(v, a) {
@@ -14020,11 +14239,21 @@ function buildGlobe(planet, res) {
   });
   return GFX.mesh(data);
 }
-// shared per-planet GPU uniforms
-function planetUniforms(p) {
+// shared per-planet GPU uniforms (t: universal time, which places the storms; T: view time, which turns them)
+const GAS_VX = new Float32Array(24), GAS_VY = new Float32Array(24), GAS_VZ = new Float32Array(24);
+function planetUniforms(p, t = 0, T = 0) {
   const g = p.gas;
-  if (g) { const c = g.colors; return { uC0: c[0], uC1: c[1], uC2: c[2], uC3: c[3] || c[0], uBands: g.bands, uTurb: g.turb, uSeed: (p.seed % 1000) / 10, uStorm: g.storm ? [g.storm.lat, g.storm.lon, g.storm.size, 1] : [0, 0, 0, 0] }; }
-  return {};
+  if (!g) return {};
+  const c = g.colors, S = Meteo.giantStorms(p, t);
+  GAS_VX.fill(0); GAS_VY.fill(0); GAS_VZ.fill(0);
+  S.forEach((s, i) => {
+    // (centre and east direction on the unit sphere, so the shader need not work them out for every pixel)
+    const d = s.dir, e = V3.norm([d[2], 0, -d[0]]);
+    GAS_VX.set([d[0], d[1], d[2], s.R], i * 4);
+    GAS_VZ.set([e[0], e[1], e[2], Math.max(0.01, s.int) * s.spin], i * 4);
+    GAS_VY.set([s.arms, s.seed, s.great ? 1 : 0, (T * s.w * s.spin) % TAU], i * 4);
+  });
+  return { uC0: c[0], uC1: c[1], uC2: c[2], uC3: c[3] || c[0], uBands: g.bands, uTurb: g.turb, uSeed: (p.seed % 1000) / 10, uIce: p.type === 'icegiant' ? 1 : 0, uVx: GAS_VX, uVy: GAS_VY, uVz: GAS_VZ };
 }
 const TMP = { st: new MatStack(8), m: M4.create() };
 function modelTRS(x, y, z, s, tilt = 0, spin = 0) {
@@ -14618,7 +14847,7 @@ class SystemView {
       const spin = p.rotAngle(t);
       if (p.isGiant) {
         const P = R.frame(R.P.gas, cam, env);
-        GFX.setAll(P, Object.assign({ uModel: modelTRS(b.pos[0], b.pos[1], b.pos[2], b.r, p.tilt, spin), uTime: T, uOutline: 0.7 }, planetUniforms(p)));
+        GFX.setAll(P, Object.assign({ uModel: modelTRS(b.pos[0], b.pos[1], b.pos[2], b.r, p.tilt, spin), uTime: T, uOutline: 0.7 }, planetUniforms(p, t, T)));
         R.sphereMesh.draw();
       } else if (b.mesh) {
         const P = R.frame(R.P.planet, cam, env);
@@ -14950,7 +15179,7 @@ class PlanetView {
     const spin = p.rotAngle(t), model = modelTRS(0, 0, 0, 1, p.tilt, spin);
     if (p.isGiant) {
       const P = R.frame(R.P.gas, cam, env);
-      GFX.setAll(P, Object.assign({ uModel: model, uTime: T, uOutline: 0.9 }, planetUniforms(p)));
+      GFX.setAll(P, Object.assign({ uModel: model, uTime: T, uOutline: 0.9 }, planetUniforms(p, t, T)));
       R.sphereMesh.draw();
     } else {
       const P = R.frame(R.P.planet, cam, env);
@@ -15265,7 +15494,7 @@ class SurfaceView {
     this.siteCode = Codes.ofPlanet(planet.original || planet);
     let rec = null;
     // (a lifeless world can keep a site too: the citizens of its colonies and domes are remembered with it)
-    if (planet.life.has || !planet.isGiant) { try { rec = EcoSave.find(this.siteCode, p.dir, Surface.radiusOf(planet), p.site); } catch (e) { console.warn(e); rec = null; } }
+    if (planet.life.has || !planet.isGiant || planet.shortDay) { try { rec = EcoSave.find(this.siteCode, p.dir, Surface.radiusOf(planet), p.site); } catch (e) { console.warn(e); rec = null; } }
     this.surface = new Surface(planet, rec ? rec.dir : p.dir);
     this.dive = { d: 0, goal: 0, pitch: null };
     const focus = (rec && this.surface.localOf(p.dir)) || [0, 0];
@@ -15290,6 +15519,7 @@ class SurfaceView {
     this.syncChaos();
     this.restored = 0;
     if (rec) { try { this.restored = EcoSave.restore(this, rec); } catch (e) { console.warn(e); } }
+    if (planet.shortDay) Favorite.unsuited(this);
     this.simT = null; this.boost = 1; this.alpha = 0; this.saveT = 0;
     this.citySig = null; this.cwT = 0; this.cpT = 0; this.bakeQ = new Set(); this.rebuildQ = [];
     const fx = Math.floor(focus[0] / 32), fz = Math.floor(focus[1] / 32);
@@ -15959,6 +16189,7 @@ class SurfaceView {
     const t = this.app.t, body = this.monoBody();
     if (this.gas) return 'A gas giant has no ground to raise a monolith on';
     if (kind === 'life' && this.planet.life.has) return 'A Life Monolith can only be raised on a lifeless world or moon';
+    if (kind === 'life' && this.planet.shortDay) return `Its day is too short for complex life (${fmt.dur(this.planet.solarDayLen)} from sunrise to sunrise, at least ${MIN_SOLAR_DAY} s needed): nothing a Life Monolith seeded could live here`;
     if ((kind === 'knowledge' || kind === 'protection' || kind === 'chaos') && Monoliths.activeAt(body, kind, t)) return `This world already has a ${MONO[kind].name} (take it down first)`;
     if (kind === 'life' && Monoliths.activeLife(body, t)) return 'This world has already been seeded';
     if (kind === 'death' && Monoliths.impactsOn(body).some((I) => I.T > t)) return 'A meteor is already falling on this world';
@@ -16592,20 +16823,22 @@ class GasSky {
     this.decks = [[-42, 3, 0.55, 0.032, 0.45], [-23, -0.04, 0.34, 0.05, 0.7], [-10, -0.26, 0.12, 0.075, 0.9]];
     // cloud formations drifting with the wind: [base y, top y, cell, fill, shear, id]
     this.layers = [[-6, -1, 22, 0.55, 0.85, 1], [1, 7, 30, 0.32, 1.05, 2]];
-    this.great = this.greatStorm(S);
     this.logged = new Set();
     this.here = 0; this.storm = null; this.flash = null;
     this.bolts = null;
   }
-  // the planet's great storm (the spot seen from orbit), if this site lies under it
-  greatStorm(S) {
-    const st = this.p.gas.storm;
-    if (!st) return null;
-    const d = [Math.cos(st.lat) * Math.sin(st.lon), Math.sin(st.lat), Math.cos(st.lat) * Math.cos(st.lon)];
-    const dot = V3.dot(d, S.dir0);
-    if (dot < 0.9) return null;
-    const k = S.Rs / dot, x = V3.dot(d, S.bx) * k, z = V3.dot(d, S.bz) * k, R = st.size * S.Rs * 0.8;
-    return Math.hypot(x, z) < R * 1.6 ? { id: 1, cls: 'great', x, z, R, s: 1, spin: this.dir, t0: 0, great: true } : null;
+  // the planet's storm systems seen from orbit (its great storm, the vortices drifting with the bands) that lie
+  // over this site: the same storms, at the same place and strength, now seen from inside
+  giantNear(t) {
+    const S = this.view.surface, out = [];
+    for (const st of Meteo.giantStorms(this.p, t)) {
+      const d = st.dir, dot = V3.dot(d, S.dir0);
+      if (dot < 0.9) continue;
+      const k = S.Rs / dot, x = V3.dot(d, S.bx) * k, z = V3.dot(d, S.bz) * k, R = st.R * S.Rs * 0.8;
+      if (Math.hypot(x, z) >= R * 1.6) continue;
+      out.push(st.great ? { id: 1, cls: 'great', x, z, R, s: 1, spin: this.dir, t0: 0, great: true } : { id: st.id, cls: 'vortex', x, z, R, s: st.int, spin: st.spin, t0: st.t0, great: false });
+    }
+    return out;
   }
   // wind shear: higher air moves faster
   zonal(k) { return this.dir * this.speed * k; }
@@ -16625,7 +16858,7 @@ class GasSky {
         out.push({ id: h, cls, x: sx, z: sz, R: r.range(r0, r1), s: st * Math.pow(Math.sin(Math.PI * f), 0.6), spin: r.sign(), t0 });
       }
     }
-    if (this.great) out.push(this.great);
+    out.push(...this.giantNear(t));
     return out;
   }
   // rotation of a storm's cloud field: continuous modulo a full turn, whatever t is
@@ -16656,7 +16889,7 @@ class GasSky {
     this.storm = best; this.here = bi;
     if (best && bi > 0.35 && !this.logged.has(best.id)) {
       this.logged.add(best.id);
-      v.app.ui.log(best.great ? 'You are inside the planet\'s great storm — a vortex wider than worlds' : best.cls === 'hurricane' ? 'A hurricane is sweeping through the cloud decks' : 'A squall rolls through the upper atmosphere', 'weather');
+      v.app.ui.log(best.great ? 'You are inside the planet\'s great storm — a vortex wider than worlds' : best.cls === 'vortex' ? 'You are inside one of the giant vortices seen from orbit — a storm wider than continents' : best.cls === 'hurricane' ? 'A hurricane is sweeping through the cloud decks' : 'A squall rolls through the upper atmosphere', 'weather');
     }
     // lightning: short-lived bolts in the heart of the storm
     this.flash = null;
@@ -18470,14 +18703,16 @@ function planetPanel(p, app, o) {
   if (p.life.has) badges.push(chip(`${p.life.count} species slots`, 'c-life'));
   if (p.rings) badges.push(chip('rings'));
   if (p.tidalLock) badges.push(chip('tidally locked'));
+  if (p.shortDay) badges.push(chip('day too short for complex life', 'c-dead'));
   const view = o.view;
   const tabs = [
     { id: 'overview', label: 'Overview', render: () => h('div', null,
-      h('p', { class: 'desc' }, PTYPES[p.type].desc + (p.life.has ? ' Life has taken hold here.' : '')),
+      h('p', { class: 'desc' }, (p.shortDay && p.type === 'fungal' ? 'Spore-laden world of fungal mats and microbes.' : PTYPES[p.type].desc) + (p.life.has ? ' Life has taken hold here.' : '')),
+      p.shortDay ? h('p', { class: 'small warn' }, `Its day is too short for complex life: the sun rises and sets every ${fmt.dur(p.solarDayLen)} (at least ${MIN_SOLAR_DAY} s is needed), faster than any animal could sleep and wake, hunt or raise its young by. No plants or animals can live here; only microbes, if anything.`) : null,
       h('div', { class: 'grid' },
         stat('Radius', `${fmt.sig(p.radius)} R⊕`), stat('Gravity', `${p.gravity.toFixed(2)} g`), stat('Mean temp', fmt.temp(p.tempC)), stat('Range', p.isGiant ? '—' : `${fmt.temp(p.tempMin)} … ${fmt.temp(p.tempMax)}`),
         stat('Atmosphere', p.isGiant ? 'Deep envelope' : `${p.atmo.label}${p.pressure > 0.005 ? ` · ${fmt.sig(p.pressure)} atm` : ''}`), stat(p.liquid ? `${cap(p.liquid)} cover` : 'Surface liquid', p.liquid ? fmt.pct(p.coverage) : 'none'),
-        stat(p.isMoon ? 'Orbits' : 'Orbit', p.isMoon ? p.parent.title : fmt.au(p.a)), stat('Year', fmt.dur(p.period)), stat('Day', p.tidalLock ? 'locked' : fmt.dur(p.dayLength)), stat('Axial tilt', `${Math.round(p.tilt * 57.3)}°`),
+        stat(p.isMoon ? 'Orbits' : 'Orbit', p.isMoon ? p.parent.title : fmt.au(p.a)), stat('Year', fmt.dur(p.period)), p.tidalLock || Math.abs(solarDayOf(p) / p.dayLength - 1) <= 0.1 ? stat('Day', p.tidalLock ? 'locked' : fmt.dur(p.dayLength)) : stat('Solar day', fmt.dur(solarDayOf(p))), stat('Axial tilt', `${Math.round(p.tilt * 57.3)}°`),
         stat('Moons', String(p.isMoon ? 0 : p.moons.length)), stat('Habitability', fmt.pct(p.habitability))),
       p.atmo.gases.length ? section('Atmosphere', h('div', { class: 'gases' }, p.atmo.gases.map(([g, v]) => chip(`${g} ${v}%`)))) : null,
       !p.isMoon && p.moons.length ? section('Moons', h('div', { class: 'plist' }, p.moons.map((m) => h('div', { class: 'prow', onclick: () => app.openPlanet(m) }, Thumbs.planet(m, 24), h('div', null, h('b', null, m.title), h('small', null, `${m.typeName} · ${fmt.temp(m.tempC)}`)), m.life.has ? chip('life', 'c-life') : null)))) : null) },
@@ -18545,7 +18780,7 @@ function cellIcon(g, size = 36) {
   return c;
 }
 const MEDIUM_NAME = { water: 'Water', acid: 'Sulfuric acid', methane: 'Liquid methane', clouds: 'Cloud droplets', silicate: 'Silicate melt', exotic: 'Exotic solvent' };
-const FACTOR_NAME = { solvent: 'A liquid solvent', temperature: 'Temperature', chemistry: 'Chemistry', energy: 'Energy', shelter: 'Shelter from radiation', time: 'Time' };
+const FACTOR_NAME = { solvent: 'A liquid solvent', temperature: 'Temperature', chemistry: 'Chemistry', energy: 'Energy', shelter: 'Shelter from radiation', time: 'Time', day: 'Day length (complex life)' };
 const fmtGyr = (g) => (g >= 1 ? `${fmt.sig(g)} billion years` : `${fmt.n(Math.max(1, Math.round(g * 1000)))} million years`);
 const fmtGy = (g) => (g >= 1 ? `${fmt.sig(g)} Gyr` : `${fmt.n(Math.max(1, Math.round(g * 1000)))} Myr`);
 const STAGE_SHORT_NAME = ['Sterile', 'Prebiotic', 'First cells', 'Mats', 'Complex cells', 'Multicell', 'Ecosystem'];
@@ -18661,7 +18896,7 @@ function locationPanel(v, app) {
           (() => { const w = v.waterHere(); if (!w) return null; return section(`Waters · ${w.zone.name}`, h('p', { class: 'small' }, w.zone.desc), h('p', { class: 'muted small' }, `Sea floor ${fmt.n(Math.round(w.floorM))} m · ${Ocean.layer(w.D).name.toLowerCase()} at the bottom${w.fresh ? ' · fresh water' : ''}${v.canDive && v.canDive() ? ' · press Dive (Z) to go below' : ''}`)); })(),
           (() => { const m = v.surface._micro; if (!m || m.stage < 2 || p.life.has) return null; return section('Microbial life', h('p', { class: 'small' }, `${Biosphere.STAGES[m.stage].name}: ${m.strains} strains in the waters, sediments and rocks here${m.stromatolites ? ', building stromatolites in the shallows' : ''}.`), h('a', { class: 'kinlink', onclick: () => app.openPlanet(p) }, 'Biosphere of this world')); })(),
           probe ? section('Probe', h('p', { class: 'muted small' }, `${BIOMES[v.biomeAt(probe[0], probe[2])].name} · elevation ${Math.round(probe[1] * 190)} m · ${fmt.temp(v.tempAt(probe[0], probe[2]))}`)) : null,
-          section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.active && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : (v.surface._micro && v.surface._micro.stage >= 2) ? 'No animals have evolved here: this world belongs to its microbes.' : 'This world is lifeless. Only wind and stone.')));
+          section('Species observed nearby', counts.size ? h('div', null, [...counts.entries()].sort((a, b2) => b2[1] - a[1]).map(([sp, n]) => h('div', { class: 'srow', onclick: () => { const a = v.eco.agents.find((x) => x.sp === sp && x.active && x.state !== 'dead'); if (a) { v.inspect(a); v.follow = a; } } }, Portraits.el(sp.code, sp.pheno, 48), h('div', { class: 'srow-main' }, h('b', null, sp.common), h('i', null, sp.name), h('div', { class: 'srow-tags' }, chip(sp.family.name), chip(sp.role, 'c-' + sp.diet), chip(`${n} here`, 'c-pop')))))) : h('p', { class: 'muted' }, p.life.has ? 'Nothing is moving here right now.' : (v.surface._micro && v.surface._micro.stage >= 2) ? (v.planet.shortDay ? `No animals or plants can live here: the sun rises and sets every ${fmt.dur(v.planet.solarDayLen)}, too fast a day for complex life. This world belongs to its microbes.` : 'No animals have evolved here: this world belongs to its microbes.') : 'This world is lifeless. Only wind and stone.')));
       } },
       { id: 'weather', label: 'Weather', render: (live) => weatherView(v, app, live) },
     ],
@@ -18684,7 +18919,7 @@ function poiPanel(poi, v, app) {
           const occ = [...(v.eco.caveOcc.get(cave.key) || [])].map((id) => v.eco.byId.get(id)).filter((a) => a && a.inside && a.inside.id === cave.key && a.state !== 'dead');
           box.append(h('div', { class: 'grid' }, stat('Mouth', `${(cave.size * 2).toFixed(1)} m wide`), stat('Room for', `~${Math.max(1, Math.round(cave.size * 3))} large animals`), stat('Inside now', String(occ.length))));
           if (occ.length) box.append(h('div', { class: 'offspring' }, occ.map((a) => kinRow(a, v, [chip(stateLabel(a))]))));
-          else box.append(h('p', { class: 'muted small' }, 'Empty just now. Animals come in to sleep, to wait out storms and cold snaps, and to hide when chased.'));
+          else box.append(h('p', { class: 'muted small' }, 'Empty just now. Animals come in to sleep, to wait out storms and cold snaps, and to raise their young; a hunted animal runs, hides in the undergrowth or stands its ground instead.'));
         }
       };
       fill(); if (cave) live(fill);
@@ -18726,7 +18961,7 @@ function denPanel(d, v, app) {
           h('div', { class: 'grid' }, stat('State', d.state === 'digging' ? `Being made · ${fmt.pct(d.prog)}` : d.state === 'ready' ? 'In use' : 'Abandoned'), stat('Belongs to', owners.length ? `${owners.length} ${sp.common}` : 'Nobody now'), stat('Inside now', String(inside.length)), stat('Age', fmt.dur(d.t))),
           owners.length ? h('p', { class: 'small' }, h('b', null, 'Home of: '), ...owners.map((p, i) => [i ? ', ' : '', who(p)]).flat()) : h('p', { class: 'muted small' }, 'Empty: another of its kind may take it over, or it will fall in.'),
           inside.length ? h('div', { class: 'offspring' }, inside.map((a) => kinRow(a, v, [chip(stateLabel(a))]))) : null,
-          h('p', { class: 'muted small' }, `Its owners sleep here, wait out storms, frosts and the midday heat inside, bolt for it when chased${sp.shelter && sp.shelter.young ? ', and bear and nurse their young in it' : ''}.`),
+          h('p', { class: 'muted small' }, `Its owners sleep here and wait out storms, frosts and the midday heat inside (chased, they run, hide in cover or stand their ground rather than bolting in)${sp.shelter && sp.shelter.young ? ', and bear and nurse their young in it' : ''}.`),
           h('a', { class: 'kinlink', onclick: () => Modals.species(app, sp) }, `About the ${sp.common}`));
       };
       fill(); live(fill);
@@ -18766,7 +19001,7 @@ const STATE_LABEL = { wander: 'Wandering', graze: 'Grazing', hunt: 'Hunting', ea
   build: 'Building a nest', brood: 'Tending its nest', raid: 'Raiding a nest!', soak: 'Soaking in the water', torpor: 'Torpid in the cold', stalk: 'Wading, watching for fish',
   home: 'Heading for shelter', dig: 'Making a shelter', forage: 'Foraging for the colony', return: 'Carrying food home', guard: 'Guarding the colony', defend: 'Defending the colony!', raidcol: 'Raiding a colony!',
   nuptial: 'On its nuptial flight', found: 'Seeking a place for a colony', swarm: 'Leading a swarm to a new home', inside: 'Inside',
-  bed: 'Settling down to sleep', watch: 'Keeping watch while the herd sleeps', ctl: 'Under your control' };
+  bed: 'Settling down to sleep', watch: 'Keeping watch while the herd sleeps', ctl: 'Under your control', cover: 'Hiding in the undergrowth!', stand: 'Standing its ground!' };
 const HOME_LABEL = { storm: 'Making for shelter from the storm', sleep: 'Heading home to sleep', cold: 'Seeking shelter from the cold', heat: 'Seeking shade from the heat', nurse: 'Going home to give birth', home: 'Heading back to the colony', royal: 'Going into the new colony' };
 // what it is going into or coming out of, in words
 function portalLabel(a, v) {
@@ -19075,8 +19310,9 @@ function weatherView(v, app, live) {
 function climateBody(p, app, view, live) {
   const C = Climate.of(p), box = h('div');
   if (!C.rocky) {
-    box.append(h('p', { class: 'desc' }, C.label), h('div', { class: 'grid' }, stat('Starlight', `${fmt.sig(C.flux)}× Earth`), stat('Day', fmt.dur(p.dayLength)), stat('Bands', String(Math.round(p.gas.bands))), stat('Great storm', p.gas.storm ? 'yes' : 'none')),
-      h('p', { class: 'small muted' }, 'Giants have no surface climate: their weather is the banded jets, the storm vortices and the lightning of the deep atmosphere. Descend into the clouds to see it.'));
+    box.append(h('p', { class: 'desc' }, C.label), h('div', { class: 'grid' }, stat('Starlight', `${fmt.sig(C.flux)}× Earth`), stat('Day', fmt.dur(p.dayLength)), stat('Bands', String(Math.round(p.gas.bands))), stat('Great storm', p.gas.storm ? 'yes' : 'none'),
+      stat('Storm vortices now', String(Meteo.giantStorms(p, app.t).filter((s) => !s.great).length))),
+      h('p', { class: 'small muted' }, 'Giants have no surface climate: their weather is the banded jets, the storm vortices and the lightning of the deep atmosphere. Vortices spin up in the shear between the jets, drift with their band, grow, peak and die away over hours; the bands wrap around them. Descend into the clouds to see it.'));
     return box;
   }
   const lvl = (k) => (k < 0.05 ? 'none' : k < 0.25 ? 'low' : k < 0.55 ? 'moderate' : 'high');
@@ -19173,15 +19409,24 @@ const SLEEP_TEXT = {
   herd: 'Out in the open, bedded down with its herd; one keeps watch', open: 'Out in the open, alone, in cover when there is some', roost: 'Roosting, perched or settled on dry ground',
   water: 'Resting in the water', drift: 'Drifting, never landing', colony: 'Inside its colony',
 };
+// how a species escapes a hunter (never into a den or a cave: see Ecosystem.evade)
+function evadeText(sp, short) {
+  const P = sp.pheno, g = sp.g;
+  if (sp.habitat === 'air') return short ? 'Takes to the air' : 'takes to the air';
+  const armed = (P.armor || 0) > 0.55 || (P.horns && g[G.horns] > 0.6) || (P.spikes && g[G.spikes] > 0.55) || (P.chim && P.chim.extra === 'tusks');
+  if (armed) return short ? 'Stands its ground' : 'stands its ground against hunters near its own size, horns, spines or armour turned to them, and runs from bigger ones';
+  if (P.social > 0.45) return short ? 'Runs with its herd' : 'runs with its herd, all of them together';
+  return short ? 'Runs or hides in cover' : 'runs, or slips into the undergrowth and freezes where there is thick cover';
+}
 function sleepText(sp) { const H = sp.sleep; if (!H) return SLEEP_TEXT.open; return H.where === 'both' && H.herd ? 'In its shelter when the night is cold, wet or stormy; otherwise with its herd, in the open' : SLEEP_TEXT[H.where] || SLEEP_TEXT.open; }
 function shelterSection(sp) {
   const S = sp.shelter;
-  if (!S || S.kind === 'colony') return sp.habitat === 'water' || sp.fam === 'floater' || (S && S.kind === 'colony') ? null : section('Shelter', h('div', { class: 'grid' }, stat('Sleeps', sleepText(sp))), h('p', { class: 'small muted' }, `Makes no shelter: it sleeps ${sp.sleep && sp.sleep.where === 'herd' ? 'out in the open with its herd, huddled together while one of them keeps watch' : sp.sleep && sp.sleep.where === 'roost' ? 'perched or settled on dry ground' : 'out in the open'}, and takes to a cave or a tree only in storms or when chased.`));
+  if (!S || S.kind === 'colony') return sp.habitat === 'water' || sp.fam === 'floater' || (S && S.kind === 'colony') ? null : section('Shelter', h('div', { class: 'grid' }, stat('Sleeps', sleepText(sp))), h('p', { class: 'small muted' }, `Makes no shelter: it sleeps ${sp.sleep && sp.sleep.where === 'herd' ? 'out in the open with its herd, huddled together while one of them keeps watch' : sp.sleep && sp.sleep.where === 'roost' ? 'perched or settled on dry ground' : 'out in the open'}, and takes to a cave or a tree only in storms. Chased, it ${evadeText(sp)}.`));
   const T = SHELTERS[S.kind];
   return section('Shelter', h('div', { class: 'grid' },
     stat('Shelter', T.name), stat('Where', { soft: 'Dug into soft ground', rock: 'Among rocks and roots', shore: "At the water's edge", tree: 'In trees', ground: 'On the ground', snow: 'In snowdrifts' }[T.site] || T.site),
-    stat('Caves', S.cave ? 'Seeks out caves' : 'In storms and when chased'), stat('Shared', S.share ? 'By its group' : 'Alone'), stat('Young', S.young ? 'Born and nursed in it' : '—'), stat('Instinct', fmt.pct(S.use)), stat('Sleeps', sleepText(sp))),
-    h('p', { class: 'small muted' }, `${T.verb} ${T.desc}. ${sp.sleep && sp.sleep.where === 'shelter' ? 'It sleeps there' : 'It sleeps there when the night is hard'}, waits out storms, hard frosts and the heat of the day inside, bolts for it when chased, and walks there on its own feet: a shelter it cannot reach is passed over for another.`));
+    stat('Caves', S.cave ? 'Seeks out caves' : 'In storms'), stat('Chased', evadeText(sp, true)), stat('Shared', S.share ? 'By its group' : 'Alone'), stat('Young', S.young ? 'Born and nursed in it' : '—'), stat('Instinct', fmt.pct(S.use)), stat('Sleeps', sleepText(sp))),
+    h('p', { class: 'small muted' }, `${T.verb} ${T.desc}. ${sp.sleep && sp.sleep.where === 'shelter' ? 'It sleeps there' : 'It sleeps there when the night is hard'}, waits out storms, hard frosts and the heat of the day inside, and walks there on its own feet: a shelter it cannot reach is passed over for another.`));
 }
 const BILL_NAME = { cone: 'seed-cracking cone', hook: 'hooked raptor bill', probe: 'long probing bill', spear: 'dagger bill', flat: 'flat dabbling bill', pouch: 'pouched bill', filter: 'bent filter bill', spoon: 'spoonbill' };
 const FEET_NAME = { perch: 'perching toes', zygo: 'paired climbing toes', talon: 'talons', run2: 'two stout running toes', run3: 'three running toes', wade: 'long spread wading toes', webbed: 'webbed feet', lobed: 'lobed toes' };
@@ -19600,8 +19845,8 @@ const Modals = {
         h('div', { class: 'keys' }, [['WASD / arrows', 'move (screen-relative)'], ['Shift', 'run · fly or swim fast'], ['Space', 'climb · rise · take wing'], ['C', 'descend · land · dive'], ['J', 'its strike'], ['K', 'feed'], ['V', 'call'], ['R', 'rest'], ['1–9', 'its abilities'], ['Q / E', 'turn the view'], ['Esc', 'leave the body']].map(([k, v]) => h('div', null, h('kbd', null, k), h('span', null, v))))),
       section('Monoliths', h('p', null, 'Monoliths are never found in nature: only you can raise them (N, or ☰ › Monoliths, on the ground of any rocky world or moon). ', h('b', null, 'Knowledge'), ': the peoples of the world develop ten times as fast. ', h('b', null, 'Protection'), ': no civilization from elsewhere can settle it. ', h('b', null, 'Chaos'), ': extreme mutations, mutant young and strange growths. ', h('b', null, 'Life'), ': a lifeless world becomes habitable and complex life arises at once. ', h('b', null, 'Death'), ': a meteor strikes the spot — a vast crater, a planet-wide extinction and a long impact winter, then new lineages radiate into the empty niches.')),
       section('Galaxies & stars', h('p', null, 'Each sector of the map holds a galaxy, a field of scattered stars far from any galaxy, or an empty void. Galaxies are spiral, barred, disk, elliptical, irregular or ring-shaped, with their own size, tilt, arms and gas; young blue stars crowd their arms and old stars their bulge and halo, around a supermassive core — a quiet black hole, an active nucleus, a quasar or blazar with jets, a radio galaxy with lobes, a pair of black holes or a dense star cluster. Nebulae, nurseries, remnants, clouds, clusters and stranger formations lie inside them; great clouds, filaments and tidal streams drift between them. About one star in eight has a companion and a very few are triple: pulsars pair only with pulsars and black holes only with black holes. Companions decide where planets can orbit stably — around a close pair only from outside, around the star of a wide pair only within the companion’s reach — and a close pair lights its worlds with two suns.')),
-      section('Life', h('p', null, 'Creatures belong to twenty-seven body-plan families: on land and in the air quadrupeds, bipeds, hexapods, octopods, serpents, gastropods and aerostats, and birds that fly, run (flightless ground birds), wade on stilt legs or swim and dive (some flightless, flying underwater on flippers); the amphibians (frogs and toads, salamanders and newts, legless caecilians and fin-walking fish), which move between the water and the land, must keep their skin wet, sink into torpor in the cold, and begin life as tadpoles or gilled larvae; in the water fish-like swimmers, whale-like cetoids, long-necked marine reptiles, rays, eels, jellies, cephalopods, crustaceans, echinoderms and siphonophore chains; and the chimeras, each built from the parts of unrelated families (a body, limbs, a head, a tail, wings, a skin and appendages, every part a gene of its own), on land, in the air, at the water\'s edge or in the sea; and the insects, hexapods shaped as beetles, ants, termites, bees, wasps, mantises, moths, dragonflies, stick insects or crickets, flying or flightless, solitary or living in colonies. A 70-gene genome controls anatomy, colour, pattern, behaviour, breeding, shelter and colony life; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night and breed in their own season of the year (set by their genes, with the southern hemisphere half a year behind the northern): some pair for life, some take several mates; some build nests (in trees, on ledges, on the ground, in banks and burrows, at the water\'s edge, afloat, as spawn in the shallows, on the sea floor) and lay clutches there, which they incubate and guard or leave, and which hunters may rob — tap a nest to see its eggs. Offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. Many animals make shelters of their own kind (burrows, dens among rocks, lodges at the water\'s edge, tree hollows, silk retreats, snow dens, trampled beds) or use the caves of the hillsides: they sleep in them, wait out storms, frost and midday heat inside, bolt into them when chased, and a caring mother with a den bears and nurses her young there — tap a den or a cave to see who is inside. Colonial insects live like termites (a king and a queen, workers and big-headed soldiers, towering mounds), ants (queens, minor and major workers, hills with scent trails), bees (a queen, workers, hanging combs; crowded hives swarm) or wasps (paper nests): only the royals breed, foragers bring food home, defenders mob intruders, and in the breeding season winged queens and males fly out to found new colonies — tap a colony to see its queen, numbers and stores. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
-      section('Origin of life', h('p', null, 'Not every world is alive. Each has a potential for life from its liquid solvent (water, acid, methane — or an ocean under the ice), temperatures that keep it liquid, raw chemistry, energy (starlight or internal heat) and shelter from radiation; given that, the seed decides whether life ever starts and when. Worlds then age in geological time (about 60 million years to the hour): prebiotic chemistry, first cells, microbial mats and stromatolites, complex cells, the first multicellular life, and — on some — complex ecosystems. Microbial strains carry their own genomes that mutate, compete for their niches (sunlit water, deep water, sediments, vents, hot springs, sea ice, land), split, colonize and die out; their blooms tint the seas, their mats colour the shallows, and they are the plankton that feeds the filter feeders. See the ', h('b', null, 'Biosphere'), ' tab of any planet.')),
+      section('Life', h('p', null, 'Creatures belong to twenty-seven body-plan families: on land and in the air quadrupeds, bipeds, hexapods, octopods, serpents, gastropods and aerostats, and birds that fly, run (flightless ground birds), wade on stilt legs or swim and dive (some flightless, flying underwater on flippers); the amphibians (frogs and toads, salamanders and newts, legless caecilians and fin-walking fish), which move between the water and the land, must keep their skin wet, sink into torpor in the cold, and begin life as tadpoles or gilled larvae; in the water fish-like swimmers, whale-like cetoids, long-necked marine reptiles, rays, eels, jellies, cephalopods, crustaceans, echinoderms and siphonophore chains; and the chimeras, each built from the parts of unrelated families (a body, limbs, a head, a tail, wings, a skin and appendages, every part a gene of its own), on land, in the air, at the water\'s edge or in the sea; and the insects, hexapods shaped as beetles, ants, termites, bees, wasps, mantises, moths, dragonflies, stick insects or crickets, flying or flightless, solitary or living in colonies. A 70-gene genome controls anatomy, colour, pattern, behaviour, breeding, shelter and colony life; planetary gravity, climate, light and atmosphere shape which traits evolve. Individuals graze, hunt, flee, drink, sleep through the night (asleep, in the open, in a den or on a nest, they spend a third of what they spend awake, and hunger or thirst grown dangerous wakes them) and breed in their own season of the year (set by their genes, with the southern hemisphere half a year behind the northern): some pair for life, some take several mates; some build nests (in trees, on ledges, on the ground, in banks and burrows, at the water\'s edge, afloat, as spawn in the shallows, on the sea floor) and lay clutches there, which they incubate and guard or leave, and which hunters may rob — tap a nest to see its eggs. Offspring inherit a crossover of both parents with mutation, and natural selection (climate, hunger, predators) shapes each line over the generations. Birds of prey that can take fish patrol the shallows, watch from the bank and plunge for fish near the surface. Many animals make shelters of their own kind (burrows, dens among rocks, lodges at the water\'s edge, tree hollows, silk retreats, snow dens, trampled beds) or use the caves of the hillsides: they sleep in them, wait out storms, frost and midday heat inside, and a caring mother with a den bears and nurses her young there — tap a den or a cave to see who is inside. A shelter is never a bolt-hole: hunted, an animal escapes the way its kind does — a herd runs together, the small and solitary slip into thick cover and freeze (a hunter passes by what it cannot see), and those with horns, tusks, spines or armour stand their ground against hunters their own size. Colonial insects live like termites (a king and a queen, workers and big-headed soldiers, towering mounds), ants (queens, minor and major workers, hills with scent trails), bees (a queen, workers, hanging combs; crowded hives swarm) or wasps (paper nests): only the royals breed, foragers bring food home, defenders mob intruders, and in the breeding season winged queens and males fly out to found new colonies — tap a colony to see its queen, numbers and stores. A creature\'s ', h('b', null, 'Offspring'), ' tab lists its own living young; tap the ', h('b', null, '♥'), ' to add an individual to your favourites (as many as you like): each is marked wherever it goes, L steps through the ones at your site, and Saves › Favourites lists them all and takes you to any of them from anywhere. Every site you observe remembers its wildlife between visits.')),
+      section('Origin of life', h('p', null, `Not every world is alive. Each has a potential for life from its liquid solvent (water, acid, methane — or an ocean under the ice), temperatures that keep it liquid, raw chemistry, energy (starlight or internal heat) and shelter from radiation; given that, the seed decides whether life ever starts and when. Worlds then age in geological time (about 60 million years to the hour): prebiotic chemistry, first cells, microbial mats and stromatolites, complex cells, the first multicellular life, and — on some — complex ecosystems. Complex life also needs a day it can live by: where the sun rises and sets less than ${MIN_SOLAR_DAY} s apart (a fast spin, or a year only minutes long, which races the sun across the sky), no animal could sleep and wake, no hunter finish a hunt and no ecosystem run its daily round, so no plants, animals or other complex organisms live there, and any saved wildlife of such a world is gone; microbes may still thrive. Microbial strains carry their own genomes that mutate, compete for their niches (sunlit water, deep water, sediments, vents, hot springs, sea ice, land), split, colonize and die out; their blooms tint the seas, their mats colour the shallows, and they are the plankton that feeds the filter feeders. See the `, h('b', null, 'Biosphere'), ' tab of any planet.')),
       section('Oceans & diving', h('p', null, 'Seas are divided into zones by depth, temperature, light, currents, nutrients and the shape of the floor: coral reefs and lagoons, kelp forests, seagrass meadows, mangroves, marshes and estuaries, upwellings, continental shelves and slopes, the open ocean, seamounts, abyssal plains, hadal trenches, hydrothermal vent fields, polar seas and waters under the ice, lakes and rivers — and acid or hydrocarbon seas elsewhere. Every sea creature belongs to a zone and a depth band, and its genome adapts to them (light-gathering or lost eyes, bioluminescence, pressure proofing, antifreeze, blubber, gigantism). Over water, press ', h('b', null, 'Dive'), ' (Z or Page Down; X or Page Up to rise, or Shift + wheel): light fades and reddens with depth, pressure and cold rise, and below the sunlit zone a lamp lights your way. Whales surface to blow and sometimes breach, squid ink when chased, and fishers of coastal settlements take their catch from the same seas.')),
       section('Sound', h('p', null, 'Besides music and creature calls, nature is synthesized live: wind and gusts, rain, rivers and streams, surf, geysers, lava, thunder, storms and hurricanes, birdsong by day and insects and frogs at night. It follows the terrain within earshot, the weather, the hour and the zoom — and thin air carries little sound, vacuum none. Under water the air falls silent: waves heard from below, a deep hum, bubbles, the rumble of vents and the songs of whales carry through the sea, and at the surface whales blow.')),
       section('Civilizations', h('p', null, 'On some living worlds a species becomes sapient and founds tribes. Each people has its own procedurally generated culture — values, palette, architecture, city layout, clothing, weapons, vehicles, spacecraft, emblem and language. Hidden progress (growth, discoveries, trade, war, exploration) carries them from ', h('b', null, 'tribes'), ' to ', h('b', null, 'nations'), ' with international trade, to ', h('b', null, 'colonizing their star system'), ' (domed cities on hostile worlds), and finally to ', h('b', null, 'intergalactic'), ' powers that terraform worlds, settle neighbouring stars, trade, ally, conquer or exterminate. History runs per galactic region in ages; look for the Civilization tab on planets, city lights on night sides, trade routes in systems and territories on the galaxy map, then land on a settlement to watch its citizens.')),
